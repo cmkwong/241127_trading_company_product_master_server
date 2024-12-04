@@ -1,0 +1,5 @@
+export const SSME_UNIT_PLANT_MAPPING = {
+  'CIC-ZCP B100 Biodiesel Generator': 'YG1090',
+};
+
+// exports.SSME_UNIT_PLANT_MAPPING = SSME_UNIT_PLANT_MAPPING;
