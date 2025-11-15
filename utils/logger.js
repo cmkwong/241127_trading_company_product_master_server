@@ -38,7 +38,7 @@ const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.File({
-      filename: './dev-data/websupervisor/log_node_server.log',
+      filename: './dev-data/log_node_server.log',
     }),
     new winston.transports.Console({
       level: 'info',

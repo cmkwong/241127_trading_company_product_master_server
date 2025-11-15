@@ -2,53 +2,66 @@ import mysql from 'mysql2';
 // const SocksConnection = require('socksjs');
 import {} from 'dotenv/config';
 
-// workflow dev mySQL
-export const bpm = mysql.createPool({
+// trade business pool mySQL
+export const tb_pool = mysql.createPool({
   connectionLimit: 20,
-  host: process.env.BPM_HOST,
-  port: process.env.BPM_PORT,
-  user: process.env.MYSQL_BPM_USER,
-  password: process.env.MYSQL_BPM_PW,
-  database: process.env.MYSQL_BPM_DATABASE,
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: 'trade_business',
+  connectTimeout: 10000, // Connection timeout in milliseconds
+  waitForConnections: true, // Wait for connections to become available
+  queueLimit: 0, // Unlimited queue size
 });
 
-// workflow prod mySQL
-export const bpm0 = mysql.createPool({
+export const auth_pool = mysql.createPool({
   connectionLimit: 20,
-  host: process.env.BPM_HOST0,
-  port: process.env.BPM_PORT0,
-  user: process.env.MYSQL_BPM_USER0,
-  password: process.env.MYSQL_BPM_PW0,
-  database: process.env.MYSQL_BPM_DATABASE0,
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: 'auth',
+  connectTimeout: 10000, // Connection timeout in milliseconds
+  waitForConnections: true, // Wait for connections to become available
+  queueLimit: 0, // Unlimited queue size
 });
 
-// apdc-dc01 mySQL SSME data
-export const ssmeData = mysql.createPool({
-  connectionLimit: 20,
-  host: process.env.SSME_HOST,
-  user: process.env.MYSQL_SSME_USER,
-  password: process.env.MYSQL_SSME_PW,
-  database: process.env.MYSQL_SSME_DATABASE,
-  multipleStatements: true,
+// Add error listener to the pool
+tb_pool.on('error', (err) => {
+  console.error('Database pool error:', err);
 });
 
-// exports.machinePool = mysql.createPool({
-//   connectionLimit: 20,
-//   host: process.env.SSME_HOST,
-//   user: process.env.MYSQL_SSME_USER,
-//   password: process.env.MYSQL_SSME_PW,
-//   database: process.env.MYSQL_MACHINE_DATABASE,
-// });
+// verify connections at startup
+export const verifyDatabaseConnections = async () => {
+  try {
+    // Test TB connection
+    const tbConn = await getConnection_from_pool(tb_pool);
+    tbConn.release();
+    console.log('Database connection successful');
 
-// apdc-dc01 mySQL SSME general
-export const ssmeGeneral = mysql.createPool({
-  connectionLimit: 20,
-  host: process.env.SSME_HOST,
-  port: process.env.SSME_PORT,
-  user: process.env.MYSQL_SSME_USER,
-  password: process.env.MYSQL_SSME_PW,
-  database: process.env.MYSQL_GENERAL_DATABASE,
-});
+    // Add similar tests for other pools
+    return true;
+  } catch (error) {
+    console.error('Database connection verification failed:', error);
+    return false;
+  }
+};
+
+export const executeQuery = async (pool, query, params = []) => {
+  let connection;
+  try {
+    connection = await getConnection_from_pool(pool);
+    return await new Promise((resolve, reject) => {
+      connection.query(query, params, (error, results) => {
+        if (error) reject(error);
+        else resolve(results);
+      });
+    });
+  } catch (error) {
+    throw error;
+  } finally {
+    if (connection) connection.release();
+  }
+};
 
 // getting connection from pool
 export const getConnection_from_pool = (pool) => {
@@ -63,13 +76,17 @@ export const getConnection_from_pool = (pool) => {
   });
 };
 
-// get pools connected
-// getPool().then(({ bpm, bpm0, ssmeData, ssmeGeneral }) => {
-//   module.exports.bpm = bpm;
-//   module.exports.bpm0 = bpm0;
-//   module.exports.ssmeData = ssmeData;
-//   module.exports.ssmeGeneral = ssmeGeneral;
-// });
-
-// exports.getPool = getPool;
-// exports.getConnection_from_pool = getConnection_from_pool;
+// Graceful shutdown handler
+export const closeAllConnections = () => {
+  return new Promise((resolve, reject) => {
+    tb_pool.end((err) => {
+      if (err) {
+        console.error('Error closing database pool:', err);
+        reject(err);
+      } else {
+        console.log('Database connections closed successfully');
+        resolve();
+      }
+    });
+  });
+};

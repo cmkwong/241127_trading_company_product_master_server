@@ -5,7 +5,6 @@ import * as dbConn from '../utils/dbConn.js';
 import * as time from '../utils/time.js';
 import * as auth from '../utils/auth.js';
 import * as dbModel from '../models/dbModel.js';
-import * as websupervisorModel from '../models/ssme/websupervisorModel.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
@@ -58,7 +57,7 @@ export const getUserRole = async (username, pool) => {
 // get the token
 export const getToken = catchAsync(async (req, res, next) => {
   // get pool
-  const pool = dbConn.ssmeGeneral;
+  const pool = dbConn.auth_pool;
 
   // get req body
   let { username, password, payload } = req.body;
@@ -82,38 +81,6 @@ export const getToken = catchAsync(async (req, res, next) => {
     //   status: 'success',
     //   token,
     // });
-  }
-});
-
-// get erp token
-export const fetchErpToken = catchAsync(async (req, res, next) => {
-  // create the encrpyter
-  const { text, publicKey } = req.body;
-  // logger.info(`public key: ${publicKey}`);
-  const token = await auth.getErpToken(text, publicKey);
-  res.prints = {
-    token,
-  };
-  next();
-  // res.status(200).json({
-  //   status: 'success',
-  //   token,
-  // });
-});
-
-// get token from websupervisor
-export const fetchWsvToken = catchAsync(async (req, res, next) => {
-  const token = await websupervisorModel.fetchToken();
-  if (!token) {
-    res.status(400).json({
-      msg: 'failed to get token',
-    });
-  } else {
-    res.prints = {
-      ...res.prints,
-      token,
-    };
-    next();
   }
 });
 

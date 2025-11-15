@@ -18,77 +18,107 @@ import logger from './utils/logger.js';
 import errorController from './controller/errorController.js';
 import endController from './controller/endController.js';
 import startController from './controller/startController.js';
+import {
+  verifyDatabaseConnections,
+  closeAllConnections,
+} from './utils/dbConn.js';
 
 // require routes
-// import authRouter from './routes/authRoutes.js';
-// import viewRouter from './routes/viewRoutes.js';
-// import workflowRouter from './routes/workflowRoutes.js';
-// import erpRouter from './routes/erpRoutes.js';
-// import ssmeRouter from './routes/ssmeRoutes.js';
-// import wsRouter from './routes/websupervisorRoutes.js';
-// import machineRouter from './routes/machineRoutes.js';
-// import reportRouter from './routes/reportRoutes.js';
-// import sysRouter from './routes/sysRoutes.js';
+import productRouter from './routes/productRoutes.js';
 
 // get dir
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const createServer = async () => {
-  const app = express();
+const app = express();
 
-  // set views pug path
-  app.set('view engine', 'pug'); // set the pug for filling the template
-  app.set('views', path.join(__dirname, 'views'));
+// set views pug path
+app.set('view engine', 'pug'); // set the pug for filling the template
+app.set('views', path.join(__dirname, 'views'));
 
-  //--------- Middleware stack ---------//
-  // Access-Control-Allow-Origin *
-  app.use(cors());
-  app.options('*', cors());
+//--------- Middleware stack ---------//
+// Access-Control-Allow-Origin *
+app.use(cors());
+app.options('*', cors());
 
-  // 	Serve static files from a folder and not from a route.
-  app.use(express.static(path.join(__dirname, 'public')));
+// 	Serve static files from a folder and not from a route.
+app.use(express.static(path.join(__dirname, 'public')));
 
-  // Body parser, reading data from body into req.body
-  app.use(express.json({ limit: '500Mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '500Mb' })); // getting the user data from a form so updateUserData() (in viewsController) can be used, #194 0930
-  app.use(cookieParser());
+// Body parser, reading data from body into req.body
+app.use(express.json({ limit: '500Mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500Mb' })); // getting the user data from a form so updateUserData() (in viewsController) can be used, #194 0930
+app.use(cookieParser());
 
-  app.use(compression()); // compress all the text that send to client
+app.use(compression()); // compress all the text that send to client
 
-  // ***************** ROUTES *****************//
-  // app.use('/', viewRouter); // middleware: root
-  app.use(startController);
-  // app.use('/api/v1/auth', authRouter);
-  // app.use('/api/v1/workflow', workflowRouter);
-  // app.use('/api/v1/erp', erpRouter);
-  // app.use('/api/v1/ssme', ssmeRouter);
-  // app.use('/api/v1/ws', wsRouter);
-  // app.use('/api/v1/machine', machineRouter);
-  // app.use('/api/v1/report', reportRouter);
-  // app.use('/api/v1/sys', sysRouter);
-  app.use(endController);
-  // error handler MIDDLEWARE
-  app.use(errorController);
+// ***************** ROUTES *****************//
+// app.use('/', viewRouter); // middleware: root
+app.use(startController);
+app.use('/api/v1/product', productRouter);
 
-  const port = process.env.PORT;
-  const server = app.listen(port, () => {
-    logger.info(`App running on port ${port}`);
-  });
+app.use(endController);
+// error handler MIDDLEWARE
+app.use(errorController);
 
-  process.env.TZ = 'UTC+8';
+const startServer = async () => {
+  try {
+    // Verify database connections at startup
+    logger.info('Verifying database connections...');
+    const dbConnectionStatus = await verifyDatabaseConnections();
 
-  process.on('unhandledRejection', (err) => {
-    logger.error(err);
-    logger.error(err.name, '|', err.message);
-    logger.error('UNHANDLED REJECTION, SHUTTING DOWN ...');
-    server.close(() => {
-      // give the server time to finish all the request
+    if (!dbConnectionStatus) {
+      logger.error(
+        'Database connection verification failed. Server startup aborted.'
+      );
       process.exit(1);
-    });
-  });
+    }
 
-  process.on('exit', function () {
-    logger.info('About to close');
-  });
+    logger.info('Database connections verified successfully.');
+
+    const port = process.env.PORT || 3000;
+    const server = app.listen(port, () => {
+      logger.info(`App running on port ${port}`);
+    });
+
+    // Set timezone
+    process.env.TZ = 'UTC+8';
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', async (err) => {
+      logger.error(err);
+      logger.error(err.name, '|', err.message);
+      logger.error('UNHANDLED REJECTION, SHUTTING DOWN ...');
+      // Close database connections before shutting down
+      await closeAllConnections().catch((err) =>
+        logger.error('Error closing DB connections:', err)
+      );
+
+      server.close(() => {
+        // give the server time to finish all the request
+        process.exit(1);
+      });
+    });
+
+    // Handle SIGTERM signal
+    process.on('SIGTERM', async () => {
+      logger.info('SIGTERM received. Shutting down gracefully...');
+
+      // Close database connections before shutting down
+      await closeAllConnections().catch((err) =>
+        logger.error('Error closing DB connections:', err)
+      );
+
+      server.close(() => {
+        logger.info('Process terminated!');
+      });
+    });
+
+    // Handle exit
+    process.on('exit', function () {
+      logger.info('About to close');
+    });
+  } catch (error) {
+    logger.error('Error during server startup:', error);
+    process.exit(1);
+  }
 };
 
-createServer();
+startServer();
