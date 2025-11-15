@@ -1,18 +1,6 @@
 import * as dbConn from '../utils/dbConn.js';
 import logger from '../utils/logger.js';
 
-// get the require workflow pool (prod / dev)
-export const getWfPool = (req) => {
-  let { wfserver } = req.query;
-  let pool;
-  if (wfserver === 'prod') {
-    pool = dbConn.bpm0;
-  } else {
-    pool = dbConn.bpm;
-  }
-  return [wfserver, pool];
-};
-
 // execute array of query
 export const executeStmts = (pool, stmts) => {
   // stmts = array[]
@@ -50,37 +38,6 @@ export const executeStmts = (pool, stmts) => {
   });
 };
 
-// // execute array of query
-// const executeStmts = (conn, stmts) => {
-//   // stmts = array[]
-//   return new Promise((resolve, reject) => {
-//     if (stmts.length === 0) {
-//       resolve(true);
-//     }
-//     // create transcation, run query one-by-one
-//     conn.beginTransaction((err) => {
-//       let queryResults = [];
-//       for (const stmt of stmts) {
-//         conn.query(stmt, (err, result, field) => {
-//           if (err) {
-//             console.log(stmt);
-//             console.log(err);
-//             reject(err);
-//           }
-//           queryResults.push(result);
-//         });
-//       }
-//       conn.commit((err) => {
-//         if (err) {
-//           conn.rollback();
-//           reject(err);
-//         }
-//         resolve(queryResults);
-//       });
-//     });
-//   });
-// };
-
 // execute just one query
 export const executeStmt = (pool, stmt) => {
   return new Promise((resolve, reject) => {
@@ -102,49 +59,6 @@ export const executeStmt = (pool, stmt) => {
       });
     });
   });
-};
-
-// // execute just one query
-// const executeStmt = (conn, stmt) => {
-//   return new Promise((resolve, reject) => {
-//     if (!stmt) {
-//       resolve(true);
-//     }
-//     // execute the stmt
-//     conn.query(stmt, (err, result, field) => {
-//       if (err) {
-//         console.log(stmt);
-//         console.log(err);
-//         reject(err);
-//       }
-//       resolve(result);
-//     });
-//   });
-// };
-
-// forming the INSERT/REPLACE statments by data (json data)
-export const getInsertStmts_DISCARD = (tableName, data, command = 'i') => {
-  let insertCommand = command === 'i' ? 'INSERT IGNORE' : 'REPLACE';
-  // let colsStr = Object.keys(data[0]).join(',');
-  let stmts = [];
-  for (let row of data) {
-    let cols = [];
-    let values = [];
-    for (let [key, value] of Object.entries(row)) {
-      if (typeof value === 'string') {
-        if (!value) continue;
-        value = value.replace(/'/g, "\\'");
-      }
-      values.push(value);
-      cols.push(key);
-    }
-    let colsStr = cols.join(',');
-    let valuesStr = `'${values.join("','")}'`;
-    stmts.push(
-      `${insertCommand} ${tableName} (${colsStr}) VALUES (${valuesStr});`
-    );
-  }
-  return stmts;
 };
 
 // forming the INSERT/REPLACE statments by data (json data) [Faster]

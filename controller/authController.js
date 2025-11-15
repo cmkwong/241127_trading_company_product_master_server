@@ -77,10 +77,6 @@ export const getToken = catchAsync(async (req, res, next) => {
       token,
     };
     next();
-    // res.status(200).json({
-    //   status: 'success',
-    //   token,
-    // });
   }
 });
 

@@ -46,23 +46,6 @@ export const verifyDatabaseConnections = async () => {
   }
 };
 
-export const executeQuery = async (pool, query, params = []) => {
-  let connection;
-  try {
-    connection = await getConnection_from_pool(pool);
-    return await new Promise((resolve, reject) => {
-      connection.query(query, params, (error, results) => {
-        if (error) reject(error);
-        else resolve(results);
-      });
-    });
-  } catch (error) {
-    throw error;
-  } finally {
-    if (connection) connection.release();
-  }
-};
-
 // getting connection from pool
 export const getConnection_from_pool = (pool) => {
   return new Promise((resolve, reject) => {

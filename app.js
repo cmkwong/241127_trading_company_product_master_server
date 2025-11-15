@@ -14,6 +14,7 @@ import startController from './controller/startController.js';
 
 // require routes
 import productRouter from './routes/productRoutes.js';
+import authRouter from './routes/authRoutes.js';
 
 // get dir
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ app.use(compression()); // compress all the text that send to client
 // app.use('/', viewRouter); // middleware: root
 app.use(startController);
 app.use('/api/v1/product', productRouter);
+app.use('/api/v1/auth', authRouter);
 
 // Handle 404 - Route not found
 // This middleware runs if no previous route handlers responded
