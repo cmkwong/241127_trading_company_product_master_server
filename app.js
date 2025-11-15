@@ -6,10 +6,10 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
 import { fileURLToPath } from 'node:url';
+import AppError from './utils/appError.js';
 
 // self class
 import errorController from './controller/errorController.js';
-import endController from './controller/endController.js';
 import startController from './controller/startController.js';
 
 // require routes
@@ -44,8 +44,14 @@ app.use(compression()); // compress all the text that send to client
 app.use(startController);
 app.use('/api/v1/product', productRouter);
 
-app.use(endController);
-// error handler MIDDLEWARE
+// Handle 404 - Route not found
+// This middleware runs if no previous route handlers responded
+app.all('*', (req, res, next) => {
+  // Using AppError to create a 404 error
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+// error handler MIDDLEWARE for other errors
 app.use(errorController);
 
 export default app;
