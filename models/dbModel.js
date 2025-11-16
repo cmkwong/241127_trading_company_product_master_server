@@ -2,7 +2,7 @@ import * as dbConn from '../utils/dbConn.js';
 import logger from '../utils/logger.js';
 
 // execute array of query
-export const executeStmts = (pool, stmts) => {
+export const executeQueries = (pool, stmts) => {
   // stmts = array[]
   return new Promise((resolve, reject) => {
     if (stmts.length === 0) resolve(true);
@@ -39,14 +39,14 @@ export const executeStmts = (pool, stmts) => {
 };
 
 // execute just one query
-export const executeStmt = (pool, stmt) => {
+export const executeQuery = (pool, stmt, params = []) => {
   return new Promise((resolve, reject) => {
     if (!stmt) resolve(true);
     // getting connection
     pool.getConnection((err, connection) => {
       if (err) reject(err);
-      // execute the stmt
-      connection.query(stmt, (err, result, field) => {
+      // execute the stmt with parameters if provided
+      connection.query(stmt, params, (err, result, field) => {
         if (err) {
           logger.error(stmt);
           logger.error(err.errno);
@@ -107,7 +107,7 @@ export const clearTable = (pool, tableName) => {
   return new Promise((resolve, reject) => {
     let stmt = `TRUNCATE TABLE ${tableName};`;
     // clear table
-    executeStmts(pool, [stmt])
+    executeQueries(pool, [stmt])
       .then((result) => {
         resolve(result);
       })
@@ -127,7 +127,7 @@ export const createTable = (pool, tableName, schemaObj) => {
     let schemaStr = schemaArr.join(', ');
     // stmt create
     let stmt = `CREATE TABLE IF NOT EXISTS ${tableName} (${schemaStr});`;
-    executeStmt(pool, stmt)
+    executeQuery(pool, stmt)
       .then((result) => {
         resolve(result);
       })
@@ -144,7 +144,7 @@ export const uploadData = (pool, tableName, data, command = 'i') => {
   return new Promise((resolve, reject) => {
     let stmts = getInsertStmts(tableName, data, command);
     // insert the data
-    executeStmts(pool, stmts)
+    executeQueries(pool, stmts)
       .then((result) => {
         resolve(result);
       })
@@ -158,7 +158,7 @@ export const uploadData = (pool, tableName, data, command = 'i') => {
 export const rowTotal = (pool, tableName) => {
   return new Promise((resolve, reject) => {
     let stmt = `SELECT COUNT(1) as count FROM ${tableName};`; // COUNT(1) for first column (saving time)
-    executeStmt(pool, stmt)
+    executeQuery(pool, stmt)
       .then((result) => {
         resolve(result);
       })

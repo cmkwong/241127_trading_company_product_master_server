@@ -25,9 +25,8 @@ export const signToken = (payload) => {
 
 // get the user
 export const getUser = async (pool, username, password) => {
-  // let pool = dbConn.ssmeGeneral;
   let stmt = 'SELECT * FROM users;';
-  let results = await dbModel.executeStmt(pool, stmt);
+  let results = await dbModel.executeQuery(pool, stmt);
   // find the matched user with name and password
   let matched = results.filter((result) => {
     return result['username'] === username && result['password'] === password;
@@ -40,17 +39,16 @@ export const getUser = async (pool, username, password) => {
 };
 
 export const getUserRole = async (username, pool) => {
-  // let pool = dbConn.ssmeGeneral;
   let stmt = 'SELECT * FROM users;';
-  let results = await dbModel.executeStmt(pool, stmt);
+  let results = await dbModel.executeQuery(pool, stmt);
   // find the matched user with name and password
   let matched = results.filter((result) => {
     return result['username'] === username;
   });
   if (matched.length === 0) {
-    return matched.role;
+    return null; // Return null if no user is found
   } else {
-    return matched.role;
+    return matched[0].role; // Return the role of the first matched user
   }
 };
 
@@ -109,40 +107,48 @@ export const logout = (req, res) => {
 };
 
 export const protect = catchAsync(async (req, res, next) => {
-  let token;
-  // 1) Getting token and check of its there
-  // this is for Postman
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    token = req.headers.authorization.split(' ')[1];
-  } else if (req.cookies.jwt) {
-    // this is for browser
-    token = req.cookies.jwt;
-  }
+  try {
+    let token;
+    // 1) Getting token and check of its there
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.jwt) {
+      // this is for browser
+      token = req.cookies.jwt;
+    }
 
-  if (!token) {
-    return next(new AppError('You are not authorized!', 401));
-  }
-  // 2) Verification token
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET); // compare the token valid
+    if (!token) {
+      return next(new AppError('You are not authorized!', 401));
+    }
 
-  // 3) Check payload still exists and belong to which role
-  const { payload } = decoded; // payload is the username
-  if (!payload) {
-    return next(new AppError('The payload is not existed. ', 401));
-  }
-  let [currentUser, userPayload, currenttime] = payload.split(';');
+    // 2) Verification token
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  // GRANT ACCESS to PROTECTED ROUTE
-  let role = getUserRole(currentUser, dbConn.ssmeGeneral);
-  if (!role) {
-    return next(new AppError('Invalid user.', 401));
+    // 3) Check payload still exists and belong to which role
+    const { payload } = decoded;
+    if (!payload) {
+      return next(new AppError('The payload is not existed.', 401));
+    }
+
+    let [currentUser, userPayload, currenttime] = payload.split(';');
+
+    // GRANT ACCESS to PROTECTED ROUTE
+    let role = await getUserRole(currentUser, dbConn.auth_pool); // Use auth_pool
+
+    // Add proper error handling for role
+    if (!role) {
+      req.user = { name: currentUser, role: 'user' }; // Default to user role if none found
+    } else {
+      req.user = { name: currentUser, role: role };
+    }
+
+    next();
+  } catch (error) {
+    return next(new AppError(`Authentication error: ${error.message}`, 401));
   }
-  req.user = { name: currentUser, role: role };
-  // res.locals.user = currentUser; // what is that for? That is for pug usage # 193 1155
-  next();
 });
 
 // restrict the user role
