@@ -1,5 +1,5 @@
 import * as dbConn from '../../../utils/dbConn.js';
-import * as dbModel from '../../../models/dbModel.js';
+import * as dbModel from '../../dbModel.js';
 import AppError from '../../../utils/appError.js';
 
 /**
@@ -32,7 +32,7 @@ export const createProductsTable = async () => {
 };
 
 /**
- * Creates the name_types master table
+ * Creates the master_product_name_types master table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createProductNameTypesTable = async () => {
@@ -40,7 +40,7 @@ export const createProductNameTypesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS name_types (
+      CREATE TABLE IF NOT EXISTS master_product_name_types (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description VARCHAR(255),
@@ -49,17 +49,17 @@ export const createProductNameTypesTable = async () => {
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'name_types table created successfully' };
+    return { message: 'master_product_name_types table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create name_types table: ${error.message}`,
+      `Failed to create master_product_name_types table: ${error.message}`,
       500
     );
   }
 };
 
 /**
- * Creates the product_names table with reference to name_types
+ * Creates the product_names table with reference to master_product_name_types
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createProductNamesTable = async () => {
@@ -73,7 +73,7 @@ export const createProductNamesTable = async () => {
         name VARCHAR(255) NOT NULL,
         name_type_id INT NOT NULL,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-        FOREIGN KEY (name_type_id) REFERENCES name_types(id) ON DELETE RESTRICT,
+        FOREIGN KEY (name_type_id) REFERENCES master_product_name_types(id) ON DELETE RESTRICT,
         UNIQUE KEY unique_product_name_type (product_id, name_type_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
@@ -89,7 +89,7 @@ export const createProductNamesTable = async () => {
 };
 
 /**
- * Creates the categories table
+ * Creates the master_categories table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCategoriesTable = async () => {
@@ -97,20 +97,20 @@ export const createCategoriesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS categories (
+      CREATE TABLE IF NOT EXISTS master_categories (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description VARCHAR(255),
         parent_id INT,
-        FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+        FOREIGN KEY (parent_id) REFERENCES master_categories(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'categories table created successfully' };
+    return { message: 'master_categories table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create categories table: ${error.message}`,
+      `Failed to create master_categories table: ${error.message}`,
       500
     );
   }
@@ -130,7 +130,7 @@ export const createProductCategoriesTable = async () => {
         category_id INT NOT NULL,
         PRIMARY KEY (product_id, category_id),
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+        FOREIGN KEY (category_id) REFERENCES master_categories(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
@@ -145,7 +145,7 @@ export const createProductCategoriesTable = async () => {
 };
 
 /**
- * Creates the customizations table
+ * Creates the product_customizations table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCustomizationsTable = async () => {
@@ -153,7 +153,7 @@ export const createCustomizationsTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS customizations (
+      CREATE TABLE IF NOT EXISTS product_customizations (
         id INT AUTO_INCREMENT PRIMARY KEY,
         product_id VARCHAR(36) NOT NULL,
         name VARCHAR(100) NOT NULL,
@@ -164,17 +164,17 @@ export const createCustomizationsTable = async () => {
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'customizations table created successfully' };
+    return { message: 'product_customizations table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create customizations table: ${error.message}`,
+      `Failed to create product_customizations table: ${error.message}`,
       500
     );
   }
 };
 
 /**
- * Creates the customization_images table
+ * Creates the product_customization_images table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCustomizationImagesTable = async () => {
@@ -182,20 +182,22 @@ export const createCustomizationImagesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS customization_images (
+      CREATE TABLE IF NOT EXISTS product_customization_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
         customization_id INT NOT NULL,
         image_url VARCHAR(255) NOT NULL,
         display_order INT DEFAULT 0,
-        FOREIGN KEY (customization_id) REFERENCES customizations(id) ON DELETE CASCADE
+        FOREIGN KEY (customization_id) REFERENCES product_customizations(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'customization_images table created successfully' };
+    return {
+      message: 'product_customization_images table created successfully',
+    };
   } catch (error) {
     throw new AppError(
-      `Failed to create customization_images table: ${error.message}`,
+      `Failed to create product_customization_images table: ${error.message}`,
       500
     );
   }
@@ -259,7 +261,7 @@ export const createProductLinkImagesTable = async () => {
 };
 
 /**
- * Creates the alibaba_ids table
+ * Creates the product_alibaba_ids table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createAlibabaIdsTable = async () => {
@@ -267,7 +269,7 @@ export const createAlibabaIdsTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS alibaba_ids (
+      CREATE TABLE IF NOT EXISTS product_alibaba_ids (
         id INT AUTO_INCREMENT PRIMARY KEY,
         product_id VARCHAR(36) NOT NULL,
         value VARCHAR(100) NOT NULL,
@@ -277,17 +279,17 @@ export const createAlibabaIdsTable = async () => {
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'alibaba_ids table created successfully' };
+    return { message: 'product_alibaba_ids table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create alibaba_ids table: ${error.message}`,
+      `Failed to create product_alibaba_ids table: ${error.message}`,
       500
     );
   }
 };
 
 /**
- * Creates the packing_types master table
+ * Creates the master_packing_types master table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createPackingTypesTable = async () => {
@@ -295,7 +297,7 @@ export const createPackingTypesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS packing_types (
+      CREATE TABLE IF NOT EXISTS master_packing_types (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description VARCHAR(255),
@@ -304,17 +306,50 @@ export const createPackingTypesTable = async () => {
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'packing_types table created successfully' };
+    return { message: 'master_packing_types table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create packing_types table: ${error.message}`,
+      `Failed to create master_packing_types table: ${error.message}`,
       500
     );
   }
 };
 
 /**
- * Creates the certificate_types master table
+ * Creates the product_packings table with reference to master_packing_types
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductPackingsTable = async () => {
+  try {
+    const pool = dbConn.tb_pool;
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS product_packings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id VARCHAR(36) NOT NULL,
+        packing_type_id INT NOT NULL,
+        length DECIMAL(10,2) NOT NULL,
+        width DECIMAL(10,2) NOT NULL,
+        height DECIMAL(10,2) NOT NULL,
+        quantity INT NOT NULL DEFAULT 1,
+        weight DECIMAL(10,2) NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (packing_type_id) REFERENCES master_packing_types(id) ON DELETE RESTRICT
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await dbModel.executeQuery(pool, createTableSQL);
+    return { message: 'product_packings table created successfully' };
+  } catch (error) {
+    throw new AppError(
+      `Failed to create product_packings table: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Creates the master_certificate_types master table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCertificateTypesTable = async () => {
@@ -322,27 +357,26 @@ export const createCertificateTypesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS certificate_types (
+      CREATE TABLE IF NOT EXISTS master_certificate_types (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description VARCHAR(255),
-        code VARCHAR(50),
         UNIQUE KEY unique_certificate_type_name (name)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'certificate_types table created successfully' };
+    return { message: 'master_certificate_types table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create certificate_types table: ${error.message}`,
+      `Failed to create master_certificate_types table: ${error.message}`,
       500
     );
   }
 };
 
 /**
- * Creates the certificates table with reference to certificate_types
+ * Creates the product_certificates table with reference to master_certificate_types
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createProductCertificatesTable = async () => {
@@ -350,27 +384,27 @@ export const createProductCertificatesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS certificates (
+      CREATE TABLE IF NOT EXISTS product_certificates (
         id INT AUTO_INCREMENT PRIMARY KEY,
         product_id VARCHAR(36) NOT NULL,
         certificate_type_id INT NOT NULL,
         remark TEXT,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-        FOREIGN KEY (certificate_type_id) REFERENCES certificate_types(id) ON DELETE RESTRICT
+        FOREIGN KEY (certificate_type_id) REFERENCES master_certificate_types(id) ON DELETE RESTRICT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'certificates table created successfully' };
+    return { message: 'product_certificates table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create certificates table: ${error.message}`,
+      `Failed to create product_certificates table: ${error.message}`,
       500
     );
   }
 };
 /**
- * Creates the certificate_files table
+ * Creates the product_certificate_files table
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createProductCertificateFilesTable = async () => {
@@ -378,24 +412,23 @@ export const createProductCertificateFilesTable = async () => {
     const pool = dbConn.tb_pool;
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS certificate_files (
+      CREATE TABLE IF NOT EXISTS product_certificate_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         certificate_id INT NOT NULL,
         file_url VARCHAR(255) NOT NULL,
-        FOREIGN KEY (certificate_id) REFERENCES certificates(id) ON DELETE CASCADE
+        FOREIGN KEY (certificate_id) REFERENCES product_certificates(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
     await dbModel.executeQuery(pool, createTableSQL);
-    return { message: 'certificate_files table created successfully' };
+    return { message: 'product_certificate_files table created successfully' };
   } catch (error) {
     throw new AppError(
-      `Failed to create certificate_files table: ${error.message}`,
+      `Failed to create product_certificate_files table: ${error.message}`,
       500
     );
   }
 };
-
 /**
  * Creates all product-related tables in the correct order to respect foreign key constraints
  * @returns {Promise} Promise that resolves when all tables are created
@@ -437,12 +470,27 @@ export const dropAllProductTables = async () => {
     const pool = dbConn.tb_pool;
 
     // Drop tables in reverse order to respect foreign key constraints
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS certificate_files;');
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS certificates;');
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS certificate_types;');
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS product_certificate_files;'
+    );
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS product_certificates;'
+    );
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS master_certificate_types;'
+    );
     await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS product_packings;');
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS packing_types;');
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS alibaba_ids;');
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS master_packing_types;'
+    );
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS product_alibaba_ids;'
+    );
     await dbModel.executeQuery(
       pool,
       'DROP TABLE IF EXISTS product_link_images;'
@@ -450,16 +498,22 @@ export const dropAllProductTables = async () => {
     await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS product_links;');
     await dbModel.executeQuery(
       pool,
-      'DROP TABLE IF EXISTS customization_images;'
+      'DROP TABLE IF EXISTS product_customization_images;'
     );
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS customizations;');
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS product_customizations;'
+    );
     await dbModel.executeQuery(
       pool,
       'DROP TABLE IF EXISTS product_categories;'
     );
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS categories;');
+    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS master_categories;');
     await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS product_names;');
-    await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS name_types;');
+    await dbModel.executeQuery(
+      pool,
+      'DROP TABLE IF EXISTS master_product_name_types;'
+    );
     await dbModel.executeQuery(pool, 'DROP TABLE IF EXISTS products;');
 
     return { message: 'All product tables dropped successfully' };
@@ -477,20 +531,20 @@ export const checkProductTablesExist = async () => {
     const pool = dbConn.tb_pool;
     const tables = [
       'products',
-      'name_types',
+      'master_product_name_types',
       'product_names',
-      'categories',
+      'master_categories',
       'product_categories',
-      'customizations',
-      'customization_images',
+      'product_customizations',
+      'product_customization_images',
       'product_links',
       'product_link_images',
-      'alibaba_ids',
-      'packing_types',
+      'product_alibaba_ids',
+      'master_packing_types',
       'product_packings',
-      'certificate_types',
-      'certificates',
-      'certificate_files',
+      'master_certificate_types',
+      'product_certificates',
+      'product_certificate_files',
     ];
 
     const checkTableSQL = `
@@ -519,20 +573,20 @@ export const getProductTablesSchema = async () => {
     const pool = dbConn.tb_pool;
     const tables = [
       'products',
-      'name_types',
+      'master_product_name_types',
       'product_names',
-      'categories',
+      'master_categories',
       'product_categories',
-      'customizations',
-      'customization_images',
+      'product_customizations',
+      'product_customization_images',
       'product_links',
       'product_link_images',
-      'alibaba_ids',
-      'packing_types',
+      'product_alibaba_ids',
+      'master_packing_types',
       'product_packings',
-      'certificate_types',
-      'certificates',
-      'certificate_files',
+      'master_certificate_types',
+      'product_certificates',
+      'product_certificate_files',
     ];
 
     const schemas = {};
