@@ -97,22 +97,32 @@ export const createProduct = async (data) => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Generate UUID and product ID if not provided
-    const productId = data.id || uuidv4();
-    const productCode = data.product_id || (await generateProductId());
-
     // Start transaction
     await pool.query('START TRANSACTION');
 
     try {
-      // Create the product using CRUD utility
-      const productData = {
-        id: productId,
-        product_id: productCode,
-        icon_url: data.icon_url || null,
-        remark: data.remark || null,
-      };
+      // Extract related data that needs to be handled separately
+      const {
+        names,
+        packings,
+        customizations,
+        links,
+        categories,
+        alibaba_ids,
+        certificates,
+        ...productData
+      } = { ...data };
 
+      // Generate UUID and product ID if not provided
+      if (!productData.id) {
+        productData.id = uuidv4();
+      }
+
+      if (!productData.product_id) {
+        productData.product_id = await generateProductId();
+      }
+
+      // Create the product using CRUD utility
       const result = await CrudOperations.performCrud({
         operation: 'create',
         tableName: TABLE_NAME,
@@ -121,52 +131,47 @@ export const createProduct = async (data) => {
       });
 
       const product = result.record;
+      const productId = productData.id;
 
       // Add product names if provided
-      if (data.names && data.names.length > 0) {
-        await ProductNames.upsertProductNames(productId, data.names);
+      if (names && names.length > 0) {
+        await ProductNames.upsertProductNames(productId, names);
       }
 
       // Add packings if provided
-      if (data.packings && data.packings.length > 0) {
-        await ProductPackings.upsertProductPackings(productId, data.packings);
+      if (packings && packings.length > 0) {
+        await ProductPackings.upsertProductPackings(productId, packings);
       }
 
       // Add customizations if provided
-      if (data.customizations && data.customizations.length > 0) {
-        for (const customization of data.customizations) {
+      if (customizations && customizations.length > 0) {
+        for (const customization of customizations) {
           customization.product_id = productId;
           await ProductCustomizations.createCustomization(customization);
         }
       }
 
       // Add links if provided
-      if (data.links && data.links.length > 0) {
-        for (const link of data.links) {
+      if (links && links.length > 0) {
+        for (const link of links) {
           link.product_id = productId;
           await ProductLinks.createProductLink(link);
         }
       }
 
       // Add categories if provided
-      if (data.categories && data.categories.length > 0) {
-        await ProductCategories.upsertProductCategories(
-          productId,
-          data.categories
-        );
+      if (categories && categories.length > 0) {
+        await ProductCategories.upsertProductCategories(productId, categories);
       }
 
       // Add Alibaba IDs if provided
-      if (data.alibaba_ids && data.alibaba_ids.length > 0) {
-        await ProductAlibabaIds.upsertProductAlibabaIds(
-          productId,
-          data.alibaba_ids
-        );
+      if (alibaba_ids && alibaba_ids.length > 0) {
+        await ProductAlibabaIds.upsertProductAlibabaIds(productId, alibaba_ids);
       }
 
       // Add certificates if provided
-      if (data.certificates && data.certificates.length > 0) {
-        for (const certificate of data.certificates) {
+      if (certificates && certificates.length > 0) {
+        for (const certificate of certificates) {
           certificate.product_id = productId;
           await ProductCertificates.createProductCertificate(certificate);
         }
@@ -480,53 +485,40 @@ export const updateProduct = async (id, data) => {
     await pool.query('START TRANSACTION');
 
     try {
-      // Update product basic data if provided
-      if (
-        data.product_id !== undefined ||
-        data.icon_url !== undefined ||
-        data.remark !== undefined
-      ) {
-        const updateData = {};
+      // Extract related data that needs to be handled separately
+      const { names, packings, categories, alibaba_ids, ...productData } = {
+        ...data,
+      };
 
-        if (data.product_id !== undefined) {
-          updateData.product_id = data.product_id;
-        }
-
-        if (data.icon_url !== undefined) {
-          updateData.icon_url = data.icon_url;
-        }
-
-        if (data.remark !== undefined) {
-          updateData.remark = data.remark;
-        }
-
+      // Update product basic data if there are fields to update
+      if (Object.keys(productData).length > 0) {
         await CrudOperations.performCrud({
           operation: 'update',
           tableName: TABLE_NAME,
           id: id,
-          data: updateData,
+          data: productData,
           connection: pool,
         });
       }
 
       // Update product names if provided
-      if (data.names !== undefined) {
-        await ProductNames.upsertProductNames(id, data.names);
+      if (names !== undefined) {
+        await ProductNames.upsertProductNames(id, names);
       }
 
       // Update packings if provided
-      if (data.packings !== undefined) {
-        await ProductPackings.upsertProductPackings(id, data.packings);
+      if (packings !== undefined) {
+        await ProductPackings.upsertProductPackings(id, packings);
       }
 
       // Update categories if provided
-      if (data.categories !== undefined) {
-        await ProductCategories.upsertProductCategories(id, data.categories);
+      if (categories !== undefined) {
+        await ProductCategories.upsertProductCategories(id, categories);
       }
 
       // Update Alibaba IDs if provided
-      if (data.alibaba_ids !== undefined) {
-        await ProductAlibabaIds.upsertProductAlibabaIds(id, data.alibaba_ids);
+      if (alibaba_ids !== undefined) {
+        await ProductAlibabaIds.upsertProductAlibabaIds(id, alibaba_ids);
       }
 
       // Commit transaction

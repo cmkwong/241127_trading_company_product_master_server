@@ -21,64 +21,70 @@ const PRODUCT_LINK_IMAGES_TABLE = 'product_link_images';
 export const createProductLink = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.product_id) {
       throw new AppError('Product ID is required', 400);
     }
-    
+
     if (!data.link) {
       throw new AppError('Link URL is required', 400);
     }
-    
-    // Generate UUID if not provided
-    const linkId = data.id || uuidv4();
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
+      // Extract images from the data as they're handled separately
+      const images = data.images;
+
+      // Create a copy of the data to avoid modifying the original
+      const linkData = { ...data };
+      delete linkData.images;
+
+      // Generate UUID if not provided
+      if (!linkData.id) {
+        linkData.id = uuidv4();
+      }
+
+      // Set default link date if not provided
+      if (!linkData.link_date) {
+        linkData.link_date = new Date();
+      }
+
       // Create the product link using CRUD utility
-      const linkData = {
-        id: linkId,
-        product_id: data.product_id,
-        link: data.link,
-        remark: data.remark || null,
-        link_date: data.link_date || new Date()
-      };
-      
-      const result = await CrudOperations.performCrud({
+      await CrudOperations.performCrud({
         operation: 'create',
         tableName: PRODUCT_LINKS_TABLE,
         data: linkData,
-        connection: pool
+        connection: pool,
       });
-      
+
       // Add link images if provided
-      if (data.images && data.images.length > 0) {
-        const imageData = data.images.map((imageUrl, index) => ({
-          product_link_id: linkId,
+      if (images && images.length > 0) {
+        const imageData = images.map((imageUrl, index) => ({
+          product_link_id: linkData.id,
           image_url: imageUrl,
-          display_order: index
+          display_order: index,
         }));
-        
+
         await CrudOperations.performCrud({
           operation: 'bulkcreate',
           tableName: PRODUCT_LINK_IMAGES_TABLE,
           data: imageData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the complete link with images
-      const productLink = await getProductLinkById(linkId);
-      
+      const productLink = await getProductLinkById(linkData.id);
+
       return {
         message: 'Product link created successfully',
-        productLink
+        productLink,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -101,21 +107,21 @@ export const createProductLink = async (data) => {
 export const getProductLinkById = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product link using CRUD utility
     const linkResult = await CrudOperations.performCrud({
       operation: 'read',
       tableName: PRODUCT_LINKS_TABLE,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!linkResult.record) {
       throw new AppError('Product link not found', 404);
     }
-    
+
     const productLink = linkResult.record;
-    
+
     // Get link images
     const imagesSQL = `
       SELECT image_url
@@ -123,10 +129,10 @@ export const getProductLinkById = async (id) => {
       WHERE product_link_id = ?
       ORDER BY display_order
     `;
-    
+
     const imagesResult = await pool.query(imagesSQL, [id]);
-    productLink.images = imagesResult[0].map(img => img.image_url);
-    
+    productLink.images = imagesResult[0].map((img) => img.image_url);
+
     return productLink;
   } catch (error) {
     throw new AppError(
@@ -144,17 +150,17 @@ export const getProductLinkById = async (id) => {
 export const getProductLinksByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product links using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: PRODUCT_LINKS_TABLE,
       conditions: { product_id: productId },
-      connection: pool
+      connection: pool,
     });
-    
+
     const productLinks = result.records;
-    
+
     // Get images for each link
     for (const link of productLinks) {
       const imagesSQL = `
@@ -163,11 +169,11 @@ export const getProductLinksByProductId = async (productId) => {
         WHERE product_link_id = ?
         ORDER BY display_order
       `;
-      
+
       const imagesResult = await pool.query(imagesSQL, [link.id]);
-      link.images = imagesResult[0].map(img => img.image_url);
+      link.images = imagesResult[0].map((img) => img.image_url);
     }
-    
+
     return productLinks;
   } catch (error) {
     throw new AppError(
@@ -190,75 +196,66 @@ export const getProductLinksByProductId = async (productId) => {
 export const updateProductLink = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if product link exists
     await getProductLinkById(id);
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
-      // Update product link data if provided
-      if (data.link !== undefined || data.remark !== undefined || data.link_date !== undefined) {
-        const updateData = {};
-        
-        if (data.link !== undefined) {
-          updateData.link = data.link;
-        }
-        
-        if (data.remark !== undefined) {
-          updateData.remark = data.remark;
-        }
-        
-        if (data.link_date !== undefined) {
-          updateData.link_date = data.link_date;
-        }
-        
+      // Extract images from the data as they're handled separately
+      const images = data.images;
+
+      // Create a copy of the data to avoid modifying the original
+      const updateData = { ...data };
+      delete updateData.images;
+
+      // Update product link data if there are fields to update
+      if (Object.keys(updateData).length > 0) {
         await CrudOperations.performCrud({
           operation: 'update',
           tableName: PRODUCT_LINKS_TABLE,
           id: id,
           data: updateData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Update images if provided
-      if (data.images !== undefined) {
+      if (images !== undefined) {
         // Delete existing images
-        await CrudOperations.performCrud({
-          operation: 'delete',
-          tableName: PRODUCT_LINK_IMAGES_TABLE,
-          conditions: { product_link_id: id },
-          connection: pool
-        });
-        
+        await pool.query(
+          `DELETE FROM ${PRODUCT_LINK_IMAGES_TABLE} WHERE product_link_id = ?`,
+          [id]
+        );
+
         // Add new images
-        if (data.images && data.images.length > 0) {
-          const imageData = data.images.map((imageUrl, index) => ({
+        if (images && images.length > 0) {
+          const imageData = images.map((imageUrl, index) => ({
             product_link_id: id,
             image_url: imageUrl,
-            display_order: index
+            display_order: index,
           }));
-          
+
           await CrudOperations.performCrud({
             operation: 'bulkcreate',
             tableName: PRODUCT_LINK_IMAGES_TABLE,
             data: imageData,
-            connection: pool
+            connection: pool,
           });
         }
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated product link
       const productLink = await getProductLinkById(id);
-      
+
       return {
         message: 'Product link updated successfully',
-        productLink
+        productLink,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -281,36 +278,34 @@ export const updateProductLink = async (id, data) => {
 export const deleteProductLink = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if product link exists
     await getProductLinkById(id);
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete product link images first
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: PRODUCT_LINK_IMAGES_TABLE,
-        conditions: { product_link_id: id },
-        connection: pool
-      });
-      
+      await pool.query(
+        `DELETE FROM ${PRODUCT_LINK_IMAGES_TABLE} WHERE product_link_id = ?`,
+        [id]
+      );
+
       // Delete the product link
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: PRODUCT_LINKS_TABLE,
         id: id,
-        connection: pool
+        connection: pool,
       });
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Product link deleted successfully',
-        id
+        id,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -333,45 +328,43 @@ export const deleteProductLink = async (id) => {
 export const deleteProductLinksByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get all links for this product
     const productLinks = await getProductLinksByProductId(productId);
-    
+
     if (productLinks.length === 0) {
       return {
         message: 'No product links found for this product',
-        count: 0
+        count: 0,
       };
     }
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete product link images first
       for (const link of productLinks) {
-        await CrudOperations.performCrud({
-          operation: 'delete',
-          tableName: PRODUCT_LINK_IMAGES_TABLE,
-          conditions: { product_link_id: link.id },
-          connection: pool
-        });
+        await pool.query(
+          `DELETE FROM ${PRODUCT_LINK_IMAGES_TABLE} WHERE product_link_id = ?`,
+          [link.id]
+        );
       }
-      
+
       // Delete the product links
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: PRODUCT_LINKS_TABLE,
         conditions: { product_id: productId },
-        connection: pool
+        connection: pool,
       });
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Product links deleted successfully',
-        count: productLinks.length
+        count: productLinks.length,
       };
     } catch (error) {
       // Rollback transaction on error

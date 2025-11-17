@@ -1,5 +1,6 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
+import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Table name constant for consistency
@@ -33,28 +34,36 @@ export const getProductAlibabaIdsByProductId = async (productId) => {
  * Upserts product Alibaba IDs
  * @param {string} productId - The product ID
  * @param {Array<{alibaba_id: string, url: string}>} alibabaIds - The Alibaba IDs to upsert
- * @returns {Promise<void>} Promise that resolves when the operation is complete
+ * @returns {Promise<Object>} Promise that resolves with the upsert result
  */
 export const upsertProductAlibabaIds = async (productId, alibabaIds) => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Delete existing Alibaba IDs for this product
-    const deleteSQL = `DELETE FROM ${ALIBABA_IDS_TABLE} WHERE product_id = ?`;
-    await pool.query(deleteSQL, [productId]);
+    // Prepare the data for bulk upsert
+    const alibabaIdData =
+      alibabaIds && alibabaIds.length > 0
+        ? alibabaIds.map((item) => ({
+            id: uuidv4(),
+            product_id: productId,
+            ...item,
+          }))
+        : [];
 
-    // Insert new Alibaba IDs
-    if (alibabaIds && alibabaIds.length > 0) {
-      const insertSQL = `INSERT INTO ${ALIBABA_IDS_TABLE} (id, product_id, alibaba_id, url) VALUES ?`;
-      const values = alibabaIds.map((item) => [
-        uuidv4(),
-        productId,
-        item.alibaba_id,
-        item.url || null,
-      ]);
+    // Use the bulkUpsert operation from CRUD utility
+    const result = await CrudOperations.performCrud({
+      operation: 'bulkUpsert',
+      tableName: ALIBABA_IDS_TABLE,
+      data: alibabaIdData,
+      conditions: { product_id: productId },
+      connection: pool,
+    });
 
-      await pool.query(insertSQL, [values]);
-    }
+    return {
+      message: 'Product Alibaba IDs updated successfully',
+      count: alibabaIdData.length,
+      ids: result.ids,
+    };
   } catch (error) {
     throw new AppError(
       `Failed to upsert product Alibaba IDs: ${error.message}`,
@@ -79,11 +88,11 @@ export const getProductIdByAlibabaId = async (alibabaId) => {
     `;
 
     const result = await pool.query(sql, [alibabaId]);
-    
+
     if (result[0].length > 0) {
       return result[0][0].product_id;
     }
-    
+
     return null;
   } catch (error) {
     throw new AppError(

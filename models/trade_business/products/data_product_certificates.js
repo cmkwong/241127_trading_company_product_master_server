@@ -1,6 +1,7 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
+import logger from '../../../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import certificate files module
@@ -33,9 +34,10 @@ export const getProductCertificatesByProductId = async (
     // Include certificate files if requested
     if (includeFiles && certificates.length > 0) {
       for (const certificate of certificates) {
-        certificate.files = await CertificateFiles.getProductCertificateFilesByCertificateId(
-          certificate.id
-        );
+        certificate.files =
+          await CertificateFiles.getProductCertificateFilesByCertificateId(
+            certificate.id
+          );
       }
     }
 
@@ -47,7 +49,6 @@ export const getProductCertificatesByProductId = async (
     );
   }
 };
-
 /**
  * Creates a product certificate
  * @param {Object} data - The certificate data
@@ -65,15 +66,17 @@ export const createProductCertificate = async (data) => {
     await pool.query('START TRANSACTION');
 
     try {
-      // Create certificate
-      const certificateId = uuidv4();
-      const certificateData = {
-        id: certificateId,
-        product_id: data.product_id,
-        name: data.name,
-        description: data.description || null,
-      };
+      // Generate ID if not provided
+      const certificateId = data.id || uuidv4();
 
+      // Create a copy of the data to avoid modifying the original
+      const certificateData = { ...data, id: certificateId };
+
+      // Extract files from the data as they're handled separately
+      const files = certificateData.files;
+      delete certificateData.files;
+
+      // Create certificate - the CRUD utility will automatically filter out fields that don't exist in the schema
       await CrudOperations.performCrud({
         operation: 'create',
         tableName: CERTIFICATES_TABLE,
@@ -82,8 +85,11 @@ export const createProductCertificate = async (data) => {
       });
 
       // Add certificate files if provided
-      if (data.files && data.files.length > 0) {
-        await CertificateFiles.upsertProductCertificateFiles(certificateId, data.files);
+      if (files && files.length > 0) {
+        await CertificateFiles.upsertProductCertificateFiles(
+          certificateId,
+          files
+        );
       }
 
       // Commit transaction
@@ -132,7 +138,8 @@ export const getProductCertificateById = async (id, includeFiles = false) => {
 
     // Include certificate files if requested
     if (includeFiles) {
-      certificate.files = await CertificateFiles.getProductCertificateFilesByCertificateId(id);
+      certificate.files =
+        await CertificateFiles.getProductCertificateFilesByCertificateId(id);
     }
 
     return certificate;
@@ -164,18 +171,16 @@ export const updateProductCertificate = async (id, data) => {
     await pool.query('START TRANSACTION');
 
     try {
-      // Update certificate data if provided
-      if (data.name !== undefined || data.description !== undefined) {
-        const updateData = {};
+      // Create a copy of the data to avoid modifying the original
+      const updateData = { ...data };
 
-        if (data.name !== undefined) {
-          updateData.name = data.name;
-        }
+      // Extract files from the data as they're handled separately
+      const files = updateData.files;
+      delete updateData.files;
 
-        if (data.description !== undefined) {
-          updateData.description = data.description;
-        }
-
+      // Only update if there are fields to update
+      if (Object.keys(updateData).length > 0) {
+        // Update certificate - the CRUD utility will automatically filter out fields that don't exist in the schema
         await CrudOperations.performCrud({
           operation: 'update',
           tableName: CERTIFICATES_TABLE,
@@ -186,8 +191,8 @@ export const updateProductCertificate = async (id, data) => {
       }
 
       // Update certificate files if provided
-      if (data.files !== undefined) {
-        await CertificateFiles.upsertProductCertificateFiles(id, data.files);
+      if (files !== undefined) {
+        await CertificateFiles.upsertProductCertificateFiles(id, files);
       }
 
       // Commit transaction

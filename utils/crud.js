@@ -9,11 +9,11 @@ class CrudOperations {
   /**
    * Performs a CRUD operation based on table schema
    * @param {Object} options - Options for the operation
-   * @param {string} options.operation - Type of operation ('create', 'read', 'update', 'delete', 'bulkCreate', 'bulkUpdate')
+   * @param {string} options.operation - Type of operation ('create', 'read', 'update', 'delete', 'bulkCreate', 'bulkUpdate', 'upsert', 'bulkUpsert')
    * @param {string} options.tableName - Name of the table
-   * @param {Object|Array} [options.data] - Data for create/update operations (object for single, array for bulk)
+   * @param {Object|Array} [options.data] - Data for create/update/upsert operations (object for single, array for bulk)
    * @param {string|Array} [options.id] - ID or array of IDs for read/update/delete operations
-   * @param {Object} [options.conditions] - Additional conditions for read operations
+   * @param {Object} [options.conditions] - Additional conditions for read operations or identifying records for upsert
    * @param {Array} [options.fields] - Fields to return for read operations
    * @param {Object} [options.connection] - Database connection to use (for transactions)
    * @param {number} [options.page] - Page number for pagination
@@ -155,6 +155,30 @@ class CrudOperations {
             id,
             softDelete,
             hasDeletedAt
+          );
+          break;
+
+        case 'upsert':
+          result = await this.upsertRecord(
+            connection,
+            tableName,
+            schema,
+            data,
+            conditions,
+            hasCreatedAt,
+            hasUpdatedAt
+          );
+          break;
+
+        case 'bulkupsert':
+          result = await this.bulkUpsertRecords(
+            connection,
+            tableName,
+            schema,
+            data,
+            conditions,
+            hasCreatedAt,
+            hasUpdatedAt
           );
           break;
 
@@ -1025,6 +1049,321 @@ class CrudOperations {
       };
     } catch (error) {
       // Rollback the transaction on error
+      await dbModel.executeQuery(connection, 'ROLLBACK');
+      throw error;
+    }
+  }
+
+  /**
+   * Performs an upsert operation (delete then insert)
+   * @param {Object} connection - Database connection
+   * @param {string} tableName - Name of the table
+   * @param {Array} schema - Table schema
+   * @param {Object} data - Data to upsert
+   * @param {Object} conditions - Conditions to identify existing records to replace
+   * @param {boolean} hasCreatedAt - Whether the table has a created_at column
+   * @param {boolean} hasUpdatedAt - Whether the table has an updated_at column
+   * @returns {Promise<Object>} Promise that resolves with the upserted record
+   */
+  static async upsertRecord(
+    connection,
+    tableName,
+    schema,
+    data,
+    conditions,
+    hasCreatedAt,
+    hasUpdatedAt
+  ) {
+    if (!data) {
+      throw new AppError('No data provided for upsert operation', 400);
+    }
+
+    if (!conditions || Object.keys(conditions).length === 0) {
+      throw new AppError('No conditions provided for upsert operation', 400);
+    }
+
+    // Start transaction
+    await dbModel.executeQuery(connection, 'START TRANSACTION');
+
+    try {
+      // Build WHERE clause for deletion
+      const whereConditions = [];
+      const whereParams = [];
+
+      Object.entries(conditions).forEach(([column, value]) => {
+        if (schema.some((col) => col.COLUMN_NAME === column)) {
+          whereConditions.push(`${column} = ?`);
+          whereParams.push(value);
+        }
+      });
+
+      if (whereConditions.length === 0) {
+        throw new AppError(
+          'No valid conditions found for upsert operation',
+          400
+        );
+      }
+
+      // Delete existing records that match the conditions
+      const deleteSQL = `DELETE FROM ${tableName} WHERE ${whereConditions.join(
+        ' AND '
+      )}`;
+      await dbModel.executeQuery(connection, deleteSQL, whereParams);
+
+      // Create a copy of the data to avoid modifying the original
+      const recordData = { ...data };
+
+      // Generate UUID for ID field if needed
+      const idColumn = schema.find(
+        (col) =>
+          col.COLUMN_KEY === 'PRI' &&
+          col.COLUMN_NAME.toLowerCase().includes('id')
+      );
+      if (
+        idColumn &&
+        !recordData[idColumn.COLUMN_NAME] &&
+        idColumn.DATA_TYPE.includes('char')
+      ) {
+        recordData[idColumn.COLUMN_NAME] = uuidv4();
+      }
+
+      // Add timestamps if the table has them
+      const now = new Date();
+      if (hasCreatedAt) {
+        recordData.created_at = now;
+      }
+      if (hasUpdatedAt) {
+        recordData.updated_at = now;
+      }
+
+      // Prepare columns and values for the insert query
+      const columns = [];
+      const placeholders = [];
+      const values = [];
+
+      schema.forEach((column) => {
+        const columnName = column.COLUMN_NAME;
+        if (recordData[columnName] !== undefined) {
+          columns.push(columnName);
+          placeholders.push('?');
+          values.push(recordData[columnName]);
+        }
+      });
+
+      if (columns.length === 0) {
+        throw new AppError('No valid columns found in the provided data', 400);
+      }
+
+      // Build and execute the insert query
+      const insertSQL = `
+      INSERT INTO ${tableName} (${columns.join(', ')})
+      VALUES (${placeholders.join(', ')})
+    `;
+
+      const result = await dbModel.executeQuery(connection, insertSQL, values);
+
+      // Commit transaction
+      await dbModel.executeQuery(connection, 'COMMIT');
+
+      // Get the ID of the upserted record
+      const insertId = result.insertId || recordData[idColumn.COLUMN_NAME];
+
+      // Read the upserted record
+      const upsertedRecord = await this.readRecords(
+        connection,
+        tableName,
+        schema,
+        insertId
+      );
+
+      return {
+        message: `Record upserted successfully in ${tableName}`,
+        id: insertId,
+        record: upsertedRecord.records || upsertedRecord.record,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await dbModel.executeQuery(connection, 'ROLLBACK');
+      throw error;
+    }
+  }
+
+  /**
+   * Performs a bulk upsert operation (delete then bulk insert)
+   * @param {Object} connection - Database connection
+   * @param {string} tableName - Name of the table
+   * @param {Array} schema - Table schema
+   * @param {Array} dataArray - Array of data objects to upsert
+   * @param {Object} conditions - Conditions to identify existing records to replace
+   * @param {boolean} hasCreatedAt - Whether the table has a created_at column
+   * @param {boolean} hasUpdatedAt - Whether the table has an updated_at column
+   * @returns {Promise<Object>} Promise that resolves with the upserted records
+   */
+  static async bulkUpsertRecords(
+    connection,
+    tableName,
+    schema,
+    dataArray,
+    conditions,
+    hasCreatedAt,
+    hasUpdatedAt
+  ) {
+    if (!Array.isArray(dataArray) || dataArray.length === 0) {
+      throw new AppError('No data provided for bulk upsert operation', 400);
+    }
+
+    if (!conditions || Object.keys(conditions).length === 0) {
+      throw new AppError(
+        'No conditions provided for bulk upsert operation',
+        400
+      );
+    }
+
+    // Start transaction
+    await dbModel.executeQuery(connection, 'START TRANSACTION');
+
+    try {
+      // Build WHERE clause for deletion
+      const whereConditions = [];
+      const whereParams = [];
+
+      Object.entries(conditions).forEach(([column, value]) => {
+        if (schema.some((col) => col.COLUMN_NAME === column)) {
+          whereConditions.push(`${column} = ?`);
+          whereParams.push(value);
+        }
+      });
+
+      if (whereConditions.length === 0) {
+        throw new AppError(
+          'No valid conditions found for bulk upsert operation',
+          400
+        );
+      }
+
+      // Delete existing records that match the conditions
+      const deleteSQL = `DELETE FROM ${tableName} WHERE ${whereConditions.join(
+        ' AND '
+      )}`;
+      await dbModel.executeQuery(connection, deleteSQL, whereParams);
+
+      // Get the primary key column
+      const idColumn = schema.find((col) => col.COLUMN_KEY === 'PRI');
+      const idColumnName = idColumn.COLUMN_NAME;
+
+      // Prepare for bulk insert
+      const now = new Date();
+      const columns = new Set();
+      const allValues = [];
+      const createdIds = [];
+
+      // First pass: determine all columns that will be used
+      dataArray.forEach((data) => {
+        Object.keys(data).forEach((key) => {
+          if (schema.some((col) => col.COLUMN_NAME === key)) {
+            columns.add(key);
+          }
+        });
+      });
+
+      // Add timestamp columns if needed
+      if (hasCreatedAt) columns.add('created_at');
+      if (hasUpdatedAt) columns.add('updated_at');
+
+      // Convert Set to Array for easier handling
+      const columnArray = Array.from(columns);
+
+      // Second pass: prepare values for each record
+      dataArray.forEach((data) => {
+        const recordValues = [];
+
+        // Create a copy of the data to avoid modifying the original
+        const recordData = { ...data };
+
+        // Generate UUID for ID field if needed
+        if (
+          idColumn &&
+          !recordData[idColumnName] &&
+          idColumn.DATA_TYPE.includes('char')
+        ) {
+          recordData[idColumnName] = uuidv4();
+        }
+
+        // Add timestamps if the table has them
+        if (hasCreatedAt) {
+          recordData.created_at = now;
+        }
+        if (hasUpdatedAt) {
+          recordData.updated_at = now;
+        }
+
+        // Store the ID for later use
+        if (recordData[idColumnName]) {
+          createdIds.push(recordData[idColumnName]);
+        }
+
+        // Prepare values in the same order as columns
+        columnArray.forEach((column) => {
+          recordValues.push(
+            recordData[column] !== undefined ? recordData[column] : null
+          );
+        });
+
+        allValues.push(recordValues);
+      });
+
+      // Build placeholders for the query
+      const placeholderGroups = allValues.map(
+        () => `(${columnArray.map(() => '?').join(', ')})`
+      );
+
+      // Build and execute the query
+      const sql = `
+      INSERT INTO ${tableName} (${columnArray.join(', ')})
+      VALUES ${placeholderGroups.join(', ')}
+    `;
+
+      // Flatten the values array for the query
+      const flatValues = allValues.flat();
+
+      const result = await dbModel.executeQuery(connection, sql, flatValues);
+
+      // Commit transaction
+      await dbModel.executeQuery(connection, 'COMMIT');
+
+      // Get the created records
+      let upsertedRecords;
+      if (createdIds.length > 0) {
+        // If we have IDs, fetch by IDs
+        upsertedRecords = await this.readRecords(
+          connection,
+          tableName,
+          schema,
+          createdIds
+        );
+      } else if (result.insertId) {
+        // Otherwise, fetch a range based on insertId
+        const ids = Array.from(
+          { length: dataArray.length },
+          (_, i) => result.insertId + i
+        );
+        upsertedRecords = await this.readRecords(
+          connection,
+          tableName,
+          schema,
+          ids
+        );
+      }
+
+      return {
+        message: `${dataArray.length} records upserted successfully in ${tableName}`,
+        count: dataArray.length,
+        ids: createdIds.length > 0 ? createdIds : undefined,
+        firstInsertId: result.insertId || undefined,
+        records: upsertedRecords?.records || [],
+      };
+    } catch (error) {
+      // Rollback transaction on error
       await dbModel.executeQuery(connection, 'ROLLBACK');
       throw error;
     }

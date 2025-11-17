@@ -21,64 +21,65 @@ const CUSTOMIZATION_IMAGES_TABLE = 'customization_images';
 export const createCustomization = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.product_id) {
       throw new AppError('Product ID is required', 400);
     }
-    
+
     if (!data.name) {
       throw new AppError('Customization name is required', 400);
     }
-    
-    // Generate UUID if not provided
-    const customizationId = data.id || uuidv4();
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
+      // Extract images from the data as they're handled separately
+      const images = data.images;
+
+      // Create a copy of the data to avoid modifying the original
+      const customizationData = { ...data };
+      delete customizationData.images;
+
+      // Generate UUID if not provided
+      if (!customizationData.id) {
+        customizationData.id = uuidv4();
+      }
+
       // Create the customization using CRUD utility
-      const customizationData = {
-        id: customizationId,
-        product_id: data.product_id,
-        name: data.name,
-        code: data.code || null,
-        remark: data.remark || null
-      };
-      
       const result = await CrudOperations.performCrud({
         operation: 'create',
         tableName: CUSTOMIZATIONS_TABLE,
         data: customizationData,
-        connection: pool
+        connection: pool,
       });
-      
+
       // Add customization images if provided
-      if (data.images && data.images.length > 0) {
-        const imageData = data.images.map((imageUrl, index) => ({
-          customization_id: customizationId,
+      if (images && images.length > 0) {
+        const imageData = images.map((imageUrl, index) => ({
+          customization_id: customizationData.id,
           image_url: imageUrl,
-          display_order: index
+          display_order: index,
         }));
-        
+
         await CrudOperations.performCrud({
           operation: 'bulkcreate',
           tableName: CUSTOMIZATION_IMAGES_TABLE,
           data: imageData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the complete customization with images
-      const customization = await getCustomizationById(customizationId);
-      
+      const customization = await getCustomizationById(customizationData.id);
+
       return {
         message: 'Customization created successfully',
-        customization
+        customization,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -101,21 +102,21 @@ export const createCustomization = async (data) => {
 export const getCustomizationById = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the customization using CRUD utility
     const customizationResult = await CrudOperations.performCrud({
       operation: 'read',
       tableName: CUSTOMIZATIONS_TABLE,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!customizationResult.record) {
       throw new AppError('Customization not found', 404);
     }
-    
+
     const customization = customizationResult.record;
-    
+
     // Get customization images
     const imagesSQL = `
       SELECT image_url
@@ -123,10 +124,10 @@ export const getCustomizationById = async (id) => {
       WHERE customization_id = ?
       ORDER BY display_order
     `;
-    
+
     const imagesResult = await pool.query(imagesSQL, [id]);
-    customization.images = imagesResult[0].map(img => img.image_url);
-    
+    customization.images = imagesResult[0].map((img) => img.image_url);
+
     return customization;
   } catch (error) {
     throw new AppError(
@@ -144,17 +145,17 @@ export const getCustomizationById = async (id) => {
 export const getCustomizationsByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the customizations using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: CUSTOMIZATIONS_TABLE,
       conditions: { product_id: productId },
-      connection: pool
+      connection: pool,
     });
-    
+
     const customizations = result.records;
-    
+
     // Get images for each customization
     for (const customization of customizations) {
       const imagesSQL = `
@@ -163,11 +164,11 @@ export const getCustomizationsByProductId = async (productId) => {
         WHERE customization_id = ?
         ORDER BY display_order
       `;
-      
+
       const imagesResult = await pool.query(imagesSQL, [customization.id]);
-      customization.images = imagesResult[0].map(img => img.image_url);
+      customization.images = imagesResult[0].map((img) => img.image_url);
     }
-    
+
     return customizations;
   } catch (error) {
     throw new AppError(
@@ -190,75 +191,66 @@ export const getCustomizationsByProductId = async (productId) => {
 export const updateCustomization = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if customization exists
     await getCustomizationById(id);
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
-      // Update customization data if provided
-      if (data.name !== undefined || data.code !== undefined || data.remark !== undefined) {
-        const updateData = {};
-        
-        if (data.name !== undefined) {
-          updateData.name = data.name;
-        }
-        
-        if (data.code !== undefined) {
-          updateData.code = data.code;
-        }
-        
-        if (data.remark !== undefined) {
-          updateData.remark = data.remark;
-        }
-        
+      // Extract images from the data as they're handled separately
+      const images = data.images;
+
+      // Create a copy of the data to avoid modifying the original
+      const updateData = { ...data };
+      delete updateData.images;
+
+      // Update customization data if there are fields to update
+      if (Object.keys(updateData).length > 0) {
         await CrudOperations.performCrud({
           operation: 'update',
           tableName: CUSTOMIZATIONS_TABLE,
           id: id,
           data: updateData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Update images if provided
-      if (data.images !== undefined) {
+      if (images !== undefined) {
         // Delete existing images
-        await CrudOperations.performCrud({
-          operation: 'delete',
-          tableName: CUSTOMIZATION_IMAGES_TABLE,
-          conditions: { customization_id: id },
-          connection: pool
-        });
-        
+        await pool.query(
+          `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
+          [id]
+        );
+
         // Add new images
-        if (data.images && data.images.length > 0) {
-          const imageData = data.images.map((imageUrl, index) => ({
+        if (images && images.length > 0) {
+          const imageData = images.map((imageUrl, index) => ({
             customization_id: id,
             image_url: imageUrl,
-            display_order: index
+            display_order: index,
           }));
-          
+
           await CrudOperations.performCrud({
             operation: 'bulkcreate',
             tableName: CUSTOMIZATION_IMAGES_TABLE,
             data: imageData,
-            connection: pool
+            connection: pool,
           });
         }
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated customization
       const customization = await getCustomizationById(id);
-      
+
       return {
         message: 'Customization updated successfully',
-        customization
+        customization,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -281,36 +273,34 @@ export const updateCustomization = async (id, data) => {
 export const deleteCustomization = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if customization exists
     await getCustomizationById(id);
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete customization images first
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: CUSTOMIZATION_IMAGES_TABLE,
-        conditions: { customization_id: id },
-        connection: pool
-      });
-      
+      await pool.query(
+        `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
+        [id]
+      );
+
       // Delete the customization
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: CUSTOMIZATIONS_TABLE,
         id: id,
-        connection: pool
+        connection: pool,
       });
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Customization deleted successfully',
-        id
+        id,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -333,45 +323,43 @@ export const deleteCustomization = async (id) => {
 export const deleteCustomizationsByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get all customizations for this product
     const customizations = await getCustomizationsByProductId(productId);
-    
+
     if (customizations.length === 0) {
       return {
         message: 'No customizations found for this product',
-        count: 0
+        count: 0,
       };
     }
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete customization images first
       for (const customization of customizations) {
-        await CrudOperations.performCrud({
-          operation: 'delete',
-          tableName: CUSTOMIZATION_IMAGES_TABLE,
-          conditions: { customization_id: customization.id },
-          connection: pool
-        });
+        await pool.query(
+          `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
+          [customization.id]
+        );
       }
-      
+
       // Delete the customizations
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: CUSTOMIZATIONS_TABLE,
         conditions: { product_id: productId },
-        connection: pool
+        connection: pool,
       });
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Customizations deleted successfully',
-        count: customizations.length
+        count: customizations.length,
       };
     } catch (error) {
       // Rollback transaction on error

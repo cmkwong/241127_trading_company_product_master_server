@@ -16,16 +16,16 @@ const TABLE_NAME = 'product_link_images';
 export const addProductLinkImage = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.product_link_id) {
       throw new AppError('Product link ID is required', 400);
     }
-    
+
     if (!data.image_url) {
       throw new AppError('Image URL is required', 400);
     }
-    
+
     // If display_order not provided, get the next available order
     if (data.display_order === undefined) {
       const orderSQL = `
@@ -33,22 +33,22 @@ export const addProductLinkImage = async (data) => {
         FROM ${TABLE_NAME}
         WHERE product_link_id = ?
       `;
-      
+
       const orderResult = await pool.query(orderSQL, [data.product_link_id]);
       data.display_order = orderResult[0][0].next_order;
     }
-    
+
     // Create the product link image using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'create',
       tableName: TABLE_NAME,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product link image added successfully',
-      productLinkImage: result.record
+      productLinkImage: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -66,15 +66,15 @@ export const addProductLinkImage = async (data) => {
 export const getProductLinkImagesByLinkId = async (productLinkId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product link images using CRUD utility with ordering
     const sql = `
-      SELECT id, product_link_id, image_url, display_order
+      SELECT id, *
       FROM ${TABLE_NAME}
       WHERE product_link_id = ?
       ORDER BY display_order
     `;
-    
+
     const result = await pool.query(sql, [productLinkId]);
     return result[0];
   } catch (error) {
@@ -96,23 +96,23 @@ export const getProductLinkImagesByLinkId = async (productLinkId) => {
 export const updateProductLinkImage = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Update the product link image using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'update',
       tableName: TABLE_NAME,
       id: id,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!result.record) {
       throw new AppError('Product link image not found', 404);
     }
-    
+
     return {
       message: 'Product link image updated successfully',
-      productLinkImage: result.record
+      productLinkImage: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -130,18 +130,18 @@ export const updateProductLinkImage = async (id, data) => {
 export const deleteProductLinkImage = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Delete the product link image using CRUD utility
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product link image deleted successfully',
-      id
+      id,
     };
   } catch (error) {
     throw new AppError(
@@ -160,46 +160,46 @@ export const deleteProductLinkImage = async (id) => {
 export const updateProductLinkImages = async (productLinkId, imageUrls) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete existing images
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: TABLE_NAME,
         conditions: { product_link_id: productLinkId },
-        connection: pool
+        connection: pool,
       });
-      
+
       // Add new images
       if (imageUrls && imageUrls.length > 0) {
         const imageData = imageUrls.map((imageUrl, index) => ({
           product_link_id: productLinkId,
           image_url: imageUrl,
-          display_order: index
+          display_order: index,
         }));
-        
+
         await CrudOperations.performCrud({
           operation: 'bulkcreate',
           tableName: TABLE_NAME,
           data: imageData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated images
       const images = await getProductLinkImagesByLinkId(productLinkId);
-      
+
       return {
         message: 'Product link images updated successfully',
         productLinkId,
         imageCount: images.length,
-        images
+        images,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -223,10 +223,10 @@ export const updateProductLinkImages = async (productLinkId, imageUrls) => {
 export const reorderProductLinkImages = async (productLinkId, orderData) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Update display order for each image
       for (const item of orderData) {
@@ -235,20 +235,20 @@ export const reorderProductLinkImages = async (productLinkId, orderData) => {
           tableName: TABLE_NAME,
           id: item.id,
           data: { display_order: item.display_order },
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated images
       const images = await getProductLinkImagesByLinkId(productLinkId);
-      
+
       return {
         message: 'Product link images reordered successfully',
         productLinkId,
-        images
+        images,
       };
     } catch (error) {
       // Rollback transaction on error
