@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constants for consistency
-const PRODUCT_LINKS_TABLE = TABLE_MASTER['PRODUCT_LINKS'];
-const PRODUCT_LINK_IMAGES_TABLE = TABLE_MASTER['PRODUCT_LINK_IMAGES'];
+const PRODUCT_LINKS_TABLE = TABLE_MASTER['PRODUCT_LINKS'].name;
+const PRODUCT_LINK_IMAGES_TABLE = TABLE_MASTER['PRODUCT_LINK_IMAGES'].name;
 
 /**
  * Creates a new product link

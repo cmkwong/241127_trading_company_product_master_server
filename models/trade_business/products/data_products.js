@@ -14,7 +14,7 @@ import * as ProductCertificates from './data_product_certificates.js';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = TABLE_MASTER['PRODUCTS'];
+const TABLE_NAME = TABLE_MASTER['PRODUCTS'].name;
 
 /**
  * Generates a unique product ID

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const CERTIFICATE_FILES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'];
+const CERTIFICATE_FILES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name;
 
 /**
  * Gets certificate files by certificate ID

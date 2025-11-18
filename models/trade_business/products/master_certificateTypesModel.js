@@ -5,8 +5,8 @@ import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constants for consistency
-const CERTIFICATE_TYPES_TABLE = TABLE_MASTER['CERTIFICATE_TYPES'];
-const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'];
+const CERTIFICATE_TYPES_TABLE = TABLE_MASTER['CERTIFICATE_TYPES'].name;
+const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
 
 /**
  * Creates a new certificate type

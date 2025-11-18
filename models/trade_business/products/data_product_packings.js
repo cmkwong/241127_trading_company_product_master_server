@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = TABLE_MASTER['PRODUCT_PACKINGS'];
+const TABLE_NAME = TABLE_MASTER['PRODUCT_PACKINGS'].name;
 
 /**
  * Creates a new product packing

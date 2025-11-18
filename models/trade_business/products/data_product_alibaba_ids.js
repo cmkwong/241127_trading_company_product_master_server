@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const ALIBABA_IDS_TABLE = TABLE_MASTER['PRODUCT_ALIBABA_IDS'];
+const ALIBABA_IDS_TABLE = TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name;
 
 /**
  * Gets product Alibaba IDs by product ID

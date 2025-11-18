@@ -5,8 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constants for consistency
-const CUSTOMIZATIONS_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'];
-const CUSTOMIZATION_IMAGES_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'];
+const CUSTOMIZATIONS_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name;
+const CUSTOMIZATION_IMAGES_TABLE =
+  TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name;
 
 /**
  * Creates a new customization for a product

@@ -5,7 +5,7 @@ import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const CATEGORIES_TABLE = TABLE_MASTER['CATEGORIES'];
+const CATEGORIES_TABLE = TABLE_MASTER['CATEGORIES'].name;
 
 /**
  * Creates a new category

@@ -9,7 +9,7 @@ import { TABLE_MASTER } from '../../tables.js';
 import * as CertificateFiles from './data_product_certificate_files.js';
 
 // Table name constant for consistency
-const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'];
+const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
 
 /**
  * Gets product certificates by product ID
