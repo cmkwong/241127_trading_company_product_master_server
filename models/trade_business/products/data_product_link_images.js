@@ -1,9 +1,10 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = 'product_link_images';
+const TABLE_NAME = TABLE_NAMES['PRODUCT_LINK_IMAGES'];
 
 /**
  * Adds an image to a product link

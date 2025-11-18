@@ -2,9 +2,10 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = 'product_packings';
+const TABLE_NAME = TABLE_NAMES['PRODUCT_PACKINGS'];
 
 /**
  * Creates a new product packing
@@ -21,49 +22,49 @@ const TABLE_NAME = 'product_packings';
 export const createProductPacking = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.product_id) {
       throw new AppError('Product ID is required', 400);
     }
-    
+
     if (!data.packing_type_id) {
       throw new AppError('Packing type ID is required', 400);
     }
-    
+
     if (!data.length || data.length <= 0) {
       throw new AppError('Valid length is required', 400);
     }
-    
+
     if (!data.width || data.width <= 0) {
       throw new AppError('Valid width is required', 400);
     }
-    
+
     if (!data.height || data.height <= 0) {
       throw new AppError('Valid height is required', 400);
     }
-    
+
     if (!data.weight || data.weight <= 0) {
       throw new AppError('Valid weight is required', 400);
     }
-    
+
     // Set default quantity if not provided
     const packingData = {
       ...data,
-      quantity: data.quantity || 1
+      quantity: data.quantity || 1,
     };
-    
+
     // Create the product packing using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'create',
       tableName: TABLE_NAME,
       data: packingData,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product packing created successfully',
-      productPacking: result.record
+      productPacking: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -81,19 +82,19 @@ export const createProductPacking = async (data) => {
 export const getProductPackingById = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product packing using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!result.record) {
       throw new AppError('Product packing not found', 404);
     }
-    
+
     return result.record;
   } catch (error) {
     throw new AppError(
@@ -111,7 +112,7 @@ export const getProductPackingById = async (id) => {
 export const getProductPackingsByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // For this query with joins, we'll use direct SQL
     const sql = `
       SELECT pp.*, mpt.name as packing_type_name, mpt.description as packing_type_description
@@ -120,7 +121,7 @@ export const getProductPackingsByProductId = async (productId) => {
       WHERE pp.product_id = ?
       ORDER BY pp.packing_type_id
     `;
-    
+
     const result = await pool.query(sql, [productId]);
     return result[0];
   } catch (error) {
@@ -146,40 +147,40 @@ export const getProductPackingsByProductId = async (productId) => {
 export const updateProductPacking = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate dimensions and weight if provided
     if (data.length !== undefined && data.length <= 0) {
       throw new AppError('Length must be greater than zero', 400);
     }
-    
+
     if (data.width !== undefined && data.width <= 0) {
       throw new AppError('Width must be greater than zero', 400);
     }
-    
+
     if (data.height !== undefined && data.height <= 0) {
       throw new AppError('Height must be greater than zero', 400);
     }
-    
+
     if (data.weight !== undefined && data.weight <= 0) {
       throw new AppError('Weight must be greater than zero', 400);
     }
-    
+
     // Update the product packing using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'update',
       tableName: TABLE_NAME,
       id: id,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!result.record) {
       throw new AppError('Product packing not found', 404);
     }
-    
+
     return {
       message: 'Product packing updated successfully',
-      productPacking: result.record
+      productPacking: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -197,21 +198,21 @@ export const updateProductPacking = async (id, data) => {
 export const deleteProductPacking = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if product packing exists
     await getProductPackingById(id);
-    
+
     // Delete the product packing using CRUD utility
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product packing deleted successfully',
-      id
+      id,
     };
   } catch (error) {
     throw new AppError(
@@ -230,51 +231,51 @@ export const deleteProductPacking = async (id) => {
 export const upsertProductPackings = async (productId, packings) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Get existing packings for this product
       const existingPackings = await getProductPackingsByProductId(productId);
-      
+
       // Delete all existing packings
       for (const packing of existingPackings) {
         await CrudOperations.performCrud({
           operation: 'delete',
           tableName: TABLE_NAME,
           id: packing.id,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Create new packings
       const createdPackings = [];
-      
+
       for (const packing of packings) {
         const packingData = {
           ...packing,
-          product_id: productId
+          product_id: productId,
         };
-        
+
         const result = await CrudOperations.performCrud({
           operation: 'create',
           tableName: TABLE_NAME,
           data: packingData,
-          connection: pool
+          connection: pool,
         });
-        
+
         createdPackings.push(result.record);
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Product packings updated successfully',
         deleted: existingPackings.length,
         created: createdPackings.length,
-        packings: await getProductPackingsByProductId(productId)
+        packings: await getProductPackingsByProductId(productId),
       };
     } catch (error) {
       // Rollback transaction on error
@@ -297,28 +298,28 @@ export const upsertProductPackings = async (productId, packings) => {
 export const deleteProductPackingsByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get all packings for this product
     const packings = await getProductPackingsByProductId(productId);
-    
+
     if (packings.length === 0) {
       return {
         message: 'No product packings found for this product',
-        count: 0
+        count: 0,
       };
     }
-    
+
     // Delete the product packings
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       conditions: { product_id: productId },
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product packings deleted successfully',
-      count: packings.length
+      count: packings.length,
     };
   } catch (error) {
     throw new AppError(
@@ -338,7 +339,7 @@ export const calculatePackingVolume = (packing) => {
   const lengthInM = packing.length / 100;
   const widthInM = packing.width / 100;
   const heightInM = packing.height / 100;
-  
+
   return lengthInM * widthInM * heightInM;
 };
 
@@ -349,10 +350,10 @@ export const calculatePackingVolume = (packing) => {
 export const getPackingTypes = async () => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     const sql = `SELECT * FROM master_packing_types ORDER BY id`;
     const result = await pool.query(sql);
-    
+
     return result[0];
   } catch (error) {
     throw new AppError(
@@ -372,23 +373,23 @@ export const getPackingTypes = async () => {
 export const createPackingType = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.name) {
       throw new AppError('Packing type name is required', 400);
     }
-    
+
     // Create the packing type using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'create',
       tableName: 'master_packing_types',
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Packing type created successfully',
-      packingType: result.record
+      packingType: result.record,
     };
   } catch (error) {
     throw new AppError(

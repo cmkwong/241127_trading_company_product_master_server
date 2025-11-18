@@ -1,9 +1,10 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const PRODUCT_CATEGORIES_TABLE = 'product_categories';
+const PRODUCT_CATEGORIES_TABLE = TABLE_NAMES['PRODUCT_CATEGORIES'];
 
 /**
  * Gets product categories by product ID

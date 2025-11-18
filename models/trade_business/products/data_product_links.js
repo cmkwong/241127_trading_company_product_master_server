@@ -2,10 +2,11 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constants for consistency
-const PRODUCT_LINKS_TABLE = 'product_links';
-const PRODUCT_LINK_IMAGES_TABLE = 'product_link_images';
+const PRODUCT_LINKS_TABLE = TABLE_NAMES['PRODUCT_LINKS'];
+const PRODUCT_LINK_IMAGES_TABLE = TABLE_NAMES['PRODUCT_LINK_IMAGES'];
 
 /**
  * Creates a new product link

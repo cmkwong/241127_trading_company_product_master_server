@@ -153,14 +153,40 @@ export const protect = catchAsync(async (req, res, next) => {
 
 // restrict the user role
 export const restrictTo = (...roles) => {
-  // cannot pass the parameter into middleware directly
   return (req, res, next) => {
-    //roles ['admin', 'lead-guide']. role='user'
-    if (!roles.includes(req.user.role)) {
+    // Check if user object exists
+    if (!req.user) {
+      return next(
+        new AppError('User authentication required for this operation', 401)
+      );
+    }
+
+    // Check if user has a role property
+    if (!req.user.role) {
+      return next(new AppError('User role information is missing', 403));
+    }
+
+    // If user has multiple roles (as an array)
+    if (Array.isArray(req.user.role)) {
+      // Check if any of the user's roles are allowed
+      const hasPermission = req.user.role.some((userRole) =>
+        roles.includes(userRole)
+      );
+
+      if (!hasPermission) {
+        return next(
+          new AppError('You do not have permission to perform this action', 403)
+        );
+      }
+    }
+    // If user has a single role (as a string)
+    else if (!roles.includes(req.user.role)) {
       return next(
         new AppError('You do not have permission to perform this action', 403)
       );
     }
+
+    // If we reach here, the user has the required role(s)
     next();
   };
 };

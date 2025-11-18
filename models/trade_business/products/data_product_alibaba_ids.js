@@ -2,9 +2,10 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const ALIBABA_IDS_TABLE = 'product_alibaba_ids';
+const ALIBABA_IDS_TABLE = TABLE_NAMES['PRODUCT_ALIBABA_IDS'];
 
 /**
  * Gets product Alibaba IDs by product ID

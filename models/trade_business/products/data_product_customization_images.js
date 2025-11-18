@@ -1,9 +1,10 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = 'customization_images';
+const TABLE_NAME = TABLE_NAMES['PRODUCT_CUSTOMIZATION_IMAGES'];
 
 /**
  * Adds an image to a customization
@@ -16,16 +17,16 @@ const TABLE_NAME = 'customization_images';
 export const addCustomizationImage = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.customization_id) {
       throw new AppError('Customization ID is required', 400);
     }
-    
+
     if (!data.image_url) {
       throw new AppError('Image URL is required', 400);
     }
-    
+
     // If display_order not provided, get the next available order
     if (data.display_order === undefined) {
       const orderSQL = `
@@ -33,22 +34,22 @@ export const addCustomizationImage = async (data) => {
         FROM ${TABLE_NAME}
         WHERE customization_id = ?
       `;
-      
+
       const orderResult = await pool.query(orderSQL, [data.customization_id]);
       data.display_order = orderResult[0][0].next_order;
     }
-    
+
     // Create the customization image using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'create',
       tableName: TABLE_NAME,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Customization image added successfully',
-      customizationImage: result.record
+      customizationImage: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -63,10 +64,12 @@ export const addCustomizationImage = async (data) => {
  * @param {string} customizationId - The customization ID to get images for
  * @returns {Promise<Array>} Promise that resolves with the customization images
  */
-export const getCustomizationImagesByCustomizationId = async (customizationId) => {
+export const getCustomizationImagesByCustomizationId = async (
+  customizationId
+) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the customization images using CRUD utility with ordering
     const sql = `
       SELECT id, customization_id, image_url, display_order
@@ -74,7 +77,7 @@ export const getCustomizationImagesByCustomizationId = async (customizationId) =
       WHERE customization_id = ?
       ORDER BY display_order
     `;
-    
+
     const result = await pool.query(sql, [customizationId]);
     return result[0];
   } catch (error) {
@@ -96,23 +99,23 @@ export const getCustomizationImagesByCustomizationId = async (customizationId) =
 export const updateCustomizationImage = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Update the customization image using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'update',
       tableName: TABLE_NAME,
       id: id,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!result.record) {
       throw new AppError('Customization image not found', 404);
     }
-    
+
     return {
       message: 'Customization image updated successfully',
-      customizationImage: result.record
+      customizationImage: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -130,18 +133,18 @@ export const updateCustomizationImage = async (id, data) => {
 export const deleteCustomizationImage = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Delete the customization image using CRUD utility
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Customization image deleted successfully',
-      id
+      id,
     };
   } catch (error) {
     throw new AppError(
@@ -160,46 +163,48 @@ export const deleteCustomizationImage = async (id) => {
 export const updateCustomizationImages = async (customizationId, imageUrls) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Delete existing images
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: TABLE_NAME,
         conditions: { customization_id: customizationId },
-        connection: pool
+        connection: pool,
       });
-      
+
       // Add new images
       if (imageUrls && imageUrls.length > 0) {
         const imageData = imageUrls.map((imageUrl, index) => ({
           customization_id: customizationId,
           image_url: imageUrl,
-          display_order: index
+          display_order: index,
         }));
-        
+
         await CrudOperations.performCrud({
           operation: 'bulkcreate',
           tableName: TABLE_NAME,
           data: imageData,
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated images
-      const images = await getCustomizationImagesByCustomizationId(customizationId);
-      
+      const images = await getCustomizationImagesByCustomizationId(
+        customizationId
+      );
+
       return {
         message: 'Customization images updated successfully',
         customizationId,
         imageCount: images.length,
-        images
+        images,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -220,13 +225,16 @@ export const updateCustomizationImages = async (customizationId, imageUrls) => {
  * @param {Array<{id: number, display_order: number}>} orderData - Array of objects with image IDs and new display orders
  * @returns {Promise<Object>} Promise that resolves with reordering result
  */
-export const reorderCustomizationImages = async (customizationId, orderData) => {
+export const reorderCustomizationImages = async (
+  customizationId,
+  orderData
+) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Update display order for each image
       for (const item of orderData) {
@@ -235,20 +243,22 @@ export const reorderCustomizationImages = async (customizationId, orderData) => 
           tableName: TABLE_NAME,
           id: item.id,
           data: { display_order: item.display_order },
-          connection: pool
+          connection: pool,
         });
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       // Get the updated images
-      const images = await getCustomizationImagesByCustomizationId(customizationId);
-      
+      const images = await getCustomizationImagesByCustomizationId(
+        customizationId
+      );
+
       return {
         message: 'Customization images reordered successfully',
         customizationId,
-        images
+        images,
       };
     } catch (error) {
       // Rollback transaction on error

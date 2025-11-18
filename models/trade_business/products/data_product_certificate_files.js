@@ -1,9 +1,10 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const CERTIFICATE_FILES_TABLE = 'product_certificate_files';
+const CERTIFICATE_FILES_TABLE = TABLE_NAMES['PRODUCT_CERTIFICATE_FILES'];
 
 /**
  * Gets certificate files by certificate ID
@@ -80,11 +81,11 @@ export const getProductCertificateFileById = async (id) => {
     `;
 
     const result = await pool.query(sql, [id]);
-    
+
     if (result[0].length === 0) {
       throw new AppError('Certificate file not found', 404);
     }
-    
+
     return result[0][0];
   } catch (error) {
     throw new AppError(
@@ -111,7 +112,7 @@ export const deleteProductCertificateFile = async (id) => {
 
     return {
       message: 'Certificate file deleted successfully',
-      fileId: id
+      fileId: id,
     };
   } catch (error) {
     throw new AppError(

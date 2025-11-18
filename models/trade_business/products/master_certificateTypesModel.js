@@ -2,10 +2,11 @@ import * as dbConn from '../../../utils/dbConn.js';
 import * as dbModel from '../../../models/dbModel.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constants for consistency
-const CERTIFICATE_TYPES_TABLE = 'master_certificate_types';
-const CERTIFICATES_TABLE = 'product_certificates';
+const CERTIFICATE_TYPES_TABLE = TABLE_NAMES['CERTIFICATE_TYPES'];
+const CERTIFICATES_TABLE = TABLE_NAMES['PRODUCT_CERTIFICATES'];
 
 /**
  * Creates a new certificate type

@@ -2,9 +2,10 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = 'product_names';
+const TABLE_NAME = TABLE_NAMES['PRODUCT_NAMES'];
 
 /**
  * Creates a new product name
@@ -18,44 +19,50 @@ const TABLE_NAME = 'product_names';
 export const createProductName = async (data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Validate required fields
     if (!data.product_id) {
       throw new AppError('Product ID is required', 400);
     }
-    
+
     if (!data.name) {
       throw new AppError('Product name is required', 400);
     }
-    
+
     if (!data.name_type_id) {
       throw new AppError('Name type ID is required', 400);
     }
-    
+
     // Generate UUID if not provided
     const nameData = {
       ...data,
-      id: data.id || uuidv4()
+      id: data.id || uuidv4(),
     };
-    
+
     // Check if a name of this type already exists for this product
-    const existingName = await getProductNameByTypeAndProductId(data.product_id, data.name_type_id);
-    
+    const existingName = await getProductNameByTypeAndProductId(
+      data.product_id,
+      data.name_type_id
+    );
+
     if (existingName) {
-      throw new AppError(`A name of type ${data.name_type_id} already exists for this product`, 409);
+      throw new AppError(
+        `A name of type ${data.name_type_id} already exists for this product`,
+        409
+      );
     }
-    
+
     // Create the product name using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'create',
       tableName: TABLE_NAME,
       data: nameData,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product name created successfully',
-      productName: result.record
+      productName: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -73,19 +80,19 @@ export const createProductName = async (data) => {
 export const getProductNameById = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product name using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     if (!result.record) {
       throw new AppError('Product name not found', 404);
     }
-    
+
     return result.record;
   } catch (error) {
     throw new AppError(
@@ -101,18 +108,21 @@ export const getProductNameById = async (id) => {
  * @param {number} nameTypeId - The name type ID
  * @returns {Promise<Object|null>} Promise that resolves with the product name data or null if not found
  */
-export const getProductNameByTypeAndProductId = async (productId, nameTypeId) => {
+export const getProductNameByTypeAndProductId = async (
+  productId,
+  nameTypeId
+) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get the product name using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: TABLE_NAME,
       conditions: { product_id: productId, name_type_id: nameTypeId },
-      connection: pool
+      connection: pool,
     });
-    
+
     return result.records.length > 0 ? result.records[0] : null;
   } catch (error) {
     throw new AppError(
@@ -130,7 +140,7 @@ export const getProductNameByTypeAndProductId = async (productId, nameTypeId) =>
 export const getProductNamesByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // For this query with joins, we'll use direct SQL
     const sql = `
       SELECT pn.id, pn.product_id, pn.name, pn.name_type_id, nt.name as type_name
@@ -139,7 +149,7 @@ export const getProductNamesByProductId = async (productId) => {
       WHERE pn.product_id = ?
       ORDER BY pn.name_type_id
     `;
-    
+
     const result = await pool.query(sql, [productId]);
     return result[0];
   } catch (error) {
@@ -161,34 +171,40 @@ export const getProductNamesByProductId = async (productId) => {
 export const updateProductName = async (id, data) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get existing product name
     const existingName = await getProductNameById(id);
-    
+
     // Check if changing name type and if that type already exists for this product
-    if (data.name_type_id !== undefined && data.name_type_id !== existingName.name_type_id) {
+    if (
+      data.name_type_id !== undefined &&
+      data.name_type_id !== existingName.name_type_id
+    ) {
       const nameWithSameType = await getProductNameByTypeAndProductId(
-        existingName.product_id, 
+        existingName.product_id,
         data.name_type_id
       );
-      
+
       if (nameWithSameType) {
-        throw new AppError(`A name of type ${data.name_type_id} already exists for this product`, 409);
+        throw new AppError(
+          `A name of type ${data.name_type_id} already exists for this product`,
+          409
+        );
       }
     }
-    
+
     // Update the product name using CRUD utility
     const result = await CrudOperations.performCrud({
       operation: 'update',
       tableName: TABLE_NAME,
       id: id,
       data: data,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product name updated successfully',
-      productName: result.record
+      productName: result.record,
     };
   } catch (error) {
     throw new AppError(
@@ -206,21 +222,21 @@ export const updateProductName = async (id, data) => {
 export const deleteProductName = async (id) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Check if product name exists
     await getProductNameById(id);
-    
+
     // Delete the product name using CRUD utility
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       id: id,
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product name deleted successfully',
-      id
+      id,
     };
   } catch (error) {
     throw new AppError(
@@ -239,28 +255,28 @@ export const deleteProductName = async (id) => {
 export const upsertProductNames = async (productId, names) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Start transaction
     await pool.query('START TRANSACTION');
-    
+
     try {
       // Get existing names for this product
       const existingNames = await getProductNamesByProductId(productId);
       const existingNamesByType = {};
-      
-      existingNames.forEach(name => {
+
+      existingNames.forEach((name) => {
         existingNamesByType[name.name_type_id] = name;
       });
-      
+
       const results = {
         created: [],
-        updated: []
+        updated: [],
       };
-      
+
       // Process each name
       for (const nameData of names) {
         const existingName = existingNamesByType[nameData.name_type_id];
-        
+
         if (existingName) {
           // Update existing name if it's different
           if (existingName.name !== nameData.name) {
@@ -269,9 +285,9 @@ export const upsertProductNames = async (productId, names) => {
               tableName: TABLE_NAME,
               id: existingName.id,
               data: { name: nameData.name },
-              connection: pool
+              connection: pool,
             });
-            
+
             results.updated.push(result.record);
           } else {
             results.updated.push(existingName);
@@ -285,23 +301,23 @@ export const upsertProductNames = async (productId, names) => {
               id: uuidv4(),
               product_id: productId,
               name_type_id: nameData.name_type_id,
-              name: nameData.name
+              name: nameData.name,
             },
-            connection: pool
+            connection: pool,
           });
-          
+
           results.created.push(result.record);
         }
       }
-      
+
       // Commit transaction
       await pool.query('COMMIT');
-      
+
       return {
         message: 'Product names updated successfully',
         created: results.created.length,
         updated: results.updated.length,
-        names: await getProductNamesByProductId(productId)
+        names: await getProductNamesByProductId(productId),
       };
     } catch (error) {
       // Rollback transaction on error
@@ -324,28 +340,28 @@ export const upsertProductNames = async (productId, names) => {
 export const deleteProductNamesByProductId = async (productId) => {
   try {
     const pool = dbConn.tb_pool;
-    
+
     // Get all names for this product
     const productNames = await getProductNamesByProductId(productId);
-    
+
     if (productNames.length === 0) {
       return {
         message: 'No product names found for this product',
-        count: 0
+        count: 0,
       };
     }
-    
+
     // Delete the product names
     await CrudOperations.performCrud({
       operation: 'delete',
       tableName: TABLE_NAME,
       conditions: { product_id: productId },
-      connection: pool
+      connection: pool,
     });
-    
+
     return {
       message: 'Product names deleted successfully',
-      count: productNames.length
+      count: productNames.length,
     };
   } catch (error) {
     throw new AppError(

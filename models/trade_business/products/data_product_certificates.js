@@ -3,12 +3,13 @@ import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import logger from '../../../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_NAMES } from '../../tables.js';
 
 // Import certificate files module
 import * as CertificateFiles from './data_product_certificate_files.js';
 
 // Table name constant for consistency
-const CERTIFICATES_TABLE = 'product_certificates';
+const CERTIFICATES_TABLE = TABLE_NAMES['PRODUCT_CERTIFICATES'];
 
 /**
  * Gets product certificates by product ID
