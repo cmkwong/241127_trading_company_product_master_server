@@ -1,5 +1,5 @@
 import express from 'express';
-import * as productsController from '../../../models/trade_business/products/data_productsController.js';
+import * as productsController from '../../../controller/trade_business/products/data_productsController.js';
 import * as authController from '../../../controller/authController.js';
 import endController from '../../../controller/endController.js';
 

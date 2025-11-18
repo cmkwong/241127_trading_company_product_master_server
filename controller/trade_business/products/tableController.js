@@ -1,6 +1,6 @@
 import * as TableModel from '../../../models/trade_business/products/tableModel.js';
-import catchAsync from '../../utils/catchAsync.js';
-import AppError from '../../utils/appError.js';
+import catchAsync from '../../../utils/catchAsync.js';
+import AppError from '../../../utils/appError.js';
 
 /**
  * Create all product tables

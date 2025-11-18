@@ -1,33 +1,21 @@
 import express from 'express';
-import * as productController from '../../controller/trade_business/products/tableController.js';
-import * as authController from '../../controller/authController.js';
-import endController from '../../controller/endController.js';
+import dataRoutes from './data/index.js';
+import tableRoutes from './table/index.js';
 import labelsRoutes from './labels/index.js';
+import masterRoutes from './master/index.js';
 
 const router = express.Router();
 
-// Mount schema routes
+// Mount labels routes
 router.use('/labels', labelsRoutes);
 
-// Product data routes
-router
-  .route('/tables')
-  .get(
-    authController.protect,
-    productController.createProductTables,
-    endController
-  )
-  .delete(
-    authController.protect,
-    productController.dropProductTables,
-    endController
-  );
+// Product table routes
+router.route('/table', tableRoutes);
 
-// Add more product routes as needed
-// router
-//   .route('/:id')
-//   .get(authController.protect, productController.getProduct, endController)
-//   .patch(authController.protect, productController.updateProduct, endController)
-//   .delete(authController.protect, productController.deleteProduct, endController);
+// Product data routes
+router.route('/data', dataRoutes);
+
+// Product master labels routes
+router.route('/master', masterRoutes);
 
 export default router;
