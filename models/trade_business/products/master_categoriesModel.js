@@ -2,10 +2,10 @@ import * as dbConn from '../../../utils/dbConn.js';
 import * as dbModel from '../../../models/dbModel.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const CATEGORIES_TABLE = TABLE_NAMES['CATEGORIES'];
+const CATEGORIES_TABLE = TABLE_MASTER['CATEGORIES'];
 
 /**
  * Creates a new category

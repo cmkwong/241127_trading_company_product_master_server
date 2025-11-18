@@ -1,5 +1,5 @@
 // Centralized table names object
-export const TABLE_NAMES = {
+export const TABLE_MASTER = {
   // Main tables
   PRODUCTS: 'products',
 

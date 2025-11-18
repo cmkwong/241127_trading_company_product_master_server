@@ -2,11 +2,11 @@ import * as dbConn from '../../../utils/dbConn.js';
 import * as dbModel from '../../../models/dbModel.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const PACKING_TYPES_TABLE = TABLE_NAMES['PACKING_TYPES'];
-const PRODUCT_PACKINGS_TABLE = TABLE_NAMES['PRODUCT_PACKINGS'];
+const PACKING_TYPES_TABLE = TABLE_MASTER['PACKING_TYPES'];
+const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'];
 
 /**
  * Creates a new packing type

@@ -2,11 +2,11 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constants for consistency
-const CUSTOMIZATIONS_TABLE = TABLE_NAMES['PRODUCT_CUSTOMIZATIONS'];
-const CUSTOMIZATION_IMAGES_TABLE = TABLE_NAMES['PRODUCT_CUSTOMIZATION_IMAGES'];
+const CUSTOMIZATIONS_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'];
+const CUSTOMIZATION_IMAGES_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'];
 
 /**
  * Creates a new customization for a product

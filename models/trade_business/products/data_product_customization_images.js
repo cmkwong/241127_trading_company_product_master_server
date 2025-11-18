@@ -1,10 +1,10 @@
 import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = TABLE_NAMES['PRODUCT_CUSTOMIZATION_IMAGES'];
+const TABLE_NAME = TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'];
 
 /**
  * Adds an image to a customization

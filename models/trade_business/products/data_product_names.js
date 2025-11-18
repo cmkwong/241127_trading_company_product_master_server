@@ -2,10 +2,10 @@ import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = TABLE_NAMES['PRODUCT_NAMES'];
+const TABLE_NAME = TABLE_MASTER['PRODUCT_NAMES'];
 
 /**
  * Creates a new product name

@@ -2,7 +2,7 @@ import * as dbConn from '../../../utils/dbConn.js';
 import * as dbModel from '../../../models/dbModel.js';
 import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 /**
  * Creates a new product

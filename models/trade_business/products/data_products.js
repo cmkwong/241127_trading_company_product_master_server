@@ -11,10 +11,10 @@ import * as ProductPackings from './data_product_packings.js';
 import * as ProductCategories from './data_product_categories.js';
 import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
-import { TABLE_NAMES } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const TABLE_NAME = TABLE_NAMES['PRODUCTS'];
+const TABLE_NAME = TABLE_MASTER['PRODUCTS'];
 
 /**
  * Generates a unique product ID
