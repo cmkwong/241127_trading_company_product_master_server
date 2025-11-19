@@ -40,3 +40,78 @@ export const updateProductLinkImagesFromBase64 = (
 ) => productLinkImageModel.updateFilesFromBase64(productLinkId, base64Images);
 export const reorderProductLinkImages = (productLinkId, orderData) =>
   productLinkImageModel.reorderFiles(productLinkId, orderData);
+
+/**
+ * Gets product link images with base64 content by link ID
+ * @param {string} productLinkId - The product link ID
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Array<Object>>} Promise that resolves with images including base64 content
+ */
+export const getProductLinkImagesWithBase64ByLinkId = (
+  productLinkId,
+  options = {}
+) =>
+  productLinkImageModel.getFilesWithBase64ByParentId(
+    productLinkId,
+    null,
+    options
+  );
+
+/**
+ * Gets a product link image with base64 content by ID
+ * @param {string} id - The image ID
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Object>} Promise that resolves with image including base64 content
+ */
+export const getProductLinkImageWithBase64ById = (id, options = {}) =>
+  productLinkImageModel.getFileWithBase64ById(id, options);
+
+/**
+ * Upserts (updates or inserts) product link images
+ * @param {string} productLinkId - The product link ID
+ * @param {Array<string>} images - Array of image URLs
+ * @returns {Promise<Array<Object>>} Promise that resolves with the upserted images
+ */
+export const upsertProductLinkImages = async (productLinkId, images) => {
+  if (!images || !Array.isArray(images)) {
+    return [];
+  }
+
+  return await productLinkImageModel.withTransaction(async () => {
+    // Delete existing images
+    await deleteProductLinkImagesByLinkId(productLinkId);
+
+    // Add new images if provided
+    if (images.length > 0) {
+      const imageData = images.map((imageUrl, index) => ({
+        product_link_id: productLinkId,
+        image_url: imageUrl,
+        display_order: index,
+      }));
+
+      // Use bulkcreate through executeQuery
+      await productLinkImageModel.executeQuery(
+        `INSERT INTO ${TABLE_MASTER['PRODUCT_LINK_IMAGES'].name} 
+         (product_link_id, image_url, display_order) VALUES ?`,
+        [
+          imageData.map((img) => [
+            img.product_link_id,
+            img.image_url,
+            img.display_order,
+          ]),
+        ]
+      );
+    }
+
+    // Return the updated images
+    return await getProductLinkImagesByLinkId(productLinkId);
+  });
+};

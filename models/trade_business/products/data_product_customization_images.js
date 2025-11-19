@@ -6,9 +6,9 @@ const customizationImageModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
   entityName: 'customization image',
   entityIdField: 'customization_id',
-  requiredFields: ['customization_id'],
+  requiredFields: ['customization_id', 'image_url'],
   validations: {
-    customization_id: { required: true },
+    image_url: { required: true },
   },
   fileConfig: {
     fileUrlField: 'image_url',
@@ -20,8 +20,10 @@ const customizationImageModel = new DataModelUtils({
 // Export the standard CRUD operations
 export const getCustomizationImageById = (id) =>
   customizationImageModel.getById(id);
-export const getCustomizationImagesByCustomizationId = (customizationId) =>
-  customizationImageModel.getAllByParentId(customizationId);
+export const getCustomizationImagesByCustomizationId = (
+  customizationId,
+  fileType = null
+) => customizationImageModel.getAllByParentId(customizationId);
 export const deleteCustomizationImage = (id) =>
   customizationImageModel.delete(id);
 export const deleteCustomizationImagesByCustomizationId = (customizationId) =>
@@ -39,3 +41,78 @@ export const updateCustomizationImagesFromBase64 = (
   customizationImageModel.updateFilesFromBase64(customizationId, base64Images);
 export const reorderCustomizationImages = (customizationId, orderData) =>
   customizationImageModel.reorderFiles(customizationId, orderData);
+
+/**
+ * Gets customization images with base64 content by customization ID
+ * @param {string} customizationId - The customization ID
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Array<Object>>} Promise that resolves with images including base64 content
+ */
+export const getCustomizationImagesWithBase64ByCustomizationId = (
+  customizationId,
+  options = {}
+) =>
+  customizationImageModel.getFilesWithBase64ByParentId(
+    customizationId,
+    null,
+    options
+  );
+
+/**
+ * Gets a customization image with base64 content by ID
+ * @param {string} id - The image ID
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Object>} Promise that resolves with image including base64 content
+ */
+export const getCustomizationImageWithBase64ById = (id, options = {}) =>
+  customizationImageModel.getFileWithBase64ById(id, options);
+
+/**
+ * Upserts (updates or inserts) customization images
+ * @param {string} customizationId - The customization ID
+ * @param {Array<string>} images - Array of image URLs
+ * @returns {Promise<Array<Object>>} Promise that resolves with the upserted images
+ */
+export const upsertCustomizationImages = async (customizationId, images) => {
+  if (!images || !Array.isArray(images)) {
+    return [];
+  }
+
+  return await customizationImageModel.withTransaction(async () => {
+    // Delete existing images
+    await deleteCustomizationImagesByCustomizationId(customizationId);
+
+    // Add new images if provided
+    if (images.length > 0) {
+      const imageData = images.map((imageUrl, index) => ({
+        customization_id: customizationId,
+        image_url: imageUrl,
+        display_order: index,
+      }));
+
+      // Use bulkcreate through executeQuery
+      await customizationImageModel.executeQuery(
+        `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
+         (customization_id, image_url, display_order) VALUES ?`,
+        [
+          imageData.map((img) => [
+            img.customization_id,
+            img.image_url,
+            img.display_order,
+          ]),
+        ]
+      );
+    }
+
+    // Return the updated images
+    return await getCustomizationImagesByCustomizationId(customizationId);
+  });
+};

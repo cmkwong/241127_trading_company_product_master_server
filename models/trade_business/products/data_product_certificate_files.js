@@ -31,6 +31,42 @@ export const getCertificateFilesByCertificateId = (
         .getAllByParentId(certificateId)
         .then((files) => files.filter((file) => file.file_type === fileType))
     : certificateFileModel.getAllByParentId(certificateId);
+
+/**
+ * Gets certificate files with base64 content by certificate ID, with optional compression
+ * @param {string} certificateId - The certificate ID
+ * @param {string} [fileType=null] - Optional file type filter
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Array<Object>>} Promise that resolves with files including base64 content
+ */
+export const getCertificateFilesWithBase64ByCertificateId = (
+  certificateId,
+  fileType = null,
+  options = {}
+) =>
+  certificateFileModel.getFilesWithBase64ByParentId(
+    certificateId,
+    fileType,
+    options
+  );
+
+/**
+ * Gets a certificate file with base64 content by ID, with optional compression
+ * @param {string} id - The file ID
+ * @param {Object} [options] - Optional compression options
+ * @param {boolean} [options.compress=false] - Whether to compress images
+ * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+ * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+ * @returns {Promise<Object>} Promise that resolves with file including base64 content
+ */
+export const getCertificateFileWithBase64ById = (id, options = {}) =>
+  certificateFileModel.getFileWithBase64ById(id, options);
+
 export const deleteCertificateFile = (id) => certificateFileModel.delete(id);
 export const deleteCertificateFilesByCertificateId = (certificateId) =>
   certificateFileModel.deleteAllByParentId(certificateId);

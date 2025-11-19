@@ -2,6 +2,7 @@ import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
+import * as CustomizationImages from './data_product_customization_images.js';
 
 // Create a data model utility for product customizations
 const customizationModel = new DataModelUtils({
@@ -19,21 +20,109 @@ const customizationModel = new DataModelUtils({
   },
 });
 
-// Create a data model utility for customization images
-const customizationImageModel = new DataModelUtils({
-  tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
-  entityName: 'customization image',
-  entityIdField: 'customization_id',
-  requiredFields: ['customization_id', 'image_url'],
-  validations: {
-    image_url: { required: true },
-  },
-  fileConfig: {
-    fileUrlField: 'image_url',
-    uploadDir: 'public/uploads/customizations/{id}',
-    imagesOnly: true,
-  },
-});
+/**
+ * Gets all customizations for a product
+ * @param {string} productId - The product ID to get customizations for
+ * @param {boolean} [includeImages=false] - Whether to include images
+ * @param {Object} [imageOptions] - Optional image options for base64 retrieval
+ * @param {boolean} [imageOptions.includeBase64=false] - Whether to include base64 image data
+ * @param {boolean} [imageOptions.compress=false] - Whether to compress images
+ * @returns {Promise<Array>} Promise that resolves with the customizations
+ */
+export const getCustomizationsByProductId = async (
+  productId,
+  includeImages = false,
+  imageOptions = {}
+) => {
+  try {
+    // Get all customizations for this product using the model
+    const customizations = await customizationModel.getAllByParentId(productId);
+
+    // Include images if requested
+    if (includeImages && customizations.length > 0) {
+      for (const customization of customizations) {
+        if (imageOptions.includeBase64) {
+          // Get images with base64 content
+          const images =
+            await CustomizationImages.getCustomizationImagesWithBase64ByCustomizationId(
+              customization.id,
+              {
+                compress: imageOptions.compress || false,
+                maxWidth: imageOptions.maxWidth || 800,
+                maxHeight: imageOptions.maxHeight || 800,
+                quality: imageOptions.quality || 0.7,
+              }
+            );
+          customization.images = images;
+        } else {
+          // Get just the image metadata
+          const images =
+            await CustomizationImages.getCustomizationImagesByCustomizationId(
+              customization.id
+            );
+          customization.images = images;
+        }
+      }
+    }
+
+    return customizations;
+  } catch (error) {
+    throw new AppError(
+      `Failed to get customizations: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Gets a customization by ID with its images
+ * @param {string} id - The ID of the customization to retrieve
+ * @param {boolean} [includeImages=true] - Whether to include images
+ * @param {Object} [imageOptions] - Optional image options for base64 retrieval
+ * @param {boolean} [imageOptions.includeBase64=false] - Whether to include base64 image data
+ * @param {boolean} [imageOptions.compress=false] - Whether to compress images
+ * @returns {Promise<Object>} Promise that resolves with the customization data
+ */
+export const getCustomizationById = async (
+  id,
+  includeImages = true,
+  imageOptions = {}
+) => {
+  try {
+    // Get the customization using the model
+    const customization = await customizationModel.getById(id);
+
+    // Include images if requested
+    if (includeImages) {
+      if (imageOptions.includeBase64) {
+        // Get images with base64 content
+        const images =
+          await CustomizationImages.getCustomizationImagesWithBase64ByCustomizationId(
+            id,
+            {
+              compress: imageOptions.compress || false,
+              maxWidth: imageOptions.maxWidth || 800,
+              maxHeight: imageOptions.maxHeight || 800,
+              quality: imageOptions.quality || 0.7,
+            }
+          );
+        customization.images = images;
+      } else {
+        // Get just the image metadata
+        const images =
+          await CustomizationImages.getCustomizationImagesByCustomizationId(id);
+        customization.images = images;
+      }
+    }
+
+    return customization;
+  } catch (error) {
+    throw new AppError(
+      `Failed to get customization: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
 
 /**
  * Creates a new customization for a product
@@ -48,9 +137,7 @@ const customizationImageModel = new DataModelUtils({
  */
 export const createCustomization = async (data) => {
   try {
-    // Start transaction
-    await customizationModel.beginTransaction();
-    try {
+    return await customizationModel.withTransaction(async () => {
       // Extract images from the data as they're handled separately
       const images = data.images;
 
@@ -61,30 +148,15 @@ export const createCustomization = async (data) => {
       // Create the customization using the model
       const result = await customizationModel.create(customizationData);
       const customizationId = result.customization.id;
+
       // Add customization images if provided
       if (images && images.length > 0) {
-        const imageData = images.map((imageUrl, index) => ({
-          customization_id: customizationId,
-          image_url: imageUrl,
-          display_order: index,
-        }));
-
-        // Use bulkcreate through executeQuery
-        await customizationImageModel.executeQuery(
-          `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
-           (customization_id, image_url, display_order) VALUES ?`,
-          [
-            imageData.map((img) => [
-              img.customization_id,
-              img.image_url,
-              img.display_order,
-            ]),
-          ]
+        await CustomizationImages.upsertCustomizationImages(
+          customizationId,
+          images
         );
       }
 
-      // Commit transaction
-      await customizationModel.commitTransaction();
       // Get the complete customization with images
       const customization = await getCustomizationById(customizationId);
 
@@ -92,60 +164,10 @@ export const createCustomization = async (data) => {
         message: 'Customization created successfully',
         customization,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await customizationModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to create customization: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets a customization by ID with its images
- * @param {string} id - The ID of the customization to retrieve
- * @returns {Promise<Object>} Promise that resolves with the customization data
- */
-export const getCustomizationById = async (id) => {
-  try {
-    // Get the customization using the model
-    const customization = await customizationModel.getById(id);
-    // Get customization images
-    const images = await customizationImageModel.getAllByParentId(id);
-    customization.images = images.map((img) => img.image_url);
-    return customization;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get customization: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets all customizations for a product
- * @param {string} productId - The product ID to get customizations for
- * @returns {Promise<Array>} Promise that resolves with the customizations
- */
-export const getCustomizationsByProductId = async (productId) => {
-  try {
-    // Get all customizations for this product using the model
-    const customizations = await customizationModel.getAllByParentId(productId);
-    // Get images for each customization
-    for (const customization of customizations) {
-      const images = await customizationImageModel.getAllByParentId(
-        customization.id
-      );
-      customization.images = images.map((img) => img.image_url);
-    }
-    return customizations;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get customizations: ${error.message}`,
       error.statusCode || 500
     );
   }
@@ -166,9 +188,7 @@ export const updateCustomization = async (id, data) => {
     // Check if customization exists
     await customizationModel.getById(id);
 
-    // Start transaction
-    await customizationModel.beginTransaction();
-    try {
+    return await customizationModel.withTransaction(async () => {
       // Extract images from the data as they're handled separately
       const images = data.images;
 
@@ -180,35 +200,12 @@ export const updateCustomization = async (id, data) => {
       if (Object.keys(updateData).length > 0) {
         await customizationModel.update(id, updateData);
       }
+
       // Update images if provided
       if (images !== undefined) {
-        // Delete existing images
-        await customizationImageModel.deleteAllByParentId(id);
-        // Add new images
-        if (images && images.length > 0) {
-          const imageData = images.map((imageUrl, index) => ({
-            customization_id: id,
-            image_url: imageUrl,
-            display_order: index,
-          }));
-
-          // Use bulkcreate through executeQuery
-          await customizationImageModel.executeQuery(
-            `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
-             (customization_id, image_url, display_order) VALUES ?`,
-            [
-              imageData.map((img) => [
-                img.customization_id,
-                img.image_url,
-                img.display_order,
-              ]),
-            ]
-          );
-        }
+        await CustomizationImages.upsertCustomizationImages(id, images);
       }
 
-      // Commit transaction
-      await customizationModel.commitTransaction();
       // Get the updated customization
       const customization = await getCustomizationById(id);
 
@@ -216,11 +213,7 @@ export const updateCustomization = async (id, data) => {
         message: 'Customization updated successfully',
         customization,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await customizationModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update customization: ${error.message}`,
@@ -239,24 +232,18 @@ export const deleteCustomization = async (id) => {
     // Check if customization exists
     await customizationModel.getById(id);
 
-    // Start transaction
-    await customizationModel.beginTransaction();
-    try {
+    return await customizationModel.withTransaction(async () => {
       // Delete customization images first
-      await customizationImageModel.deleteAllByParentId(id);
+      await CustomizationImages.deleteCustomizationImagesByCustomizationId(id);
+
       // Delete the customization
       await customizationModel.delete(id);
-      // Commit transaction
-      await customizationModel.commitTransaction();
+
       return {
         message: 'Customization deleted successfully',
         id,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await customizationModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete customization: ${error.message}`,
@@ -282,27 +269,22 @@ export const deleteCustomizationsByProductId = async (productId) => {
       };
     }
 
-    // Start transaction
-    await customizationModel.beginTransaction();
-    try {
+    return await customizationModel.withTransaction(async () => {
       // Delete customization images first for each customization
       for (const customization of customizations) {
-        await customizationImageModel.deleteAllByParentId(customization.id);
+        await CustomizationImages.deleteCustomizationImagesByCustomizationId(
+          customization.id
+        );
       }
 
       // Delete all customizations for this product
       await customizationModel.deleteAllByParentId(productId);
-      // Commit transaction
-      await customizationModel.commitTransaction();
+
       return {
         message: 'Customizations deleted successfully',
         count: customizations.length,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await customizationModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete customizations: ${error.message}`,
@@ -319,10 +301,7 @@ export const deleteCustomizationsByProductId = async (productId) => {
  */
 export const upsertCustomizations = async (productId, customizations) => {
   try {
-    // Start transaction
-    await customizationModel.beginTransaction();
-
-    try {
+    return await customizationModel.withTransaction(async () => {
       // Get existing customizations
       const existingCustomizations = await getCustomizationsByProductId(
         productId
@@ -332,7 +311,9 @@ export const upsertCustomizations = async (productId, customizations) => {
       if (existingCustomizations.length > 0) {
         for (const customization of existingCustomizations) {
           // Delete images first
-          await customizationImageModel.deleteAllByParentId(customization.id);
+          await CustomizationImages.deleteCustomizationImagesByCustomizationId(
+            customization.id
+          );
         }
 
         // Delete customizations
@@ -361,22 +342,9 @@ export const upsertCustomizations = async (productId, customizations) => {
 
         // Add images
         if (images.length > 0) {
-          const imageData = images.map((imageUrl, index) => ({
-            customization_id: dataToCreate.id,
-            image_url: imageUrl,
-            display_order: index,
-          }));
-
-          await customizationImageModel.executeQuery(
-            `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
-             (customization_id, image_url, display_order) VALUES ?`,
-            [
-              imageData.map((img) => [
-                img.customization_id,
-                img.image_url,
-                img.display_order,
-              ]),
-            ]
+          await CustomizationImages.upsertCustomizationImages(
+            dataToCreate.id,
+            images
           );
         }
 
@@ -385,23 +353,66 @@ export const upsertCustomizations = async (productId, customizations) => {
         createdCustomizations.push(customization);
       }
 
-      // Commit transaction
-      await customizationModel.commitTransaction();
-
       return {
         message: 'Customizations updated successfully',
         deleted: existingCustomizations.length,
         created: createdCustomizations.length,
         customizations: createdCustomizations,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await customizationModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update customizations: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Adds a base64 image to a customization
+ * @param {Object} data - The image data
+ * @param {string} data.customization_id - The customization ID
+ * @param {string} data.base64_image - The base64 image data
+ * @param {string} [data.description] - Optional image description
+ * @returns {Promise<Object>} Promise that resolves with the added image
+ */
+export const addCustomizationImageFromBase64 = async (data) => {
+  try {
+    // Check if customization exists
+    await customizationModel.getById(data.customization_id);
+
+    // Add the image
+    return await CustomizationImages.addCustomizationImageFromBase64(data);
+  } catch (error) {
+    throw new AppError(
+      `Failed to add customization image: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Updates customization images from base64 data
+ * @param {string} customizationId - The customization ID
+ * @param {Array<Object>} base64Images - Array of base64 image data
+ * @returns {Promise<Object>} Promise that resolves with the updated images
+ */
+export const updateCustomizationImagesFromBase64 = async (
+  customizationId,
+  base64Images
+) => {
+  try {
+    // Check if customization exists
+    await customizationModel.getById(customizationId);
+
+    // Update the images
+    return await CustomizationImages.updateCustomizationImagesFromBase64(
+      customizationId,
+      base64Images
+    );
+  } catch (error) {
+    throw new AppError(
+      `Failed to update customization images: ${error.message}`,
       error.statusCode || 500
     );
   }

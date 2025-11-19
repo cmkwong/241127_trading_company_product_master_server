@@ -20,22 +20,32 @@ const certificateModel = new DataModelUtils({
  * Gets product certificates by product ID
  * @param {string} productId - The product ID
  * @param {boolean} [includeFiles=false] - Whether to include certificate files
+ * @param {boolean} [includeBase64=false] - Whether to include base64 file content
  * @returns {Promise<Array<Object>>} Promise that resolves with the product certificates
  */
 export const getProductCertificatesByProductId = async (
   productId,
-  includeFiles = false
+  includeFiles = false,
+  includeBase64 = false
 ) => {
   try {
     // Get certificates using the model
     const certificates = await certificateModel.getAllByParentId(productId);
+
     // Include certificate files if requested
     if (includeFiles && certificates.length > 0) {
       for (const certificate of certificates) {
-        certificate.files =
-          await CertificateFiles.getCertificateFilesByCertificateId(
-            certificate.id
-          );
+        if (includeBase64) {
+          certificate.files =
+            await CertificateFiles.getCertificateFilesWithBase64ByCertificateId(
+              certificate.id
+            );
+        } else {
+          certificate.files =
+            await CertificateFiles.getCertificateFilesByCertificateId(
+              certificate.id
+            );
+        }
       }
     }
 
@@ -122,7 +132,6 @@ export const getProductCertificateById = async (id, includeFiles = false) => {
     );
   }
 };
-
 /**
  * Updates a product certificate
  * @param {string} id - The certificate ID
@@ -137,9 +146,7 @@ export const updateProductCertificate = async (id, data) => {
     // Check if certificate exists
     await certificateModel.getById(id);
 
-    // Start transaction
-    await certificateModel.beginTransaction();
-    try {
+    return await certificateModel.withTransaction(async () => {
       // Create a copy of the data to avoid modifying the original
       const updateData = { ...data };
 
@@ -152,22 +159,17 @@ export const updateProductCertificate = async (id, data) => {
         // Update certificate
         await certificateModel.update(id, updateData);
       }
+
       // Update certificate files if provided
       if (files !== undefined) {
         await CertificateFiles.upsertCertificateFiles(id, files);
       }
 
-      // Commit transaction
-      await certificateModel.commitTransaction();
       // Get the updated certificate with files
       const certificate = await getProductCertificateById(id, true);
 
       return certificate;
-    } catch (error) {
-      // Rollback transaction on error
-      await certificateModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update product certificate: ${error.message}`,
@@ -186,12 +188,18 @@ export const deleteProductCertificate = async (id) => {
     // Check if certificate exists
     await certificateModel.getById(id);
 
-    // Delete the certificate (cascade will delete all related files)
-    await certificateModel.delete(id);
-    return {
-      message: 'Certificate deleted successfully',
-      certificateId: id,
-    };
+    return await certificateModel.withTransaction(async () => {
+      // Delete certificate files first
+      await CertificateFiles.deleteCertificateFilesByCertificateId(id);
+
+      // Then delete the certificate
+      await certificateModel.delete(id);
+
+      return {
+        message: 'Certificate and its files deleted successfully',
+        certificateId: id,
+      };
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete product certificate: ${error.message}`,
@@ -207,7 +215,32 @@ export const deleteProductCertificate = async (id) => {
  */
 export const deleteProductCertificatesByProductId = async (productId) => {
   try {
-    return await certificateModel.deleteAllByParentId(productId);
+    // Get all certificates for this product
+    const certificates = await getProductCertificatesByProductId(productId);
+
+    if (certificates.length === 0) {
+      return {
+        message: 'No certificates found for this product',
+        count: 0,
+      };
+    }
+
+    return await certificateModel.withTransaction(async () => {
+      // For each certificate, delete its files first
+      for (const certificate of certificates) {
+        await CertificateFiles.deleteCertificateFilesByCertificateId(
+          certificate.id
+        );
+      }
+
+      // Then delete all certificates
+      const result = await certificateModel.deleteAllByParentId(productId);
+
+      return {
+        message: 'Product certificates and their files deleted successfully',
+        count: certificates.length,
+      };
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete product certificates: ${error.message}`,

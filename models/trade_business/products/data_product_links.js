@@ -2,8 +2,6 @@ import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
-
-// Import product link images module
 import * as ProductLinkImages from './data_product_link_images.js';
 
 // Create a data model utility for product links
@@ -11,12 +9,11 @@ const productLinkModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
   entityName: 'product link',
   entityIdField: 'product_id',
-  requiredFields: ['product_id', 'link_type', 'url'],
+  requiredFields: ['product_id', 'name', 'url'],
   validations: {
     product_id: { required: true },
-    link_type: { required: true },
+    name: { required: true },
     url: { required: true },
-    title: { required: false },
     description: { required: false },
   },
   defaults: {
@@ -25,115 +22,50 @@ const productLinkModel = new DataModelUtils({
 });
 
 /**
- * Creates a new product link
- * @param {Object} data - The product link data
- * @param {string} data.product_id - The product ID this link belongs to
- * @param {string} data.link_type - The type of link (e.g., 'website', 'video', 'social')
- * @param {string} data.url - The URL of the link
- * @param {string} [data.title] - Optional title for the link
- * @param {string} [data.description] - Optional description for the link
- * @param {Array<Object>} [data.images] - Optional array of base64 image data
- * @returns {Promise<Object>} Promise that resolves with the created product link
- */
-export const createProductLink = async (data) => {
-  try {
-    // Start transaction
-    await productLinkModel.beginTransaction();
-
-    try {
-      // Extract images from the data as they're handled separately
-      const images = data.images;
-
-      // Create a copy of the data to avoid modifying the original
-      const linkData = { ...data };
-      delete linkData.images;
-
-      // Create the product link
-      const result = await productLinkModel.create(linkData);
-      const productLinkId = result.productLink.id;
-
-      // Add images if provided
-      if (images && images.length > 0) {
-        await ProductLinkImages.updateProductLinkImagesFromBase64(
-          productLinkId,
-          images
-        );
-      }
-
-      // Commit transaction
-      await productLinkModel.commitTransaction();
-
-      // Get the complete product link with images
-      const productLink = await getProductLinkById(productLinkId, true);
-
-      return {
-        message: 'Product link created successfully',
-        productLink,
-      };
-    } catch (error) {
-      // Rollback transaction on error
-      await productLinkModel.rollbackTransaction();
-      throw error;
-    }
-  } catch (error) {
-    throw new AppError(
-      `Failed to create product link: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets a product link by ID
- * @param {string} id - The ID of the product link to retrieve
- * @param {boolean} [includeImages=false] - Whether to include link images
- * @returns {Promise<Object>} Promise that resolves with the product link data
- */
-export const getProductLinkById = async (id, includeImages = false) => {
-  try {
-    // Get the product link
-    const productLink = await productLinkModel.getById(id);
-
-    // Include images if requested
-    if (includeImages) {
-      productLink.images = await ProductLinkImages.getProductLinkImagesByLinkId(
-        id
-      );
-    }
-
-    return productLink;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get product link: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets all product links for a product
+ * Gets all links for a product
  * @param {string} productId - The product ID to get links for
- * @param {boolean} [includeImages=false] - Whether to include link images
+ * @param {boolean} [includeImages=false] - Whether to include images
+ * @param {Object} [imageOptions] - Optional image options for base64 retrieval
+ * @param {boolean} [imageOptions.includeBase64=false] - Whether to include base64 image data
+ * @param {boolean} [imageOptions.compress=false] - Whether to compress images
  * @returns {Promise<Array>} Promise that resolves with the product links
  */
 export const getProductLinksByProductId = async (
   productId,
-  includeImages = false
+  includeImages = false,
+  imageOptions = {}
 ) => {
   try {
-    // Get all product links for this product
-    const productLinks = await productLinkModel.getAllByParentId(productId);
+    // Get all links for this product using the model
+    const links = await productLinkModel.getAllByParentId(productId);
 
     // Include images if requested
-    if (includeImages && productLinks.length > 0) {
-      for (const link of productLinks) {
-        link.images = await ProductLinkImages.getProductLinkImagesByLinkId(
-          link.id
-        );
+    if (includeImages && links.length > 0) {
+      for (const link of links) {
+        if (imageOptions.includeBase64) {
+          // Get images with base64 content
+          const images =
+            await ProductLinkImages.getProductLinkImagesWithBase64ByLinkId(
+              link.id,
+              {
+                compress: imageOptions.compress || false,
+                maxWidth: imageOptions.maxWidth || 800,
+                maxHeight: imageOptions.maxHeight || 800,
+                quality: imageOptions.quality || 0.7,
+              }
+            );
+          link.images = images;
+        } else {
+          // Get just the image metadata
+          const images = await ProductLinkImages.getProductLinkImagesByLinkId(
+            link.id
+          );
+          link.images = images;
+        }
       }
     }
 
-    return productLinks;
+    return links;
   } catch (error) {
     throw new AppError(
       `Failed to get product links: ${error.message}`,
@@ -143,25 +75,113 @@ export const getProductLinksByProductId = async (
 };
 
 /**
+ * Gets a product link by ID with its images
+ * @param {string} id - The ID of the link to retrieve
+ * @param {boolean} [includeImages=true] - Whether to include images
+ * @param {Object} [imageOptions] - Optional image options for base64 retrieval
+ * @param {boolean} [imageOptions.includeBase64=false] - Whether to include base64 image data
+ * @param {boolean} [imageOptions.compress=false] - Whether to compress images
+ * @returns {Promise<Object>} Promise that resolves with the link data
+ */
+export const getProductLinkById = async (
+  id,
+  includeImages = true,
+  imageOptions = {}
+) => {
+  try {
+    // Get the link using the model
+    const link = await productLinkModel.getById(id);
+
+    // Include images if requested
+    if (includeImages) {
+      if (imageOptions.includeBase64) {
+        // Get images with base64 content
+        const images =
+          await ProductLinkImages.getProductLinkImagesWithBase64ByLinkId(id, {
+            compress: imageOptions.compress || false,
+            maxWidth: imageOptions.maxWidth || 800,
+            maxHeight: imageOptions.maxHeight || 800,
+            quality: imageOptions.quality || 0.7,
+          });
+        link.images = images;
+      } else {
+        // Get just the image metadata
+        const images = await ProductLinkImages.getProductLinkImagesByLinkId(id);
+        link.images = images;
+      }
+    }
+
+    return link;
+  } catch (error) {
+    throw new AppError(
+      `Failed to get product link: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Creates a new product link
+ * @param {Object} data - The link data
+ * @param {string} data.product_id - The product ID this link belongs to
+ * @param {string} data.name - The name of the link
+ * @param {string} data.url - The URL for the link
+ * @param {string} [data.description] - Optional description for the link
+ * @param {string} [data.id] - Optional UUID (generated if not provided)
+ * @param {Array<string>} [data.images] - Optional array of image URLs
+ * @returns {Promise<Object>} Promise that resolves with the created link
+ */
+export const createProductLink = async (data) => {
+  try {
+    return await productLinkModel.withTransaction(async () => {
+      // Extract images from the data as they're handled separately
+      const images = data.images;
+
+      // Create a copy of the data to avoid modifying the original
+      const linkData = { ...data };
+      delete linkData.images;
+
+      // Create the link using the model
+      const result = await productLinkModel.create(linkData);
+      const linkId = result.productLink.id;
+
+      // Add link images if provided
+      if (images && images.length > 0) {
+        await ProductLinkImages.upsertProductLinkImages(linkId, images);
+      }
+
+      // Get the complete link with images
+      const link = await getProductLinkById(linkId);
+
+      return {
+        message: 'Product link created successfully',
+        productLink: link,
+      };
+    });
+  } catch (error) {
+    throw new AppError(
+      `Failed to create product link: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
  * Updates a product link
- * @param {string} id - The ID of the product link to update
- * @param {Object} data - The product link data to update
- * @param {string} [data.link_type] - The updated link type
+ * @param {string} id - The ID of the link to update
+ * @param {Object} data - The link data to update
+ * @param {string} [data.name] - The updated name
  * @param {string} [data.url] - The updated URL
- * @param {string} [data.title] - The updated title
  * @param {string} [data.description] - The updated description
- * @param {Array<Object>} [data.images] - Updated array of base64 image data
- * @returns {Promise<Object>} Promise that resolves with the updated product link
+ * @param {Array<string>} [data.images] - Updated array of image URLs
+ * @returns {Promise<Object>} Promise that resolves with the updated link
  */
 export const updateProductLink = async (id, data) => {
   try {
-    // Check if product link exists
+    // Check if link exists
     await productLinkModel.getById(id);
 
-    // Start transaction
-    await productLinkModel.beginTransaction();
-
-    try {
+    return await productLinkModel.withTransaction(async () => {
       // Extract images from the data as they're handled separately
       const images = data.images;
 
@@ -169,31 +189,24 @@ export const updateProductLink = async (id, data) => {
       const updateData = { ...data };
       delete updateData.images;
 
-      // Update product link data if there are fields to update
+      // Update link data if there are fields to update
       if (Object.keys(updateData).length > 0) {
         await productLinkModel.update(id, updateData);
       }
 
       // Update images if provided
       if (images !== undefined) {
-        await ProductLinkImages.updateProductLinkImagesFromBase64(id, images);
+        await ProductLinkImages.upsertProductLinkImages(id, images);
       }
 
-      // Commit transaction
-      await productLinkModel.commitTransaction();
-
-      // Get the updated product link
-      const productLink = await getProductLinkById(id, true);
+      // Get the updated link
+      const link = await getProductLinkById(id);
 
       return {
         message: 'Product link updated successfully',
-        productLink,
+        productLink: link,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productLinkModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update product link: ${error.message}`,
@@ -204,36 +217,26 @@ export const updateProductLink = async (id, data) => {
 
 /**
  * Deletes a product link and its images
- * @param {string} id - The ID of the product link to delete
+ * @param {string} id - The ID of the link to delete
  * @returns {Promise<Object>} Promise that resolves with deletion result
  */
 export const deleteProductLink = async (id) => {
   try {
-    // Check if product link exists
+    // Check if link exists
     await productLinkModel.getById(id);
 
-    // Start transaction
-    await productLinkModel.beginTransaction();
-
-    try {
-      // Delete product link images first
+    return await productLinkModel.withTransaction(async () => {
+      // Delete link images first
       await ProductLinkImages.deleteProductLinkImagesByLinkId(id);
 
-      // Delete the product link
+      // Delete the link
       await productLinkModel.delete(id);
-
-      // Commit transaction
-      await productLinkModel.commitTransaction();
 
       return {
         message: 'Product link deleted successfully',
         id,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productLinkModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete product link: ${error.message}`,
@@ -243,46 +246,36 @@ export const deleteProductLink = async (id) => {
 };
 
 /**
- * Deletes all product links for a product
+ * Deletes all links for a product
  * @param {string} productId - The product ID to delete links for
  * @returns {Promise<Object>} Promise that resolves with deletion result
  */
 export const deleteProductLinksByProductId = async (productId) => {
   try {
-    // Get all product links for this product
-    const productLinks = await getProductLinksByProductId(productId);
+    // Get all links for this product
+    const links = await getProductLinksByProductId(productId);
 
-    if (productLinks.length === 0) {
+    if (links.length === 0) {
       return {
-        message: 'No product links found for this product',
+        message: 'No links found for this product',
         count: 0,
       };
     }
 
-    // Start transaction
-    await productLinkModel.beginTransaction();
-
-    try {
-      // Delete product link images first for each link
-      for (const link of productLinks) {
+    return await productLinkModel.withTransaction(async () => {
+      // Delete link images first for each link
+      for (const link of links) {
         await ProductLinkImages.deleteProductLinkImagesByLinkId(link.id);
       }
 
-      // Delete all product links for this product
+      // Delete all links for this product
       await productLinkModel.deleteAllByParentId(productId);
-
-      // Commit transaction
-      await productLinkModel.commitTransaction();
 
       return {
         message: 'Product links deleted successfully',
-        count: productLinks.length,
+        count: links.length,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productLinkModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete product links: ${error.message}`,
@@ -292,35 +285,32 @@ export const deleteProductLinksByProductId = async (productId) => {
 };
 
 /**
- * Updates or creates product links for a product (upsert operation)
+ * Updates or creates links for a product (upsert operation)
  * @param {string} productId - The product ID
- * @param {Array<Object>} productLinks - Array of product link objects
+ * @param {Array<Object>} links - Array of link objects
  * @returns {Promise<Object>} Promise that resolves with upsert result
  */
-export const upsertProductLinks = async (productId, productLinks) => {
+export const upsertProductLinks = async (productId, links) => {
   try {
-    // Start transaction
-    await productLinkModel.beginTransaction();
-
-    try {
-      // Get existing product links
+    return await productLinkModel.withTransaction(async () => {
+      // Get existing links
       const existingLinks = await getProductLinksByProductId(productId);
 
-      // Delete all existing product links and their images
+      // Delete all existing links and their images
       if (existingLinks.length > 0) {
         for (const link of existingLinks) {
           // Delete images first
           await ProductLinkImages.deleteProductLinkImagesByLinkId(link.id);
         }
 
-        // Delete product links
+        // Delete links
         await productLinkModel.deleteAllByParentId(productId);
       }
 
-      // Create new product links
+      // Create new links
       const createdLinks = [];
 
-      for (const linkData of productLinks) {
+      for (const linkData of links) {
         // Ensure product_id is set
         linkData.product_id = productId;
 
@@ -334,24 +324,21 @@ export const upsertProductLinks = async (productId, productLinks) => {
           dataToCreate.id = uuidv4();
         }
 
-        // Create product link
+        // Create link
         await productLinkModel.create(dataToCreate);
 
         // Add images
         if (images.length > 0) {
-          await ProductLinkImages.updateProductLinkImagesFromBase64(
+          await ProductLinkImages.upsertProductLinkImages(
             dataToCreate.id,
             images
           );
         }
 
-        // Get complete product link with images
-        const productLink = await getProductLinkById(dataToCreate.id, true);
-        createdLinks.push(productLink);
+        // Get complete link with images
+        const link = await getProductLinkById(dataToCreate.id);
+        createdLinks.push(link);
       }
-
-      // Commit transaction
-      await productLinkModel.commitTransaction();
 
       return {
         message: 'Product links updated successfully',
@@ -359,14 +346,60 @@ export const upsertProductLinks = async (productId, productLinks) => {
         created: createdLinks.length,
         productLinks: createdLinks,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productLinkModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update product links: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Adds a base64 image to a product link
+ * @param {Object} data - The image data
+ * @param {string} data.product_link_id - The product link ID
+ * @param {string} data.base64_image - The base64 image data
+ * @param {string} [data.description] - Optional image description
+ * @returns {Promise<Object>} Promise that resolves with the added image
+ */
+export const addProductLinkImageFromBase64 = async (data) => {
+  try {
+    // Check if link exists
+    await productLinkModel.getById(data.product_link_id);
+
+    // Add the image
+    return await ProductLinkImages.addProductLinkImageFromBase64(data);
+  } catch (error) {
+    throw new AppError(
+      `Failed to add product link image: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Updates product link images from base64 data
+ * @param {string} productLinkId - The product link ID
+ * @param {Array<Object>} base64Images - Array of base64 image data
+ * @returns {Promise<Object>} Promise that resolves with the updated images
+ */
+export const updateProductLinkImagesFromBase64 = async (
+  productLinkId,
+  base64Images
+) => {
+  try {
+    // Check if link exists
+    await productLinkModel.getById(productLinkId);
+
+    // Update the images
+    return await ProductLinkImages.updateProductLinkImagesFromBase64(
+      productLinkId,
+      base64Images
+    );
+  } catch (error) {
+    throw new AppError(
+      `Failed to update product link images: ${error.message}`,
       error.statusCode || 500
     );
   }

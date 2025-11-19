@@ -1098,4 +1098,314 @@ export default class DataModelUtils {
       );
     }
   }
+
+  /**
+   * Executes a function within a transaction
+   * @param {Function} fn - The function to execute within the transaction
+   * @returns {Promise<any>} The result of the function execution
+   */
+  async withTransaction(fn) {
+    try {
+      // Start transaction
+      await this.beginTransaction();
+
+      try {
+        // Execute the function
+        const result = await fn();
+
+        // Commit transaction
+        await this.commitTransaction();
+
+        return result;
+      } catch (error) {
+        // Rollback transaction on error
+        await this.rollbackTransaction();
+        throw error;
+      }
+    } catch (error) {
+      throw new AppError(
+        `Transaction failed: ${error.message}`,
+        error.statusCode || 500
+      );
+    }
+  }
+  /**
+   * Gets files with base64 content for a parent entity, with optional compression
+   * @param {string|number} parentId - The parent entity ID
+   * @param {string} [fileType=null] - Optional file type filter
+   * @param {Object} [options] - Optional compression options
+   * @param {boolean} [options.compress=false] - Whether to compress images
+   * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+   * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+   * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+   * @returns {Promise<Array<Object>>} Promise that resolves with files including base64 content
+   */
+  async getFilesWithBase64ByParentId(parentId, fileType = null, options = {}) {
+    if (!this.hasFileHandling) {
+      throw new AppError('File handling is not configured for this model', 500);
+    }
+
+    // Default compression options
+    const compressionOptions = {
+      compress: options.compress || false,
+      maxWidth: options.maxWidth || 800,
+      maxHeight: options.maxHeight || 800,
+      quality: options.quality || 0.7,
+    };
+
+    try {
+      // Get file records from database
+      let files = await this.getAllByParentId(parentId);
+
+      // Filter by file type if specified
+      if (fileType && this.fileTypeField) {
+        files = files.filter((file) => file[this.fileTypeField] === fileType);
+      }
+
+      // If no files found, return empty array
+      if (files.length === 0) {
+        return [];
+      }
+
+      // Import necessary modules
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      // Import Sharp for image processing if compression is requested
+      let sharp;
+      if (compressionOptions.compress) {
+        try {
+          sharp = (await import('sharp')).default;
+        } catch (error) {
+          console.warn('Sharp module not available. Compression disabled.');
+          compressionOptions.compress = false;
+        }
+      }
+
+      // Process each file to add base64 content
+      const filesWithBase64 = await Promise.all(
+        files.map(async (file) => {
+          try {
+            // Get file path from URL
+            const filePath = file[this.fileUrlField].replace(/^\//, ''); // Remove leading slash if present
+
+            // Check if file exists
+            try {
+              await fs.access(filePath);
+            } catch (error) {
+              // File doesn't exist, return record without base64
+              console.warn(`File not found: ${filePath}`);
+              return {
+                ...file,
+                base64_content: null,
+                error: 'File not found',
+              };
+            }
+
+            // Get file extension and MIME type
+            const ext = path.extname(filePath).toLowerCase();
+            let mimeType = 'application/octet-stream'; // Default MIME type
+
+            // Determine MIME type based on extension
+            if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
+            else if (ext === '.png') mimeType = 'image/png';
+            else if (ext === '.gif') mimeType = 'image/gif';
+            else if (ext === '.pdf') mimeType = 'application/pdf';
+            else if (['.doc', '.docx'].includes(ext))
+              mimeType = 'application/msword';
+            else if (['.xls', '.xlsx'].includes(ext))
+              mimeType = 'application/vnd.ms-excel';
+            else if (ext === '.txt') mimeType = 'text/plain';
+
+            // Check if this is an image and compression is requested
+            const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(
+              ext
+            );
+
+            if (isImage && compressionOptions.compress && sharp) {
+              // Compress image using Sharp
+              const imageBuffer = await fs.readFile(filePath);
+
+              // Process the image with Sharp
+              const compressedBuffer = await sharp(imageBuffer)
+                .resize({
+                  width: compressionOptions.maxWidth,
+                  height: compressionOptions.maxHeight,
+                  fit: 'inside',
+                  withoutEnlargement: true,
+                })
+                .jpeg({ quality: compressionOptions.quality * 100 }) // Convert quality to 0-100 scale
+                .toBuffer();
+
+              // Convert compressed buffer to base64
+              const base64Content = compressedBuffer.toString('base64');
+
+              // Return file record with compressed base64 data
+              return {
+                ...file,
+                base64_content: `data:image/jpeg;base64,${base64Content}`,
+                is_compressed: true,
+              };
+            } else {
+              // For non-images or when compression is not requested, use standard approach
+              const fileBuffer = await fs.readFile(filePath);
+              const base64Content = fileBuffer.toString('base64');
+
+              // Return file record with base64 data
+              return {
+                ...file,
+                base64_content: `data:${mimeType};base64,${base64Content}`,
+                is_compressed: false,
+              };
+            }
+          } catch (error) {
+            console.error(`Error processing file ${file.id}:`, error);
+            return {
+              ...file,
+              base64_content: null,
+              error: error.message,
+            };
+          }
+        })
+      );
+
+      return filesWithBase64;
+    } catch (error) {
+      throw new AppError(
+        `Failed to get ${this.entityName}s with base64: ${error.message}`,
+        error.statusCode || 500
+      );
+    }
+  }
+
+  /**
+   * Gets a file with base64 content by ID, with optional compression
+   * @param {string|number} id - The file ID
+   * @param {Object} [options] - Optional compression options
+   * @param {boolean} [options.compress=false] - Whether to compress images
+   * @param {number} [options.maxWidth=800] - Maximum width for compressed images
+   * @param {number} [options.maxHeight=800] - Maximum height for compressed images
+   * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+   * @returns {Promise<Object>} Promise that resolves with file including base64 content
+   */
+  async getFileWithBase64ById(id, options = {}) {
+    if (!this.hasFileHandling) {
+      throw new AppError('File handling is not configured for this model', 500);
+    }
+
+    // Default compression options
+    const compressionOptions = {
+      compress: options.compress || false,
+      maxWidth: options.maxWidth || 800,
+      maxHeight: options.maxHeight || 800,
+      quality: options.quality || 0.7,
+    };
+
+    try {
+      // Get file record from database
+      const file = await this.getById(id);
+
+      // Import necessary modules
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      // Import Sharp for image processing if compression is requested
+      let sharp;
+      if (compressionOptions.compress) {
+        try {
+          sharp = (await import('sharp')).default;
+        } catch (error) {
+          console.warn('Sharp module not available. Compression disabled.');
+          compressionOptions.compress = false;
+        }
+      }
+
+      try {
+        // Get file path from URL
+        const filePath = file[this.fileUrlField].replace(/^\//, ''); // Remove leading slash if present
+
+        // Check if file exists
+        try {
+          await fs.access(filePath);
+        } catch (error) {
+          // File doesn't exist, return record without base64
+          console.warn(`File not found: ${filePath}`);
+          return {
+            ...file,
+            base64_content: null,
+            error: 'File not found',
+          };
+        }
+
+        // Get file extension and MIME type
+        const ext = path.extname(filePath).toLowerCase();
+        let mimeType = 'application/octet-stream'; // Default MIME type
+
+        // Determine MIME type based on extension
+        if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
+        else if (ext === '.png') mimeType = 'image/png';
+        else if (ext === '.gif') mimeType = 'image/gif';
+        else if (ext === '.pdf') mimeType = 'application/pdf';
+        else if (['.doc', '.docx'].includes(ext))
+          mimeType = 'application/msword';
+        else if (['.xls', '.xlsx'].includes(ext))
+          mimeType = 'application/vnd.ms-excel';
+        else if (ext === '.txt') mimeType = 'text/plain';
+
+        // Check if this is an image and compression is requested
+        const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(
+          ext
+        );
+
+        if (isImage && compressionOptions.compress && sharp) {
+          // Compress image using Sharp
+          const imageBuffer = await fs.readFile(filePath);
+
+          // Process the image with Sharp
+          const compressedBuffer = await sharp(imageBuffer)
+            .resize({
+              width: compressionOptions.maxWidth,
+              height: compressionOptions.maxHeight,
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .jpeg({ quality: compressionOptions.quality * 100 }) // Convert quality to 0-100 scale
+            .toBuffer();
+
+          // Convert compressed buffer to base64
+          const base64Content = compressedBuffer.toString('base64');
+
+          // Return file record with compressed base64 data
+          return {
+            ...file,
+            base64_content: `data:image/jpeg;base64,${base64Content}`,
+            is_compressed: true,
+          };
+        } else {
+          // For non-images or when compression is not requested, use standard approach
+          const fileBuffer = await fs.readFile(filePath);
+          const base64Content = fileBuffer.toString('base64');
+
+          // Return file record with base64 data
+          return {
+            ...file,
+            base64_content: `data:${mimeType};base64,${base64Content}`,
+            is_compressed: false,
+          };
+        }
+      } catch (error) {
+        console.error(`Error processing file ${id}:`, error);
+        return {
+          ...file,
+          base64_content: null,
+          error: error.message,
+        };
+      }
+    } catch (error) {
+      throw new AppError(
+        `Failed to get ${this.entityName} with base64: ${error.message}`,
+        error.statusCode || 500
+      );
+    }
+  }
 }
