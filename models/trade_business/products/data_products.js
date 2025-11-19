@@ -1,7 +1,7 @@
-import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
+import { TABLE_MASTER } from '../../tables.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 
 // Import related data models
 import * as ProductNames from './data_product_names.js';
@@ -11,10 +11,22 @@ import * as ProductPackings from './data_product_packings.js';
 import * as ProductCategories from './data_product_categories.js';
 import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
-import { TABLE_MASTER } from '../../tables.js';
 
-// Table name constant for consistency
-const TABLE_NAME = TABLE_MASTER['PRODUCTS'].name;
+// Create a data model utility for products
+const productModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCTS'].name,
+  entityName: 'product',
+  entityIdField: 'id',
+  requiredFields: ['product_id'],
+  validations: {
+    product_id: { required: true },
+    icon_url: { required: false },
+    remark: { required: false },
+  },
+  defaults: {
+    id: uuidv4,
+  },
+});
 
 /**
  * Generates a unique product ID
@@ -25,8 +37,6 @@ export const generateProductId = async (format) => {
   try {
     // If format is 'prefix', use the P{YY}{MM}{NNNN} format
     if (format === 'prefix') {
-      const pool = dbConn.tb_pool;
-
       // Get the current date
       const date = new Date();
       const year = date.getFullYear().toString().slice(-2);
@@ -38,12 +48,12 @@ export const generateProductId = async (format) => {
       // Find the highest product_id with this prefix
       const sql = `
         SELECT MAX(product_id) as max_id
-        FROM ${TABLE_NAME}
+        FROM ${productModel.tableName}
         WHERE product_id LIKE ?
       `;
 
-      const result = await pool.query(sql, [`${prefix}%`]);
-      const maxId = result[0][0].max_id;
+      const result = await productModel.executeQuery(sql, [`${prefix}%`]);
+      const maxId = result[0].max_id;
 
       let sequenceNumber = 1;
 
@@ -96,10 +106,8 @@ export const generateProductId = async (format) => {
  */
 export const createProduct = async (data) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Start transaction
-    await pool.query('START TRANSACTION');
+    await productModel.beginTransaction();
 
     try {
       // Extract related data that needs to be handled separately
@@ -114,25 +122,14 @@ export const createProduct = async (data) => {
         ...productData
       } = { ...data };
 
-      // Generate UUID and product ID if not provided
-      if (!productData.id) {
-        productData.id = uuidv4();
-      }
-
+      // Generate product ID if not provided
       if (!productData.product_id) {
         productData.product_id = await generateProductId();
       }
 
-      // Create the product using CRUD utility
-      const result = await CrudOperations.performCrud({
-        operation: 'create',
-        tableName: TABLE_NAME,
-        data: productData,
-        connection: pool,
-      });
-
-      const product = result.record;
-      const productId = productData.id;
+      // Create the product using the model
+      const result = await productModel.create(productData);
+      const productId = result.product.id;
 
       // Add product names if provided
       if (names && names.length > 0) {
@@ -179,7 +176,7 @@ export const createProduct = async (data) => {
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
+      await productModel.commitTransaction();
 
       // Get the complete product with all related data
       const completeProduct = await getProductById(productId, true);
@@ -190,7 +187,7 @@ export const createProduct = async (data) => {
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await productModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -209,21 +206,8 @@ export const createProduct = async (data) => {
  */
 export const getProductById = async (id, includeRelated = false) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Get the product using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: TABLE_NAME,
-      id: id,
-      connection: pool,
-    });
-
-    if (!result.record) {
-      throw new AppError('Product not found', 404);
-    }
-
-    const product = result.record;
+    // Get the product using the model
+    const product = await productModel.getById(id);
 
     // Include related data if requested
     if (includeRelated) {
@@ -240,7 +224,7 @@ export const getProductById = async (id, includeRelated = false) => {
         await ProductCustomizations.getCustomizationsByProductId(id);
 
       // Get links
-      product.links = await ProductLinks.getProductLinksByProductId(id);
+      product.links = await ProductLinks.getProductLinksByProductId(id, true);
 
       // Get categories
       product.categories =
@@ -272,21 +256,21 @@ export const getProductById = async (id, includeRelated = false) => {
  */
 export const getProductByCode = async (productCode, includeRelated = false) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Get the product using a custom query
+    const sql = `
+      SELECT *
+      FROM ${productModel.tableName}
+      WHERE product_id = ?
+      LIMIT 1
+    `;
 
-    // Get the product using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: TABLE_NAME,
-      conditions: { product_id: productCode },
-      connection: pool,
-    });
+    const results = await productModel.executeQuery(sql, [productCode]);
 
-    if (!result.records || result.records.length === 0) {
+    if (results.length === 0) {
       throw new AppError('Product not found', 404);
     }
 
-    const product = result.records[0];
+    const product = results[0];
 
     // Include related data if requested
     if (includeRelated) {
@@ -303,7 +287,10 @@ export const getProductByCode = async (productCode, includeRelated = false) => {
         await ProductCustomizations.getCustomizationsByProductId(product.id);
 
       // Get links
-      product.links = await ProductLinks.getProductLinksByProductId(product.id);
+      product.links = await ProductLinks.getProductLinksByProductId(
+        product.id,
+        true
+      );
 
       // Get categories
       product.categories =
@@ -342,17 +329,15 @@ export const getProductByCode = async (productCode, includeRelated = false) => {
  */
 export const getProducts = async (options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Set default pagination values
     const page = options.page || 1;
     const limit = options.limit || 20;
     const offset = (page - 1) * limit;
 
-    let countSQL = `SELECT COUNT(*) as total FROM ${TABLE_NAME}`;
+    let countSQL = `SELECT COUNT(*) as total FROM ${productModel.tableName}`;
     let productsSQL = `
       SELECT p.* 
-      FROM ${TABLE_NAME} p
+      FROM ${productModel.tableName} p
     `;
 
     const sqlParams = [];
@@ -362,14 +347,14 @@ export const getProducts = async (options = {}) => {
     if (options.search) {
       productsSQL = `
         SELECT DISTINCT p.* 
-        FROM ${TABLE_NAME} p
+        FROM ${productModel.tableName} p
         LEFT JOIN product_names pn ON p.id = pn.product_id
         WHERE pn.name LIKE ?
       `;
 
       countSQL = `
         SELECT COUNT(DISTINCT p.id) as total 
-        FROM ${TABLE_NAME} p
+        FROM ${productModel.tableName} p
         LEFT JOIN product_names pn ON p.id = pn.product_id
         WHERE pn.name LIKE ?
       `;
@@ -407,17 +392,16 @@ export const getProducts = async (options = {}) => {
     sqlParams.push(limit, offset);
 
     // Execute count query
-    const countResult = await pool.query(
+    const countResult = await productModel.executeQuery(
       countSQL,
       options.search || options.category_id
         ? sqlParams.slice(0, sqlParams.length - 2)
         : []
     );
-    const total = countResult[0][0].total;
+    const total = countResult[0].total;
 
     // Execute products query
-    const productsResult = await pool.query(productsSQL, sqlParams);
-    const products = productsResult[0];
+    const products = await productModel.executeQuery(productsSQL, sqlParams);
 
     // Include related data if requested
     if (options.includeRelated) {
@@ -477,13 +461,11 @@ export const getProducts = async (options = {}) => {
  */
 export const updateProduct = async (id, data) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if product exists
-    await getProductById(id);
+    await productModel.getById(id);
 
     // Start transaction
-    await pool.query('START TRANSACTION');
+    await productModel.beginTransaction();
 
     try {
       // Extract related data that needs to be handled separately
@@ -493,13 +475,7 @@ export const updateProduct = async (id, data) => {
 
       // Update product basic data if there are fields to update
       if (Object.keys(productData).length > 0) {
-        await CrudOperations.performCrud({
-          operation: 'update',
-          tableName: TABLE_NAME,
-          id: id,
-          data: productData,
-          connection: pool,
-        });
+        await productModel.update(id, productData);
       }
 
       // Update product names if provided
@@ -523,7 +499,7 @@ export const updateProduct = async (id, data) => {
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
+      await productModel.commitTransaction();
 
       // Get the updated product with all related data
       const product = await getProductById(id, true);
@@ -534,7 +510,7 @@ export const updateProduct = async (id, data) => {
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await productModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -552,18 +528,11 @@ export const updateProduct = async (id, data) => {
  */
 export const deleteProduct = async (id) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Check if product exists and get its code
+    const product = await productModel.getById(id);
 
-    // Check if product exists
-    const product = await getProductById(id);
-
-    // Delete the product (cascade will delete all related data)
-    await CrudOperations.performCrud({
-      operation: 'delete',
-      tableName: TABLE_NAME,
-      id: id,
-      connection: pool,
-    });
+    // Delete the product using the model
+    await productModel.delete(id);
 
     return {
       message: 'Product deleted successfully',
@@ -585,12 +554,9 @@ export const deleteProduct = async (id) => {
  */
 export const productExists = async (id) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    const sql = `SELECT COUNT(*) as count FROM ${TABLE_NAME} WHERE id = ?`;
-    const result = await pool.query(sql, [id]);
-
-    return result[0][0].count > 0;
+    const sql = `SELECT COUNT(*) as count FROM ${productModel.tableName} WHERE id = ?`;
+    const result = await productModel.executeQuery(sql, [id]);
+    return result[0].count > 0;
   } catch (error) {
     throw new AppError(
       `Failed to check if product exists: ${error.message}`,
@@ -606,12 +572,9 @@ export const productExists = async (id) => {
  */
 export const productExistsByCode = async (productCode) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    const sql = `SELECT COUNT(*) as count FROM ${TABLE_NAME} WHERE product_id = ?`;
-    const result = await pool.query(sql, [productCode]);
-
-    return result[0][0].count > 0;
+    const sql = `SELECT COUNT(*) as count FROM ${productModel.tableName} WHERE product_id = ?`;
+    const result = await productModel.executeQuery(sql, [productCode]);
+    return result[0].count > 0;
   } catch (error) {
     throw new AppError(
       `Failed to check if product exists by code: ${error.message}`,
@@ -626,34 +589,32 @@ export const productExistsByCode = async (productCode) => {
  */
 export const getProductStats = async () => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Get total products count
-    const countSQL = `SELECT COUNT(*) as total FROM ${TABLE_NAME}`;
-    const countResult = await pool.query(countSQL);
-    const total = countResult[0][0].total;
+    const countSQL = `SELECT COUNT(*) as total FROM ${productModel.tableName}`;
+    const countResult = await productModel.executeQuery(countSQL);
+    const total = countResult[0].total;
 
     // Get products created in the last 30 days
     const recentSQL = `
       SELECT COUNT(*) as count 
-      FROM ${TABLE_NAME} 
+      FROM ${productModel.tableName} 
       WHERE created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
     `;
-    const recentResult = await pool.query(recentSQL);
-    const recentCount = recentResult[0][0].count;
+    const recentResult = await productModel.executeQuery(recentSQL);
+    const recentCount = recentResult[0].count;
 
     // Get products by month for the last 12 months
     const monthlySQL = `
       SELECT 
         DATE_FORMAT(created_at, '%Y-%m') as month,
         COUNT(*) as count
-      FROM ${TABLE_NAME}
+      FROM ${productModel.tableName}
       WHERE created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
       GROUP BY DATE_FORMAT(created_at, '%Y-%m')
       ORDER BY month
     `;
-    const monthlyResult = await pool.query(monthlySQL);
-    const monthlyStats = monthlyResult[0];
+    const monthlyResult = await productModel.executeQuery(monthlySQL);
+    const monthlyStats = monthlyResult;
 
     return {
       total,

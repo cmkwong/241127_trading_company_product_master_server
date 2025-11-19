@@ -1,13 +1,39 @@
-import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 
-// Table name constants for consistency
-const CUSTOMIZATIONS_TABLE = TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name;
-const CUSTOMIZATION_IMAGES_TABLE =
-  TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name;
+// Create a data model utility for product customizations
+const customizationModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+  entityName: 'customization',
+  entityIdField: 'product_id',
+  requiredFields: ['product_id', 'name'],
+  validations: {
+    name: { required: true },
+    code: { required: false },
+    remark: { required: false },
+  },
+  defaults: {
+    id: uuidv4,
+  },
+});
+
+// Create a data model utility for customization images
+const customizationImageModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
+  entityName: 'customization image',
+  entityIdField: 'customization_id',
+  requiredFields: ['customization_id', 'image_url'],
+  validations: {
+    image_url: { required: true },
+  },
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/uploads/customizations/{id}',
+    imagesOnly: true,
+  },
+});
 
 /**
  * Creates a new customization for a product
@@ -22,20 +48,8 @@ const CUSTOMIZATION_IMAGES_TABLE =
  */
 export const createCustomization = async (data) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Validate required fields
-    if (!data.product_id) {
-      throw new AppError('Product ID is required', 400);
-    }
-
-    if (!data.name) {
-      throw new AppError('Customization name is required', 400);
-    }
-
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await customizationModel.beginTransaction();
     try {
       // Extract images from the data as they're handled separately
       const images = data.images;
@@ -44,40 +58,35 @@ export const createCustomization = async (data) => {
       const customizationData = { ...data };
       delete customizationData.images;
 
-      // Generate UUID if not provided
-      if (!customizationData.id) {
-        customizationData.id = uuidv4();
-      }
-
-      // Create the customization using CRUD utility
-      const result = await CrudOperations.performCrud({
-        operation: 'create',
-        tableName: CUSTOMIZATIONS_TABLE,
-        data: customizationData,
-        connection: pool,
-      });
-
+      // Create the customization using the model
+      const result = await customizationModel.create(customizationData);
+      const customizationId = result.customization.id;
       // Add customization images if provided
       if (images && images.length > 0) {
         const imageData = images.map((imageUrl, index) => ({
-          customization_id: customizationData.id,
+          customization_id: customizationId,
           image_url: imageUrl,
           display_order: index,
         }));
 
-        await CrudOperations.performCrud({
-          operation: 'bulkcreate',
-          tableName: CUSTOMIZATION_IMAGES_TABLE,
-          data: imageData,
-          connection: pool,
-        });
+        // Use bulkcreate through executeQuery
+        await customizationImageModel.executeQuery(
+          `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
+           (customization_id, image_url, display_order) VALUES ?`,
+          [
+            imageData.map((img) => [
+              img.customization_id,
+              img.image_url,
+              img.display_order,
+            ]),
+          ]
+        );
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await customizationModel.commitTransaction();
       // Get the complete customization with images
-      const customization = await getCustomizationById(customizationData.id);
+      const customization = await getCustomizationById(customizationId);
 
       return {
         message: 'Customization created successfully',
@@ -85,7 +94,7 @@ export const createCustomization = async (data) => {
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await customizationModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -103,33 +112,11 @@ export const createCustomization = async (data) => {
  */
 export const getCustomizationById = async (id) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Get the customization using CRUD utility
-    const customizationResult = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CUSTOMIZATIONS_TABLE,
-      id: id,
-      connection: pool,
-    });
-
-    if (!customizationResult.record) {
-      throw new AppError('Customization not found', 404);
-    }
-
-    const customization = customizationResult.record;
-
+    // Get the customization using the model
+    const customization = await customizationModel.getById(id);
     // Get customization images
-    const imagesSQL = `
-      SELECT image_url
-      FROM ${CUSTOMIZATION_IMAGES_TABLE}
-      WHERE customization_id = ?
-      ORDER BY display_order
-    `;
-
-    const imagesResult = await pool.query(imagesSQL, [id]);
-    customization.images = imagesResult[0].map((img) => img.image_url);
-
+    const images = await customizationImageModel.getAllByParentId(id);
+    customization.images = images.map((img) => img.image_url);
     return customization;
   } catch (error) {
     throw new AppError(
@@ -146,31 +133,15 @@ export const getCustomizationById = async (id) => {
  */
 export const getCustomizationsByProductId = async (productId) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Get the customizations using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CUSTOMIZATIONS_TABLE,
-      conditions: { product_id: productId },
-      connection: pool,
-    });
-
-    const customizations = result.records;
-
+    // Get all customizations for this product using the model
+    const customizations = await customizationModel.getAllByParentId(productId);
     // Get images for each customization
     for (const customization of customizations) {
-      const imagesSQL = `
-        SELECT image_url
-        FROM ${CUSTOMIZATION_IMAGES_TABLE}
-        WHERE customization_id = ?
-        ORDER BY display_order
-      `;
-
-      const imagesResult = await pool.query(imagesSQL, [customization.id]);
-      customization.images = imagesResult[0].map((img) => img.image_url);
+      const images = await customizationImageModel.getAllByParentId(
+        customization.id
+      );
+      customization.images = images.map((img) => img.image_url);
     }
-
     return customizations;
   } catch (error) {
     throw new AppError(
@@ -192,14 +163,11 @@ export const getCustomizationsByProductId = async (productId) => {
  */
 export const updateCustomization = async (id, data) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if customization exists
-    await getCustomizationById(id);
+    await customizationModel.getById(id);
 
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await customizationModel.beginTransaction();
     try {
       // Extract images from the data as they're handled separately
       const images = data.images;
@@ -210,23 +178,12 @@ export const updateCustomization = async (id, data) => {
 
       // Update customization data if there are fields to update
       if (Object.keys(updateData).length > 0) {
-        await CrudOperations.performCrud({
-          operation: 'update',
-          tableName: CUSTOMIZATIONS_TABLE,
-          id: id,
-          data: updateData,
-          connection: pool,
-        });
+        await customizationModel.update(id, updateData);
       }
-
       // Update images if provided
       if (images !== undefined) {
         // Delete existing images
-        await pool.query(
-          `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
-          [id]
-        );
-
+        await customizationImageModel.deleteAllByParentId(id);
         // Add new images
         if (images && images.length > 0) {
           const imageData = images.map((imageUrl, index) => ({
@@ -235,18 +192,23 @@ export const updateCustomization = async (id, data) => {
             display_order: index,
           }));
 
-          await CrudOperations.performCrud({
-            operation: 'bulkcreate',
-            tableName: CUSTOMIZATION_IMAGES_TABLE,
-            data: imageData,
-            connection: pool,
-          });
+          // Use bulkcreate through executeQuery
+          await customizationImageModel.executeQuery(
+            `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
+             (customization_id, image_url, display_order) VALUES ?`,
+            [
+              imageData.map((img) => [
+                img.customization_id,
+                img.image_url,
+                img.display_order,
+              ]),
+            ]
+          );
         }
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await customizationModel.commitTransaction();
       // Get the updated customization
       const customization = await getCustomizationById(id);
 
@@ -256,7 +218,7 @@ export const updateCustomization = async (id, data) => {
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await customizationModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -274,39 +236,25 @@ export const updateCustomization = async (id, data) => {
  */
 export const deleteCustomization = async (id) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if customization exists
-    await getCustomizationById(id);
+    await customizationModel.getById(id);
 
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await customizationModel.beginTransaction();
     try {
       // Delete customization images first
-      await pool.query(
-        `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
-        [id]
-      );
-
+      await customizationImageModel.deleteAllByParentId(id);
       // Delete the customization
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: CUSTOMIZATIONS_TABLE,
-        id: id,
-        connection: pool,
-      });
-
+      await customizationModel.delete(id);
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await customizationModel.commitTransaction();
       return {
         message: 'Customization deleted successfully',
         id,
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await customizationModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -324,8 +272,6 @@ export const deleteCustomization = async (id) => {
  */
 export const deleteCustomizationsByProductId = async (productId) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Get all customizations for this product
     const customizations = await getCustomizationsByProductId(productId);
 
@@ -337,40 +283,125 @@ export const deleteCustomizationsByProductId = async (productId) => {
     }
 
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await customizationModel.beginTransaction();
     try {
-      // Delete customization images first
+      // Delete customization images first for each customization
       for (const customization of customizations) {
-        await pool.query(
-          `DELETE FROM ${CUSTOMIZATION_IMAGES_TABLE} WHERE customization_id = ?`,
-          [customization.id]
-        );
+        await customizationImageModel.deleteAllByParentId(customization.id);
       }
 
-      // Delete the customizations
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: CUSTOMIZATIONS_TABLE,
-        conditions: { product_id: productId },
-        connection: pool,
-      });
-
+      // Delete all customizations for this product
+      await customizationModel.deleteAllByParentId(productId);
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await customizationModel.commitTransaction();
       return {
         message: 'Customizations deleted successfully',
         count: customizations.length,
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await customizationModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
     throw new AppError(
       `Failed to delete customizations: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Updates or creates customizations for a product (upsert operation)
+ * @param {string} productId - The product ID
+ * @param {Array<Object>} customizations - Array of customization objects
+ * @returns {Promise<Object>} Promise that resolves with upsert result
+ */
+export const upsertCustomizations = async (productId, customizations) => {
+  try {
+    // Start transaction
+    await customizationModel.beginTransaction();
+
+    try {
+      // Get existing customizations
+      const existingCustomizations = await getCustomizationsByProductId(
+        productId
+      );
+
+      // Delete all existing customizations and their images
+      if (existingCustomizations.length > 0) {
+        for (const customization of existingCustomizations) {
+          // Delete images first
+          await customizationImageModel.deleteAllByParentId(customization.id);
+        }
+
+        // Delete customizations
+        await customizationModel.deleteAllByParentId(productId);
+      }
+
+      // Create new customizations
+      const createdCustomizations = [];
+
+      for (const customizationData of customizations) {
+        // Ensure product_id is set
+        customizationData.product_id = productId;
+
+        // Extract images
+        const images = customizationData.images || [];
+        const dataToCreate = { ...customizationData };
+        delete dataToCreate.images;
+
+        // Generate ID if not provided
+        if (!dataToCreate.id) {
+          dataToCreate.id = uuidv4();
+        }
+
+        // Create customization
+        await customizationModel.create(dataToCreate);
+
+        // Add images
+        if (images.length > 0) {
+          const imageData = images.map((imageUrl, index) => ({
+            customization_id: dataToCreate.id,
+            image_url: imageUrl,
+            display_order: index,
+          }));
+
+          await customizationImageModel.executeQuery(
+            `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
+             (customization_id, image_url, display_order) VALUES ?`,
+            [
+              imageData.map((img) => [
+                img.customization_id,
+                img.image_url,
+                img.display_order,
+              ]),
+            ]
+          );
+        }
+
+        // Get complete customization with images
+        const customization = await getCustomizationById(dataToCreate.id);
+        createdCustomizations.push(customization);
+      }
+
+      // Commit transaction
+      await customizationModel.commitTransaction();
+
+      return {
+        message: 'Customizations updated successfully',
+        deleted: existingCustomizations.length,
+        created: createdCustomizations.length,
+        customizations: createdCustomizations,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await customizationModel.rollbackTransaction();
+      throw error;
+    }
+  } catch (error) {
+    throw new AppError(
+      `Failed to update customizations: ${error.message}`,
       error.statusCode || 500
     );
   }

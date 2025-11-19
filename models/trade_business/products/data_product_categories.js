@@ -1,72 +1,104 @@
-import * as dbConn from '../../../utils/dbConn.js';
-import AppError from '../../../utils/appError.js';
-import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
+import AppError from '../../../utils/appError.js';
 
-// Table name constant for consistency
-const PRODUCT_CATEGORIES_TABLE = TABLE_MASTER['PRODUCT_CATEGORIES'].name;
+// Create a data model utility for product categories with multiple joins
+const productCategoryModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+  entityName: 'product category',
+  entityIdField: 'product_id',
+  requiredFields: ['product_id', 'category_id'],
+  validations: {
+    category_id: { required: true },
+    bulk_id: { required: false },
+  },
+  joinConfig: [
+    {
+      joinTable: 'master_categories',
+      joinField: 'category_id',
+      targetField: 'id', // Optional, defaults to 'id'
+      selectFields:
+        'master_categories.name as category_name, master_categories.description as category_description, master_categories.parent_id',
+      orderBy: 'master_categories.name',
+    },
+  ],
+});
+
+// Export the standard CRUD operations using the model
+export const createProductCategory = (data) =>
+  productCategoryModel.create(data);
+export const getProductCategoryById = (id) => productCategoryModel.getById(id);
+export const getProductCategoriesByProductId = (productId) =>
+  productCategoryModel.getAllByParentId(productId);
+export const updateProductCategory = (id, data) =>
+  productCategoryModel.update(id, data);
+export const deleteProductCategory = (id) => productCategoryModel.delete(id);
+export const deleteProductCategoriesByProductId = (productId) =>
+  productCategoryModel.deleteAllByParentId(productId);
+export const upsertProductCategories = (productId, categories) =>
+  productCategoryModel.upsertAll(productId, categories);
 
 /**
- * Gets product categories by product ID
- * @param {string} productId - The product ID
- * @returns {Promise<Array<Object>>} Promise that resolves with the product categories
+ * Gets all categories from master table
+ * @returns {Promise<Array>} Promise that resolves with the categories
  */
-export const getProductCategoriesByProductId = async (productId) => {
+export const getAllCategories = async () => {
   try {
-    const pool = dbConn.tb_pool;
-
-    const sql = `
-      SELECT pc.*, c.name as category_name
-      FROM ${PRODUCT_CATEGORIES_TABLE} pc
-      LEFT JOIN categories c ON pc.category_id = c.id
-      WHERE pc.product_id = ?
-    `;
-
-    const result = await pool.query(sql, [productId]);
-    return result[0];
+    const result = await productCategoryModel.executeQuery(
+      `SELECT * FROM master_categories ORDER BY name`
+    );
+    return result;
   } catch (error) {
     throw new AppError(
-      `Failed to get product categories: ${error.message}`,
+      `Failed to get categories: ${error.message}`,
       error.statusCode || 500
     );
   }
 };
+
 /**
- * Upserts product categories
- * @param {string} productId - The product ID
- * @param {Array<{category_id: string}>} categories - The categories to upsert
- * @returns {Promise<void>} Promise that resolves when the operation is complete
+ * Gets categories with hierarchical structure
+ * @returns {Promise<Array>} Promise that resolves with the hierarchical categories
  */
-export const upsertProductCategories = async (productId, categories) => {
+export const getCategoryHierarchy = async () => {
   try {
-    const pool = dbConn.tb_pool;
+    // Get all categories first
+    const allCategories = await getAllCategories();
 
-    // Prepare the data for bulk upsert
-    const categoryData =
-      categories && categories.length > 0
-        ? categories.map((category) => ({
-            id: uuidv4(),
-            product_id: productId,
-            category_id: category.category_id,
-          }))
-        : [];
+    // Build hierarchy
+    const categoryMap = {};
+    const rootCategories = [];
 
-    // Use the bulkUpsert operation
-    await CrudOperations.performCrud({
-      operation: 'bulkUpsert',
-      tableName: PRODUCT_CATEGORIES_TABLE,
-      data: categoryData,
-      conditions: { product_id: productId },
-      connection: pool,
+    // First pass: map categories by ID
+    allCategories.forEach((category) => {
+      categoryMap[category.id] = {
+        ...category,
+        children: [],
+      };
     });
 
-    return {
-      message: 'Product categories updated successfully',
-      count: categoryData.length,
-    };
+    // Second pass: build the hierarchy
+    allCategories.forEach((category) => {
+      if (category.parent_id) {
+        // This is a child category
+        if (categoryMap[category.parent_id]) {
+          categoryMap[category.parent_id].children.push(
+            categoryMap[category.id]
+          );
+        } else {
+          // Parent not found, treat as root
+          rootCategories.push(categoryMap[category.id]);
+        }
+      } else {
+        // This is a root category
+        rootCategories.push(categoryMap[category.id]);
+      }
+    });
+
+    return rootCategories;
   } catch (error) {
     throw new AppError(
-      `Failed to upsert product categories: ${error.message}`,
+      `Failed to get category hierarchy: ${error.message}`,
       error.statusCode || 500
     );
   }
@@ -74,20 +106,22 @@ export const upsertProductCategories = async (productId, categories) => {
 
 /**
  * Gets products by category ID
- * @param {string} categoryId - The category ID
- * @returns {Promise<Array<string>>} Promise that resolves with array of product IDs
+ * @param {number} categoryId - The category ID
+ * @returns {Promise<Array>} Promise that resolves with the products in the category
  */
-export const getProductIdsByCategoryId = async (categoryId) => {
+export const getProductsByCategoryId = async (categoryId) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    const sql = `
-      SELECT product_id FROM ${PRODUCT_CATEGORIES_TABLE}
-      WHERE category_id = ?
-    `;
-
-    const result = await pool.query(sql, [categoryId]);
-    return result[0].map((item) => item.product_id);
+    const result = await productCategoryModel.executeQuery(
+      `
+      SELECT p.* 
+      FROM products p
+      JOIN ${TABLE_MASTER['PRODUCT_CATEGORIES'].name} pc ON p.id = pc.product_id
+      WHERE pc.category_id = ?
+      ORDER BY p.name
+      `,
+      [categoryId]
+    );
+    return result;
   } catch (error) {
     throw new AppError(
       `Failed to get products by category: ${error.message}`,

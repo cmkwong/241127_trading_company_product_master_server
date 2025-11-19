@@ -1,15 +1,20 @@
-import * as dbConn from '../../../utils/dbConn.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
-import logger from '../../../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
-
-// Import certificate files module
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 import * as CertificateFiles from './data_product_certificate_files.js';
 
-// Table name constant for consistency
-const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
+// Create a data model utility for product certificates
+const certificateModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+  entityName: 'product certificate',
+  entityIdField: 'product_id',
+  requiredFields: ['product_id', 'name'],
+  validations: {
+    name: { required: true },
+    description: { required: false },
+  },
+});
 
 /**
  * Gets product certificates by product ID
@@ -22,21 +27,13 @@ export const getProductCertificatesByProductId = async (
   includeFiles = false
 ) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    const sql = `
-      SELECT * FROM ${CERTIFICATES_TABLE}
-      WHERE product_id = ?
-    `;
-
-    const result = await pool.query(sql, [productId]);
-    const certificates = result[0];
-
+    // Get certificates using the model
+    const certificates = await certificateModel.getAllByParentId(productId);
     // Include certificate files if requested
     if (includeFiles && certificates.length > 0) {
       for (const certificate of certificates) {
         certificate.files =
-          await CertificateFiles.getProductCertificateFilesByCertificateId(
+          await CertificateFiles.getCertificateFilesByCertificateId(
             certificate.id
           );
       }
@@ -50,6 +47,7 @@ export const getProductCertificatesByProductId = async (
     );
   }
 };
+
 /**
  * Creates a product certificate
  * @param {Object} data - The certificate data
@@ -61,11 +59,8 @@ export const getProductCertificatesByProductId = async (
  */
 export const createProductCertificate = async (data) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await certificateModel.beginTransaction();
     try {
       // Generate ID if not provided
       const certificateId = data.id || uuidv4();
@@ -77,32 +72,22 @@ export const createProductCertificate = async (data) => {
       const files = certificateData.files;
       delete certificateData.files;
 
-      // Create certificate - the CRUD utility will automatically filter out fields that don't exist in the schema
-      await CrudOperations.performCrud({
-        operation: 'create',
-        tableName: CERTIFICATES_TABLE,
-        data: certificateData,
-        connection: pool,
-      });
-
+      // Create certificate
+      await certificateModel.create(certificateData);
       // Add certificate files if provided
       if (files && files.length > 0) {
-        await CertificateFiles.upsertProductCertificateFiles(
-          certificateId,
-          files
-        );
+        await CertificateFiles.upsertCertificateFiles(certificateId, files);
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await certificateModel.commitTransaction();
       // Get the created certificate with files
       const certificate = await getProductCertificateById(certificateId, true);
 
       return certificate;
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await certificateModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -121,26 +106,12 @@ export const createProductCertificate = async (data) => {
  */
 export const getProductCertificateById = async (id, includeFiles = false) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Get the certificate
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CERTIFICATES_TABLE,
-      id: id,
-      connection: pool,
-    });
-
-    if (!result.record) {
-      throw new AppError('Certificate not found', 404);
-    }
-
-    const certificate = result.record;
-
+    // Get the certificate using the model
+    const certificate = await certificateModel.getById(id);
     // Include certificate files if requested
     if (includeFiles) {
       certificate.files =
-        await CertificateFiles.getProductCertificateFilesByCertificateId(id);
+        await CertificateFiles.getCertificateFilesByCertificateId(id);
     }
 
     return certificate;
@@ -163,14 +134,11 @@ export const getProductCertificateById = async (id, includeFiles = false) => {
  */
 export const updateProductCertificate = async (id, data) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if certificate exists
-    await getProductCertificateById(id);
+    await certificateModel.getById(id);
 
     // Start transaction
-    await pool.query('START TRANSACTION');
-
+    await certificateModel.beginTransaction();
     try {
       // Create a copy of the data to avoid modifying the original
       const updateData = { ...data };
@@ -181,31 +149,23 @@ export const updateProductCertificate = async (id, data) => {
 
       // Only update if there are fields to update
       if (Object.keys(updateData).length > 0) {
-        // Update certificate - the CRUD utility will automatically filter out fields that don't exist in the schema
-        await CrudOperations.performCrud({
-          operation: 'update',
-          tableName: CERTIFICATES_TABLE,
-          id: id,
-          data: updateData,
-          connection: pool,
-        });
+        // Update certificate
+        await certificateModel.update(id, updateData);
       }
-
       // Update certificate files if provided
       if (files !== undefined) {
-        await CertificateFiles.upsertProductCertificateFiles(id, files);
+        await CertificateFiles.upsertCertificateFiles(id, files);
       }
 
       // Commit transaction
-      await pool.query('COMMIT');
-
+      await certificateModel.commitTransaction();
       // Get the updated certificate with files
       const certificate = await getProductCertificateById(id, true);
 
       return certificate;
     } catch (error) {
       // Rollback transaction on error
-      await pool.query('ROLLBACK');
+      await certificateModel.rollbackTransaction();
       throw error;
     }
   } catch (error) {
@@ -223,19 +183,11 @@ export const updateProductCertificate = async (id, data) => {
  */
 export const deleteProductCertificate = async (id) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if certificate exists
-    await getProductCertificateById(id);
+    await certificateModel.getById(id);
 
     // Delete the certificate (cascade will delete all related files)
-    await CrudOperations.performCrud({
-      operation: 'delete',
-      tableName: CERTIFICATES_TABLE,
-      id: id,
-      connection: pool,
-    });
-
+    await certificateModel.delete(id);
     return {
       message: 'Certificate deleted successfully',
       certificateId: id,
@@ -243,6 +195,22 @@ export const deleteProductCertificate = async (id) => {
   } catch (error) {
     throw new AppError(
       `Failed to delete product certificate: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Deletes all certificates for a product
+ * @param {string} productId - The product ID
+ * @returns {Promise<Object>} Promise that resolves with deletion result
+ */
+export const deleteProductCertificatesByProductId = async (productId) => {
+  try {
+    return await certificateModel.deleteAllByParentId(productId);
+  } catch (error) {
+    throw new AppError(
+      `Failed to delete product certificates: ${error.message}`,
       error.statusCode || 500
     );
   }
