@@ -10,12 +10,12 @@ const router = express.Router();
 router.use('/labels', labelsRoutes);
 
 // Product table routes
-router.route('/table', tableRoutes);
+router.use('/table', tableRoutes);
 
 // Product data routes
-router.route('/data', dataRoutes);
+router.use('/data', dataRoutes);
 
 // Product master labels routes
-router.route('/master', masterRoutes);
+router.use('/master', masterRoutes);
 
 export default router;

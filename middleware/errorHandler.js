@@ -1,6 +1,6 @@
 import logger from '../utils/logger.js';
 
-const errorController = (err, req, res, next) => {
+const errorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
@@ -19,4 +19,4 @@ const errorController = (err, req, res, next) => {
   logger.error(`${err.stack}`.substring(0, 2000));
 };
 
-export default errorController;
+export default errorHandler;

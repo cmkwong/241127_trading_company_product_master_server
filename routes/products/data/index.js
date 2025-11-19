@@ -1,78 +1,70 @@
 import express from 'express';
 import * as productsController from '../../../controller/trade_business/products/data_productsController.js';
-import * as authController from '../../../controller/authController.js';
-import endController from '../../../controller/endController.js';
+import * as authController from '../../../middleware/authController.js';
+import routeTracker from '../../../middleware/routeTracker.js';
 
 const router = express.Router();
 
 // Apply authentication middleware to all routes
 router.use(authController.protect);
 
+// Apply route tracker to all routes in this router
+router.use(routeTracker);
+
 // Routes that don't require ID validation
 router
   .route('/')
-  .get(productsController.getProducts, endController)
+  .get(productsController.getProducts)
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.validateProductData,
-    productsController.createProduct,
-    endController
+    productsController.createProduct
   );
 
 // Generate product ID
-router.get('/generate-id', productsController.generateProductId, endController);
+router.get('/generate-id', productsController.generateProductId);
 
 // Product statistics
 router.get(
   '/stats',
   authController.restrictTo('admin', 'manager', 'product-manager', 'analyst'),
-  productsController.getProductStats,
-  endController
+  productsController.getProductStats
 );
 
 // Check if product exists by code
 router.get(
   '/exists-by-code/:code',
   productsController.validateProductCode,
-  productsController.checkProductExistsByCode,
-  endController
+  productsController.checkProductExistsByCode
 );
 
 // Get product by code
 router.get(
   '/code/:code',
   productsController.validateProductCode,
-  productsController.getProductByCode,
-  endController
+  productsController.getProductByCode
 );
 
 // Routes that require ID validation
 router
   .route('/:id')
-  .get(
-    productsController.validateProductId,
-    productsController.getProductById,
-    endController
-  )
+  .get(productsController.validateProductId, productsController.getProductById)
   .patch(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.validateProductId,
-    productsController.updateProduct,
-    endController
+    productsController.updateProduct
   )
   .delete(
     authController.restrictTo('admin', 'manager'),
     productsController.validateProductId,
-    productsController.deleteProduct,
-    endController
+    productsController.deleteProduct
   );
 
 // Check if product exists by ID
 router.get(
   '/exists/:id',
   productsController.validateProductId,
-  productsController.checkProductExists,
-  endController
+  productsController.checkProductExists
 );
 
 export default router;

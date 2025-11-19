@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Mount domain-specific routes
 router.use('/auth', authRoutes);
-router.use('/product', productRoutes);
-router.use('/supplier', supplierRoutes);
+router.use('/products', productRoutes);
+router.use('/suppliers', supplierRoutes);
 
 export default router;

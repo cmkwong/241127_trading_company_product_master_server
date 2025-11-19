@@ -1,6 +1,6 @@
 import express from 'express';
-import * as authController from '../../controller/authController.js';
-import endController from '../../controller/endController.js';
+import * as authController from '../../middleware/authController.js';
+import endController from '../../middleware/endController.js';
 import schemaRoutes from './schema/index.js';
 
 // Import supplier controller when available

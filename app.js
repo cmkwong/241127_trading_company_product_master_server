@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 import AppError from './utils/appError.js';
 
 // self class
-import errorController from './controller/errorController.js';
-import startController from './controller/startController.js';
+import errorHandler from './middleware/errorHandler.js';
+import startController from './middleware/startController.js';
 
 // require routes
 import apiRoutes from './routes/index.js';
@@ -52,6 +52,6 @@ app.all('*', (req, res, next) => {
 });
 
 // error handler MIDDLEWARE for other errors
-app.use(errorController);
+app.use(errorHandler);
 
 export default app;

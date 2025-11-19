@@ -1,7 +1,7 @@
 import express from 'express';
 import * as labelsController from '../../../controller/trade_business/products/labelsController.js';
-import * as authController from '../../../controller/authController.js';
-import endController from '../../../controller/endController.js';
+import * as authController from '../../../middleware/authController.js';
+import endController from '../../../middleware/endController.js';
 
 const router = express.Router();
 // In your routes file

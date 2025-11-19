@@ -2,7 +2,7 @@ import express from 'express';
 import * as categoriesController from '../../../controller/trade_business/products/master_categoriesController.js';
 import * as certificateTypesController from '../../../controller/trade_business/products/master_certificateTypesController.js';
 import * as packingTypesController from '../../../controller/trade_business/products/master_packingTypesController.js';
-import endController from '../../../controller/endController.js';
+import endController from '../../../middleware/endController.js';
 
 const router = express.Router();
 
