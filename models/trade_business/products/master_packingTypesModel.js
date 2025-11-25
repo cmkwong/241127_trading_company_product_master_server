@@ -5,7 +5,7 @@ import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const PACKING_TYPES_TABLE = TABLE_MASTER['PACKING_TYPES'].name;
+const PACKING_TYPES_TABLE = TABLE_MASTER['MASTER_PACKING_TYPES'].name;
 const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'].name;
 
 /**

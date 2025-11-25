@@ -1,117 +1,114 @@
 import express from 'express';
-import * as categoriesController from '../../../controller/trade_business/products/master_categoriesController.js';
-import * as certificateTypesController from '../../../controller/trade_business/products/master_certificateTypesController.js';
-import * as packingTypesController from '../../../controller/trade_business/products/master_packingTypesController.js';
+import * as masterDataController from '../../../controller/trade_business/products/master_dataController.js';
 import endController from '../../../middleware/endController.js';
 
 const router = express.Router();
 
-// Category routes
-router
-  .route('/categories')
-  .get(categoriesController.getAllCategories, endController)
-  .post(categoriesController.createCategory, endController);
+/**
+ * Create standard CRUD routes for a master data entity type
+ * @param {string} basePath - Base path for the routes (e.g., '/packing-types')
+ * @param {Object} controller - Controller object with CRUD methods
+ */
+const createMasterDataRoutes = (basePath, controller) => {
+  // Base routes for collection (GET all, POST new)
+  router
+    .route(basePath)
+    .get(controller.getAll, endController)
+    .post(controller.create, endController);
 
-router
-  .route('/categories/:id')
-  .get(categoriesController.getCategoryById, endController)
-  .patch(categoriesController.updateCategory, endController)
-  .delete(categoriesController.deleteCategory, endController);
+  // Routes for specific items by ID
+  router
+    .route(`${basePath}/:id`)
+    .get(controller.getById, endController)
+    .patch(controller.update, endController)
+    .delete(controller.delete, endController);
 
-router.get(
-  '/categories/:id/products',
-  categoriesController.getProductsByCategory,
-  endController
+  // Related products route
+  router.get(
+    `${basePath}/:id/products`,
+    controller.getRelatedProducts,
+    endController
+  );
+
+  // Batch creation route
+  router.post(`${basePath}/batch`, controller.batchCreate, endController);
+
+  // Insert defaults route
+  router.post(`${basePath}/defaults`, controller.insertDefaults, endController);
+
+  return router;
+};
+
+// Create standard routes for all master data types
+createMasterDataRoutes('/packing-types', masterDataController.packingTypes);
+createMasterDataRoutes(
+  '/product-name-types',
+  masterDataController.productNameTypes
 );
-router.get(
-  '/categories/:id/children',
-  categoriesController.getChildCategories,
-  endController
-);
-router.get(
-  '/categories/:id/path',
-  categoriesController.getCategoryPath,
-  endController
-);
-router.get(
-  '/category-tree',
-  categoriesController.getCategoryTree,
-  endController
-);
+
+// Only add certificate types routes if the controller exists
+if (masterDataController.certificateTypes) {
+  createMasterDataRoutes(
+    '/certificate-types',
+    masterDataController.certificateTypes
+  );
+}
+
+// Only add categories routes if the controller exists
+if (masterDataController.categories) {
+  createMasterDataRoutes('/categories', masterDataController.categories);
+
+  // Add category-specific routes
+  if (masterDataController.categories.getChildCategories) {
+    router.get(
+      '/categories/:id/children',
+      masterDataController.categories.getChildCategories,
+      endController
+    );
+  }
+
+  if (masterDataController.categories.getCategoryPath) {
+    router.get(
+      '/categories/:id/path',
+      masterDataController.categories.getCategoryPath,
+      endController
+    );
+  }
+
+  if (masterDataController.categories.getCategoryTree) {
+    router.get(
+      '/category-tree',
+      masterDataController.categories.getCategoryTree,
+      endController
+    );
+  }
+}
+
+// Add packing types statistics route if it exists
+if (masterDataController.packingTypes.getStatistics) {
+  router.get(
+    '/packing-types/:id/statistics',
+    masterDataController.packingTypes.getStatistics,
+    endController
+  );
+}
+
+// ===== Combined Master Data Operations =====
 router.post(
-  '/categories/batch',
-  categoriesController.batchCreateCategories,
-  endController
-);
-router.post(
-  '/categories/defaults',
-  categoriesController.insertDefaultCategories,
-  endController
-);
-router.get(
-  '/categories/check-exists',
-  categoriesController.checkCategoryExists,
+  '/defaults/all',
+  masterDataController.insertAllDefaults,
   endController
 );
 
-// Certificate Types routes
-router
-  .route('/certificate-types')
-  .get(certificateTypesController.getCertificateTypes, endController)
-  .post(certificateTypesController.createCertificateType, endController);
-
-router
-  .route('/certificate-types/:id')
-  .get(certificateTypesController.getCertificateTypes, endController)
-  .patch(certificateTypesController.updateCertificateType, endController)
-  .delete(certificateTypesController.deleteCertificateType, endController);
-
 router.get(
-  '/certificate-types/:id/products',
-  certificateTypesController.getProductsByCertificateType,
-  endController
-);
-router.post(
-  '/certificate-types/defaults',
-  certificateTypesController.insertDefaultCertificateTypes,
-  endController
-);
-router.get(
-  '/certificate-types/check-exists',
-  certificateTypesController.checkCertificateTypeExists,
+  '/statistics',
+  masterDataController.getMasterDataStatistics,
   endController
 );
 
-// Packing Types routes
-router
-  .route('/packing-types')
-  .get(packingTypesController.getPackingTypes, endController)
-  .post(packingTypesController.createPackingType, endController);
-
-router
-  .route('/packing-types/:id')
-  .get(packingTypesController.getPackingTypes, endController)
-  .patch(packingTypesController.updatePackingType, endController)
-  .delete(packingTypesController.deletePackingType, endController);
-
 router.get(
-  '/packing-types/:id/products',
-  packingTypesController.getProductsByPackingType,
-  endController
-);
-router.get(
-  '/packing-types/:id/statistics',
-  packingTypesController.getPackingStatistics,
-  endController
-);
-router.post(
-  '/packing-types/defaults',
-  packingTypesController.insertDefaultPackingTypes,
-  endController
-);
-router.get(
-  '/packing-types/check-exists',
-  packingTypesController.checkPackingTypeExists,
+  '/check-exists',
+  masterDataController.checkEntityExists,
   endController
 );
 

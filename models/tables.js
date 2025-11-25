@@ -37,7 +37,7 @@ export const TABLE_MASTER = {
   },
 
   // Master tables
-  PRODUCT_NAME_TYPES: {
+  MASTER_PRODUCT_NAME_TYPES: {
     name: 'master_product_name_types',
     fields: {
       id: {
@@ -60,7 +60,7 @@ export const TABLE_MASTER = {
     },
   },
 
-  CATEGORIES: {
+  MASTER_CATEGORIES: {
     name: 'master_categories',
     fields: {
       id: {
@@ -89,7 +89,7 @@ export const TABLE_MASTER = {
     },
   },
 
-  PACKING_TYPES: {
+  MASTER_PACKING_TYPES: {
     name: 'master_packing_types',
     fields: {
       id: {
@@ -112,7 +112,7 @@ export const TABLE_MASTER = {
     },
   },
 
-  CERTIFICATE_TYPES: {
+  MASTER_CERTIFICATE_TYPES: {
     name: 'master_certificate_types',
     fields: {
       id: {

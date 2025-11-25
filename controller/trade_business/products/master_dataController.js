@@ -15,30 +15,30 @@ const createMasterDataController = (modelMap, entityType) => {
   return {
     create: catchAsync(async (req, res, next) => {
       const result = await modelMap.create(req.body);
-      
+
       res.prints = {
         status: 'success',
         message: result.message,
-        [entityType]: result[entityType]
+        [entityType]: result[entityType],
       };
-      
+
       next();
     }),
 
     getById: catchAsync(async (req, res, next) => {
       const { id } = req.params;
-      
+
       if (!id) {
         return next(new AppError(`${entityType} ID is required`, 400));
       }
-      
+
       const entity = await modelMap.getById(id);
-      
+
       res.prints = {
         status: 'success',
-        [entityType]: entity
+        [entityType]: entity,
       };
-      
+
       next();
     }),
 
@@ -46,109 +46,130 @@ const createMasterDataController = (modelMap, entityType) => {
       const options = {
         search: req.query.search,
         page: req.query.page ? parseInt(req.query.page) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit) : 100
+        limit: req.query.limit ? parseInt(req.query.limit) : 100,
       };
-      
+
+      // Add parent_id filter for categories if available
+      if (entityType === 'category' && req.query.parent_id !== undefined) {
+        options.parent_id =
+          req.query.parent_id === 'null' ? null : req.query.parent_id;
+      }
+
       const result = await modelMap.getAll(options);
-      
+
       res.prints = {
         status: 'success',
         [`${entityType}s`]: result[`${entityType}s`],
-        pagination: result.pagination
+        pagination: result.pagination,
       };
-      
+
       next();
     }),
 
     update: catchAsync(async (req, res, next) => {
       const { id } = req.params;
-      
+
       if (!id) {
         return next(new AppError(`${entityType} ID is required`, 400));
       }
-      
+
       const result = await modelMap.update(id, req.body);
-      
+
       res.prints = {
         status: 'success',
         message: result.message,
-        [entityType]: result[entityType]
+        [entityType]: result[entityType],
       };
-      
+
       next();
     }),
 
     delete: catchAsync(async (req, res, next) => {
       const { id } = req.params;
       const force = req.query.force === 'true';
-      
+
       if (!id) {
         return next(new AppError(`${entityType} ID is required`, 400));
       }
-      
-      const result = await modelMap.delete(id, force);
-      
-      res.prints = {
-        status: 'success',
-        message: result.message,
-        deletedAssociations: result.deletedAssociations || 0
-      };
-      
+
+      // Special handling for categories with reassignChildren option
+      if (entityType === 'category') {
+        const reassignChildren = req.query.reassignChildren === 'true';
+        const result = await modelMap.delete(id, reassignChildren);
+
+        res.prints = {
+          status: 'success',
+          message: result.message,
+          reassignedChildren: result.reassignedChildren,
+        };
+      } else {
+        // Standard handling for other entity types
+        const result = await modelMap.delete(id, force);
+
+        res.prints = {
+          status: 'success',
+          message: result.message,
+          deletedAssociations: result.deletedAssociations || 0,
+        };
+      }
+
       next();
     }),
 
     getRelatedProducts: catchAsync(async (req, res, next) => {
       const { id } = req.params;
-      
+
       if (!id) {
         return next(new AppError(`${entityType} ID is required`, 400));
       }
-      
+
       const options = {
         page: req.query.page ? parseInt(req.query.page) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit) : 20
+        limit: req.query.limit ? parseInt(req.query.limit) : 20,
       };
-      
+
       const result = await modelMap.getRelatedProducts(id, options);
-      
+
       res.prints = {
         status: 'success',
         products: result.products,
-        pagination: result.pagination
+        pagination: result.pagination,
       };
-      
+
       next();
     }),
 
     batchCreate: catchAsync(async (req, res, next) => {
       if (!Array.isArray(req.body)) {
-        return next(new AppError(`Request body must be an array of ${entityType}s`, 400));
+        return next(
+          new AppError(`Request body must be an array of ${entityType}s`, 400)
+        );
       }
-      
+
       const result = await modelMap.batchCreate(req.body);
-      
+
       res.prints = {
         status: 'success',
         total: result.total,
         successful: result.successful,
         failed: result.failed,
-        details: result.details
+        details: result.details,
       };
-      
+
       next();
     }),
 
     insertDefaults: catchAsync(async (req, res, next) => {
       const result = await modelMap.insertDefaults();
-      
+
       res.prints = {
         status: 'success',
         message: result.message,
-        results: result.results
+        results: result.results,
       };
-      
+
       next();
-    })
+    }),
   };
 };
 
@@ -161,7 +182,7 @@ const packingTypesModelMap = {
   delete: packingTypesModel.deletePackingType,
   getRelatedProducts: packingTypesModel.getProductsByPackingType,
   batchCreate: packingTypesModel.batchCreatePackingTypes,
-  insertDefaults: packingTypesModel.insertDefaultPackingTypes
+  insertDefaults: packingTypesModel.insertDefaultPackingTypes,
 };
 
 const productNameTypesModelMap = {
@@ -172,10 +193,9 @@ const productNameTypesModelMap = {
   delete: productNameTypesModel.deleteProductNameType,
   getRelatedProducts: productNameTypesModel.getProductsByNameType,
   batchCreate: productNameTypesModel.batchCreateProductNameTypes,
-  insertDefaults: productNameTypesModel.insertDefaultProductNameTypes
+  insertDefaults: productNameTypesModel.insertDefaultProductNameTypes,
 };
 
-// Assuming certificateTypesModel has similar function structure
 const certificateTypesModelMap = {
   create: certificateTypesModel.createCertificateType,
   getById: certificateTypesModel.getCertificateTypeById,
@@ -184,13 +204,123 @@ const certificateTypesModelMap = {
   delete: certificateTypesModel.deleteCertificateType,
   getRelatedProducts: certificateTypesModel.getProductsByCertificateType,
   batchCreate: certificateTypesModel.batchCreateCertificateTypes,
-  insertDefaults: certificateTypesModel.insertDefaultCertificateTypes
+  insertDefaults: certificateTypesModel.insertDefaultCertificateTypes,
+};
+
+// Add categories model map
+const categoriesModelMap = {
+  create: categoriesModel.createCategory,
+  getById: categoriesModel.getCategoryById,
+  getAll: categoriesModel.getAllCategories,
+  update: categoriesModel.updateCategory,
+  delete: categoriesModel.deleteCategory,
+  getRelatedProducts: categoriesModel.getProductsByCategory,
+  batchCreate: categoriesModel.batchCreateCategories,
+  insertDefaults: categoriesModel.insertDefaultCategories,
 };
 
 // Create controllers for each master data type
-export const packingTypes = createMasterDataController(packingTypesModelMap, 'packingType');
-export const productNameTypes = createMasterDataController(productNameTypesModelMap, 'productNameType');
-export const certificateTypes = createMasterDataController(certificateTypesModelMap, 'certificateType');
+export const packingTypes = createMasterDataController(
+  packingTypesModelMap,
+  'packingType'
+);
+export const productNameTypes = createMasterDataController(
+  productNameTypesModelMap,
+  'productNameType'
+);
+export const certificateTypes = createMasterDataController(
+  certificateTypesModelMap,
+  'certificateType'
+);
+export const categories = createMasterDataController(
+  categoriesModelMap,
+  'category'
+);
+
+// Add category-specific controller functions
+export const categoryExtensions = {
+  getChildCategories: catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    // If id is 'root', get root categories (parent_id is null)
+    const parentId = id === 'root' ? null : id;
+
+    const categories = await categoriesModel.getChildCategories(parentId);
+
+    res.prints = {
+      status: 'success',
+      categories,
+    };
+
+    next();
+  }),
+
+  getCategoryPath: catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id) {
+      return next(new AppError('Category ID is required', 400));
+    }
+
+    const path = await categoriesModel.getCategoryPath(id);
+
+    res.prints = {
+      status: 'success',
+      path,
+    };
+
+    next();
+  }),
+
+  getCategoryTree: catchAsync(async (req, res, next) => {
+    const categoryTree = await categoriesModel.getCategoryTree();
+
+    res.prints = {
+      status: 'success',
+      categoryTree,
+    };
+
+    next();
+  }),
+
+  checkCategoryExists: catchAsync(async (req, res, next) => {
+    const { name } = req.query;
+
+    if (!name) {
+      return next(new AppError('Category name is required', 400));
+    }
+
+    try {
+      const options = {
+        search: name,
+        limit: 1,
+      };
+
+      const result = await categoriesModel.getAllCategories(options);
+      const exists =
+        result.categories.length > 0 &&
+        result.categories[0].name.toLowerCase() === name.toLowerCase();
+
+      res.prints = {
+        status: 'success',
+        exists,
+        category: exists ? result.categories[0] : null,
+      };
+
+      next();
+    } catch (error) {
+      next(
+        new AppError(
+          `Failed to check category existence: ${error.message}`,
+          500
+        )
+      );
+    }
+  }),
+};
+
+// Merge category-specific functions into the categories controller
+Object.assign(categories, categoryExtensions);
 
 /**
  * Insert defaults for all master data types
@@ -200,39 +330,41 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
     categories: null,
     packingTypes: null,
     productNameTypes: null,
-    certificateTypes: null
+    certificateTypes: null,
   };
-  
+
   try {
     results.categories = await categoriesModel.insertDefaultCategories();
   } catch (error) {
     results.categories = { error: error.message };
   }
-  
+
   try {
     results.packingTypes = await packingTypesModel.insertDefaultPackingTypes();
   } catch (error) {
     results.packingTypes = { error: error.message };
   }
-  
+
   try {
-    results.productNameTypes = await productNameTypesModel.insertDefaultProductNameTypes();
+    results.productNameTypes =
+      await productNameTypesModel.insertDefaultProductNameTypes();
   } catch (error) {
     results.productNameTypes = { error: error.message };
   }
-  
+
   try {
-    results.certificateTypes = await certificateTypesModel.insertDefaultCertificateTypes();
+    results.certificateTypes =
+      await certificateTypesModel.insertDefaultCertificateTypes();
   } catch (error) {
     results.certificateTypes = { error: error.message };
   }
-  
+
   res.prints = {
     status: 'success',
     message: 'Default data insertion completed',
-    results
+    results,
   };
-  
+
   next();
 });
 
@@ -241,56 +373,64 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
  */
 export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
   const stats = {};
-  
+
   try {
     // Get packing types count
-    const packingTypesResult = await packingTypesModel.getAllPackingTypes({ limit: 1 });
+    const packingTypesResult = await packingTypesModel.getAllPackingTypes({
+      limit: 1,
+    });
     stats.packingTypes = {
-      total: packingTypesResult.pagination.total
+      total: packingTypesResult.pagination.total,
     };
   } catch (error) {
     stats.packingTypes = { error: error.message };
   }
-  
+
   try {
     // Get product name types count
-    const nameTypesResult = await productNameTypesModel.getAllProductNameTypes({ limit: 1 });
+    const nameTypesResult = await productNameTypesModel.getAllProductNameTypes({
+      limit: 1,
+    });
     stats.productNameTypes = {
-      total: nameTypesResult.pagination.total
+      total: nameTypesResult.pagination.total,
     };
   } catch (error) {
     stats.productNameTypes = { error: error.message };
   }
-  
+
   try {
     // Get certificate types count
-    const certTypesResult = await certificateTypesModel.getAllCertificateTypes({ limit: 1 });
+    const certTypesResult = await certificateTypesModel.getAllCertificateTypes({
+      limit: 1,
+    });
     stats.certificateTypes = {
-      total: certTypesResult.pagination.total
+      total: certTypesResult.pagination.total,
     };
   } catch (error) {
     stats.certificateTypes = { error: error.message };
   }
-  
+
   try {
     // Get categories count
-    const categoriesResult = await categoriesModel.getAllCategories({ limit: 1 });
+    const categoriesResult = await categoriesModel.getAllCategories({
+      limit: 1,
+    });
     stats.categories = {
-      total: categoriesResult.pagination.total
+      total: categoriesResult.pagination.total,
     };
-    
+
     // Get additional category stats
     const rootCategories = await categoriesModel.getChildCategories(null);
     stats.categories.rootCount = rootCategories.length;
   } catch (error) {
     stats.categories = { error: error.message };
   }
-  
+
   res.prints = {
     status: 'success',
-    statistics: stats
+    statistics: stats,
   };
-  
+
   next();
 });
 
@@ -299,67 +439,75 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
  */
 export const checkEntityExists = catchAsync(async (req, res, next) => {
   const { type, name } = req.query;
-  
+
   if (!type || !name) {
     return next(new AppError('Entity type and name are required', 400));
   }
-  
+
   let exists = false;
   let entity = null;
-  
+
   try {
     const options = {
       search: name,
-      limit: 1
+      limit: 1,
     };
-    
+
     let result;
-    
+
     switch (type) {
       case 'packingType':
         result = await packingTypesModel.getAllPackingTypes(options);
         if (result.packingTypes.length > 0) {
-          exists = result.packingTypes[0].name.toLowerCase() === name.toLowerCase();
+          exists =
+            result.packingTypes[0].name.toLowerCase() === name.toLowerCase();
           entity = exists ? result.packingTypes[0] : null;
         }
         break;
-        
+
       case 'productNameType':
         result = await productNameTypesModel.getAllProductNameTypes(options);
         if (result.productNameTypes.length > 0) {
-          exists = result.productNameTypes[0].name.toLowerCase() === name.toLowerCase();
+          exists =
+            result.productNameTypes[0].name.toLowerCase() ===
+            name.toLowerCase();
           entity = exists ? result.productNameTypes[0] : null;
         }
         break;
-        
+
       case 'certificateType':
         result = await certificateTypesModel.getAllCertificateTypes(options);
         if (result.certificateTypes.length > 0) {
-          exists = result.certificateTypes[0].name.toLowerCase() === name.toLowerCase();
+          exists =
+            result.certificateTypes[0].name.toLowerCase() ===
+            name.toLowerCase();
           entity = exists ? result.certificateTypes[0] : null;
         }
         break;
-        
+
       case 'category':
         result = await categoriesModel.getAllCategories(options);
         if (result.categories.length > 0) {
-          exists = result.categories[0].name.toLowerCase() === name.toLowerCase();
+          exists =
+            result.categories[0].name.toLowerCase() === name.toLowerCase();
           entity = exists ? result.categories[0] : null;
         }
         break;
-        
+
       default:
         return next(new AppError(`Unknown entity type: ${type}`, 400));
     }
-    
+
     res.prints = {
       status: 'success',
       exists,
-      entity
+      entity,
     };
-    
+
     next();
   } catch (error) {
-    next(new AppError(`Failed to check entity existence: ${error.message}`, 500));
+    next(
+      new AppError(`Failed to check entity existence: ${error.message}`, 500)
+    );
   }
 });

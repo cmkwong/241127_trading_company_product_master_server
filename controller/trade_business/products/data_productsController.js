@@ -1,7 +1,7 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
 import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
-import sampleProducts from '../../../samples/products.js';
+import sampleProducts from '../../../datas/products.js';
 
 /**
  * Create a new product
