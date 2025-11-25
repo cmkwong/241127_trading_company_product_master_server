@@ -628,3 +628,94 @@ export const getProductStats = async () => {
     );
   }
 };
+
+/**
+ * Truncates all product-related tables
+ * @returns {Promise<Object>} Promise that resolves with the result of the truncation operation
+ */
+export const truncateAllProductTables = async () => {
+  try {
+    console.log('before beginTransaction ......................');
+    // Start transaction
+    await productModel.beginTransaction();
+    console.log('after beginTransaction ......................');
+
+    try {
+      console.log('before executeQuery ......................');
+      // Disable foreign key checks to allow truncating tables with relationships
+      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+      console.log('after executeQuery ......................');
+
+      // List of product-related tables in the correct order for truncation
+      // We need to truncate child tables before parent tables to avoid foreign key constraints
+      const productTables = [
+        // Certificate files
+        'product_certificate_files',
+        // Certificates
+        'product_certificates',
+        // Packing information
+        'product_packings',
+        // Alibaba IDs
+        'product_alibaba_ids',
+        // Link images
+        'product_link_images',
+        // Links
+        'product_links',
+        // Customization images
+        'product_customization_images',
+        // Customizations
+        'product_customizations',
+        // Categories
+        'product_categories',
+        // Names
+        'product_names',
+        // Main products table
+        'products',
+      ];
+
+      const results = {
+        truncated: [],
+        errors: [],
+      };
+
+      // Truncate each table
+      for (const table of productTables) {
+        try {
+          await productModel.executeQuery(`TRUNCATE TABLE ${table}`);
+          results.truncated.push(table);
+        } catch (error) {
+          results.errors.push({
+            table,
+            error: error.message,
+          });
+        }
+      }
+
+      // Re-enable foreign key checks
+      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+
+      // Commit transaction
+      await productModel.commitTransaction();
+
+      return {
+        success: results.errors.length === 0,
+        message: `Truncated ${results.truncated.length} product-related tables`,
+        truncatedTables: results.truncated,
+        errors: results.errors,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await productModel.rollbackTransaction();
+
+      // Make sure to re-enable foreign key checks even if there's an error
+      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+
+      throw error;
+    }
+  } catch (error) {
+    throw new AppError(
+      `Failed to truncate product tables: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
