@@ -204,6 +204,7 @@ export const importSampleProducts = catchAsync(async (req, res, next) => {
     // Process each product individually
     for (const productData of productsData) {
       try {
+        console.log('before.....................');
         // Insert the product
         const [productResult] = await tb_pool.query(
           'INSERT INTO products (id, product_id, icon_url, remark) VALUES (?, ?, ?, ?)',
@@ -214,6 +215,7 @@ export const importSampleProducts = catchAsync(async (req, res, next) => {
             productData.remark || null,
           ]
         );
+        console.log('after......................');
 
         if (productResult.affectedRows > 0) {
           // Add product names if available

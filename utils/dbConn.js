@@ -59,6 +59,55 @@ export const getConnection_from_pool = (pool) => {
   });
 };
 
+/**
+ * Execute a SQL query using promise-based API
+ * @param {string} sql - SQL query to execute
+ * @param {Array} [params=[]] - Query parameters
+ * @param {Object} [options] - Query options
+ * @param {string} [options.database='trade_business'] - Database to use ('trade_business' or 'auth')
+ * @returns {Promise<Array>} Query results
+ */
+export const executeQuery = async (sql, params = [], options = {}) => {
+  const database = options.database || 'trade_business';
+  const pool = database === 'auth' ? auth_pool : tb_pool;
+
+  try {
+    // Use the promise() method to get a promise-based connection
+    const promisePool = pool.promise();
+    const [rows] = await promisePool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error('Query execution error:', error);
+    throw new Error(`Query execution failed: ${error.message}`);
+  }
+};
+
+/**
+ * Execute a transaction with multiple queries
+ * @param {Function} callback - Callback function that receives a connection and executes queries
+ * @param {Object} [options] - Transaction options
+ * @param {string} [options.database='trade_business'] - Database to use ('trade_business' or 'auth')
+ * @returns {Promise<any>} Result from the callback function
+ */
+export const executeTransaction = async (callback, options = {}) => {
+  const database = options.database || 'trade_business';
+  const pool = database === 'auth' ? auth_pool : tb_pool;
+  const connection = await pool.promise().getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const result = await callback(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    console.error('Transaction execution error:', error);
+    throw new Error(`Transaction failed: ${error.message}`);
+  } finally {
+    connection.release();
+  }
+};
+
 // Graceful shutdown handler
 export const closeAllConnections = () => {
   return new Promise((resolve, reject) => {
