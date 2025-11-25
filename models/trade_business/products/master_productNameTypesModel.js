@@ -38,7 +38,10 @@ export const createProductNameType = async (nameTypeData) => {
     };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      throw new AppError('A product name type with this name already exists', 409);
+      throw new AppError(
+        'A product name type with this name already exists',
+        409
+      );
     }
     throw new AppError(
       `Failed to create product name type: ${error.message}`,
@@ -139,7 +142,10 @@ export const getAllProductNameTypes = async (options = {}) => {
       },
     };
   } catch (error) {
-    throw new AppError(`Failed to get product name types: ${error.message}`, 500);
+    throw new AppError(
+      `Failed to get product name types: ${error.message}`,
+      500
+    );
   }
 };
 
@@ -173,7 +179,10 @@ export const updateProductNameType = async (id, updateData) => {
     };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      throw new AppError('A product name type with this name already exists', 409);
+      throw new AppError(
+        'A product name type with this name already exists',
+        409
+      );
     }
     throw new AppError(
       `Failed to update product name type: ${error.message}`,
@@ -280,7 +289,9 @@ export const getProductsByNameType = async (nameTypeId, options = {}) => {
       WHERE pn.name_type_id = ?
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, [nameTypeId]);
+    const countResult = await dbModel.executeQuery(pool, countSQL, [
+      nameTypeId,
+    ]);
     const total = countResult[0].total;
 
     // Get products with pagination
@@ -417,11 +428,8 @@ export const insertDefaultProductNameTypes = async () => {
     // Import product name types from data file
     const sampleProducts = await import('../../../datas/products.js');
     const defaultNameTypes = sampleProducts.default.master_product_name_types;
-    
-    // Remove the id field from each name type as new IDs will be generated
-    const nameTypesToInsert = defaultNameTypes.map(({ id, ...rest }) => rest);
-    
-    const results = await batchCreateProductNameTypes(nameTypesToInsert);
+
+    const results = await batchCreateProductNameTypes(defaultNameTypes);
 
     return {
       message: 'Default product name types inserted successfully',

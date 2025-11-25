@@ -485,12 +485,7 @@ export const insertDefaultPackingTypes = async () => {
     const sampleProducts = await import('../../../datas/products.js');
     const defaultPackingTypes = sampleProducts.default.master_packing_types;
 
-    // Remove the id field from each packing type as new IDs will be generated
-    const packingTypesToInsert = defaultPackingTypes.map(
-      ({ id, ...rest }) => rest
-    );
-
-    const results = await batchCreatePackingTypes(packingTypesToInsert);
+    const results = await batchCreatePackingTypes(defaultPackingTypes);
 
     return {
       message: 'Default packing types inserted successfully',
