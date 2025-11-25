@@ -29,6 +29,7 @@ export default class DataModelUtils {
    * @param {string} [config.fileConfig.fileTypeField] - Optional name of the file type field (e.g., 'file_type')
    * @param {string} [config.fileConfig.descriptionField] - Optional name of the description field
    * @param {boolean} [config.fileConfig.imagesOnly=false] - Whether this handler is for images only
+   * @param {string} [config.database='trade_business'] - Database to use ('trade_business' or 'auth')
    */
   constructor(config) {
     this.tableName = config.tableName;
@@ -38,6 +39,10 @@ export default class DataModelUtils {
     this.defaults = config.defaults || {};
     this.requiredFields = config.requiredFields || [];
     this.joinConfig = config.joinConfig;
+    this.database = config.database || 'trade_business';
+
+    // Create database connection
+    this.db = dbConn.createDbConnection(this.database);
 
     // File handling configuration
     this.hasFileHandling = !!config.fileConfig;
@@ -172,8 +177,6 @@ export default class DataModelUtils {
    */
   async create(data) {
     try {
-      const pool = dbConn.tb_pool;
-
       // Validate data
       this.validateData(data);
 
@@ -190,7 +193,7 @@ export default class DataModelUtils {
         operation: 'create',
         tableName: this.tableName,
         data: entityData,
-        connection: pool,
+        connection: this.db.pool,
       });
 
       return {
@@ -212,14 +215,12 @@ export default class DataModelUtils {
    */
   async getById(id) {
     try {
-      const pool = dbConn.tb_pool;
-
       // Get the entity using CRUD utility
       const result = await CrudOperations.performCrud({
         operation: 'read',
         tableName: this.tableName,
         id: id,
-        connection: pool,
+        connection: this.db.pool,
       });
 
       if (!result.record) {
@@ -245,8 +246,6 @@ export default class DataModelUtils {
    */
   async getAllByParentId(parentId) {
     try {
-      const pool = dbConn.tb_pool;
-
       // If join configuration is provided, use it
       if (this.joinConfig) {
         // Build the SQL query with joins
@@ -307,8 +306,7 @@ export default class DataModelUtils {
           }
         }
 
-        const result = await pool.query(sql, [parentId]);
-        return result[0];
+        return await this.db.executeQuery(sql, [parentId]);
       } else {
         // Simple query without joins
         const sql = `
@@ -318,8 +316,7 @@ export default class DataModelUtils {
           ORDER BY ${this.hasFileHandling ? 'display_order' : 'id'}
         `;
 
-        const result = await pool.query(sql, [parentId]);
-        return result[0];
+        return await this.db.executeQuery(sql, [parentId]);
       }
     } catch (error) {
       throw new AppError(
@@ -337,8 +334,6 @@ export default class DataModelUtils {
    */
   async update(id, data) {
     try {
-      const pool = dbConn.tb_pool;
-
       // Validate data for update
       this.validateData(data, true);
 
@@ -348,7 +343,7 @@ export default class DataModelUtils {
         tableName: this.tableName,
         id: id,
         data: data,
-        connection: pool,
+        connection: this.db.pool,
       });
 
       if (!result.record) {
@@ -377,8 +372,6 @@ export default class DataModelUtils {
    */
   async delete(id) {
     try {
-      const pool = dbConn.tb_pool;
-
       // Check if entity exists
       const entity = await this.getById(id);
 
@@ -396,7 +389,7 @@ export default class DataModelUtils {
         operation: 'delete',
         tableName: this.tableName,
         id: id,
-        connection: pool,
+        connection: this.db.pool,
       });
 
       return {
@@ -418,8 +411,6 @@ export default class DataModelUtils {
    */
   async deleteAllByParentId(parentId) {
     try {
-      const pool = dbConn.tb_pool;
-
       // Get all entities for this parent
       const entities = await this.getAllByParentId(parentId);
 
@@ -450,7 +441,7 @@ export default class DataModelUtils {
         operation: 'delete',
         tableName: this.tableName,
         conditions: { [this.entityIdField]: parentId },
-        connection: pool,
+        connection: this.db.pool,
       });
 
       return {
@@ -473,12 +464,8 @@ export default class DataModelUtils {
    */
   async upsertAll(parentId, entities) {
     try {
-      const pool = dbConn.tb_pool;
-
-      // Start transaction
-      await pool.query('START TRANSACTION');
-
-      try {
+      // Use the executeTransaction method for transaction handling
+      return await this.db.executeTransaction(async (connection) => {
         // Get existing entities for this parent
         const existingEntities = await this.getAllByParentId(parentId);
 
@@ -498,7 +485,7 @@ export default class DataModelUtils {
             operation: 'delete',
             tableName: this.tableName,
             conditions: { [this.entityIdField]: parentId },
-            connection: pool,
+            connection: connection,
           });
         }
 
@@ -519,14 +506,11 @@ export default class DataModelUtils {
             operation: 'create',
             tableName: this.tableName,
             data: entityData,
-            connection: pool,
+            connection: connection,
           });
 
           createdEntities.push(result.record);
         }
-
-        // Commit transaction
-        await pool.query('COMMIT');
 
         // Delete old files after successful database update
         if (this.hasFileHandling && filesToDelete.length > 0) {
@@ -546,11 +530,7 @@ export default class DataModelUtils {
           [this._pluralize(this._camelCase(this.entityName))]:
             await this.getAllByParentId(parentId),
         };
-      } catch (error) {
-        // Rollback transaction on error
-        await pool.query('ROLLBACK');
-        throw error;
-      }
+      });
     } catch (error) {
       throw new AppError(
         `Failed to update ${this.entityName}s: ${error.message}`,
@@ -561,12 +541,11 @@ export default class DataModelUtils {
 
   /**
    * Begins a database transaction
-   * @returns {Promise<void>}
+   * @returns {Promise<Object>} Connection with active transaction
    */
   async beginTransaction() {
     try {
-      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
-      await pool.query('START TRANSACTION');
+      return await this.db.beginTransaction();
     } catch (error) {
       throw new AppError(
         `Failed to start transaction: ${error.message}`,
@@ -577,12 +556,12 @@ export default class DataModelUtils {
 
   /**
    * Commits a database transaction
+   * @param {Object} connection - Connection with active transaction
    * @returns {Promise<void>}
    */
-  async commitTransaction() {
+  async commitTransaction(connection) {
     try {
-      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
-      await pool.query('COMMIT');
+      await this.db.commitTransaction(connection);
     } catch (error) {
       throw new AppError(
         `Failed to commit transaction: ${error.message}`,
@@ -593,12 +572,12 @@ export default class DataModelUtils {
 
   /**
    * Rolls back a database transaction
+   * @param {Object} connection - Connection with active transaction
    * @returns {Promise<void>}
    */
-  async rollbackTransaction() {
+  async rollbackTransaction(connection) {
     try {
-      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
-      await pool.query('ROLLBACK');
+      await this.db.rollbackTransaction(connection);
     } catch (error) {
       throw new AppError(
         `Failed to rollback transaction: ${error.message}`,
@@ -615,12 +594,26 @@ export default class DataModelUtils {
    */
   async executeQuery(sql, params = []) {
     try {
-      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
-      const [rows] = await pool.query(sql, params);
-      return rows;
+      return await this.db.executeQuery(sql, params);
     } catch (error) {
       throw new AppError(
         `Query execution failed: ${error.message}`,
+        error.statusCode || 500
+      );
+    }
+  }
+
+  /**
+   * Executes a function within a transaction
+   * @param {Function} fn - The function to execute within the transaction
+   * @returns {Promise<any>} The result of the function execution
+   */
+  async withTransaction(fn) {
+    try {
+      return await this.db.executeTransaction(fn);
+    } catch (error) {
+      throw new AppError(
+        `Transaction failed: ${error.message}`,
         error.statusCode || 500
       );
     }
@@ -753,11 +746,10 @@ export default class DataModelUtils {
           WHERE ${this.entityIdField} = ?
         `;
 
-        const pool = dbConn.tb_pool;
-        const orderResult = await pool.query(orderSQL, [
+        const orderResult = await this.db.executeQuery(orderSQL, [
           data[this.entityIdField],
         ]);
-        displayOrder = orderResult[0][0].next_order;
+        displayOrder = orderResult[0]?.next_order || 0;
       }
 
       // Prepare file data for database
@@ -798,8 +790,6 @@ export default class DataModelUtils {
     }
 
     try {
-      const pool = dbConn.tb_pool;
-
       // Get the existing file record
       const existingFile = await this.getById(id);
       const entityId = existingFile[this.entityIdField];
@@ -903,12 +893,8 @@ export default class DataModelUtils {
     }
 
     try {
-      const pool = dbConn.tb_pool;
-
-      // Start transaction
-      await this.beginTransaction();
-
-      try {
+      // Use transaction for this operation
+      return await this.db.executeTransaction(async (connection) => {
         // Get existing files to delete their files later
         const existingFiles = await this.getAllByParentId(entityId);
         const filesToDelete = [];
@@ -937,7 +923,7 @@ export default class DataModelUtils {
             operation: 'delete',
             tableName: this.tableName,
             conditions: conditions,
-            connection: pool,
+            connection: connection,
           });
         }
 
@@ -1013,13 +999,10 @@ export default class DataModelUtils {
               operation: 'bulkcreate',
               tableName: this.tableName,
               data: fileData,
-              connection: pool,
+              connection: connection,
             });
           }
         }
-
-        // Commit transaction
-        await this.commitTransaction();
 
         // Delete old files after successful database update
         for (const fileUrl of filesToDelete) {
@@ -1039,11 +1022,7 @@ export default class DataModelUtils {
           count: files.length,
           [this._pluralize(this._camelCase(this.entityName))]: files,
         };
-      } catch (error) {
-        // Rollback transaction on error
-        await this.rollbackTransaction();
-        throw error;
-      }
+      });
     } catch (error) {
       throw new AppError(
         `Failed to update ${this.entityName}s: ${error.message}`,
@@ -1064,17 +1043,18 @@ export default class DataModelUtils {
     }
 
     try {
-      // Start transaction
-      await this.beginTransaction();
-
-      try {
+      // Use transaction for this operation
+      return await this.db.executeTransaction(async (connection) => {
         // Update display order for each file
         for (const item of orderData) {
-          await this.update(item.id, { display_order: item.display_order });
+          await CrudOperations.performCrud({
+            operation: 'update',
+            tableName: this.tableName,
+            id: item.id,
+            data: { display_order: item.display_order },
+            connection: connection,
+          });
         }
-
-        // Commit transaction
-        await this.commitTransaction();
 
         // Get the updated files
         const files = await this.getAllByParentId(entityId);
@@ -1086,11 +1066,7 @@ export default class DataModelUtils {
           [this.entityIdField]: entityId,
           [this._pluralize(this._camelCase(this.entityName))]: files,
         };
-      } catch (error) {
-        // Rollback transaction on error
-        await this.rollbackTransaction();
-        throw error;
-      }
+      });
     } catch (error) {
       throw new AppError(
         `Failed to reorder ${this.entityName}s: ${error.message}`,
@@ -1099,36 +1075,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Executes a function within a transaction
-   * @param {Function} fn - The function to execute within the transaction
-   * @returns {Promise<any>} The result of the function execution
-   */
-  async withTransaction(fn) {
-    try {
-      // Start transaction
-      await this.beginTransaction();
-
-      try {
-        // Execute the function
-        const result = await fn();
-
-        // Commit transaction
-        await this.commitTransaction();
-
-        return result;
-      } catch (error) {
-        // Rollback transaction on error
-        await this.rollbackTransaction();
-        throw error;
-      }
-    } catch (error) {
-      throw new AppError(
-        `Transaction failed: ${error.message}`,
-        error.statusCode || 500
-      );
-    }
-  }
   /**
    * Gets files with base64 content for a parent entity, with optional compression
    * @param {string|number} parentId - The parent entity ID

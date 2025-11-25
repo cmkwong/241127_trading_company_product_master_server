@@ -26,6 +26,7 @@ const productModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
+  database: 'trade_business', // Explicitly specify the database
 });
 
 /**
@@ -106,10 +107,8 @@ export const generateProductId = async (format) => {
  */
 export const createProduct = async (data) => {
   try {
-    // Start transaction
-    await productModel.beginTransaction();
-
-    try {
+    // Use withTransaction for transaction management
+    return await productModel.withTransaction(async () => {
       // Extract related data that needs to be handled separately
       const {
         names,
@@ -175,9 +174,6 @@ export const createProduct = async (data) => {
         }
       }
 
-      // Commit transaction
-      await productModel.commitTransaction();
-
       // Get the complete product with all related data
       const completeProduct = await getProductById(productId, true);
 
@@ -185,11 +181,7 @@ export const createProduct = async (data) => {
         message: 'Product created successfully',
         product: completeProduct,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to create product: ${error.message}`,
@@ -464,10 +456,8 @@ export const updateProduct = async (id, data) => {
     // Check if product exists
     await productModel.getById(id);
 
-    // Start transaction
-    await productModel.beginTransaction();
-
-    try {
+    // Use withTransaction for transaction management
+    return await productModel.withTransaction(async () => {
       // Extract related data that needs to be handled separately
       const { names, packings, categories, alibaba_ids, ...productData } = {
         ...data,
@@ -498,9 +488,6 @@ export const updateProduct = async (id, data) => {
         await ProductAlibabaIds.upsertProductAlibabaIds(id, alibaba_ids);
       }
 
-      // Commit transaction
-      await productModel.commitTransaction();
-
       // Get the updated product with all related data
       const product = await getProductById(id, true);
 
@@ -508,11 +495,7 @@ export const updateProduct = async (id, data) => {
         message: 'Product updated successfully',
         product,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update product: ${error.message}`,
@@ -635,10 +618,8 @@ export const getProductStats = async () => {
  */
 export const truncateAllProductTables = async () => {
   try {
-    // Start transaction
-    await productModel.beginTransaction();
-
-    try {
+    // Use withTransaction for transaction management
+    return await productModel.withTransaction(async () => {
       // Disable foreign key checks to allow truncating tables with relationships
       await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
 
@@ -690,27 +671,135 @@ export const truncateAllProductTables = async () => {
       // Re-enable foreign key checks
       await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
 
-      // Commit transaction
-      await productModel.commitTransaction();
-
       return {
         success: results.errors.length === 0,
         message: `Truncated ${results.truncated.length} product-related tables`,
         truncatedTables: results.truncated,
         errors: results.errors,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productModel.rollbackTransaction();
-
-      // Make sure to re-enable foreign key checks even if there's an error
-      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
-
-      throw error;
-    }
+    });
   } catch (error) {
+    // Make sure to re-enable foreign key checks even if there's an error
+    try {
+      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+    } catch (e) {
+      console.error('Failed to re-enable foreign key checks:', e);
+    }
+
     throw new AppError(
       `Failed to truncate product tables: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Import sample products data
+ * @param {Object} sampleData - The sample data object containing products and related data
+ * @returns {Promise<Object>} Promise that resolves with import results
+ */
+export const importSampleProducts = async (sampleData) => {
+  try {
+    // Get the sample data
+    const productsData = sampleData.products;
+
+    if (!productsData || !Array.isArray(productsData)) {
+      throw new AppError('Invalid sample products data structure', 400);
+    }
+
+    // Process each product in the sample data
+    const results = {
+      total: productsData.length,
+      successful: 0,
+      failed: 0,
+      errors: [],
+      products: [],
+    };
+
+    // Process each product individually
+    for (const productData of productsData) {
+      try {
+        // Prepare the product data with all related entities
+        const completeProductData = {
+          id: productData.id, // Keep the original ID from sample data
+          product_id: productData.product_id,
+          icon_url: productData.icon_url || null,
+          remark: productData.remark || null,
+        };
+
+        // Add product names if available
+        const names = sampleData.product_names?.filter(
+          (name) => name.product_id === productData.id
+        );
+        if (names && names.length > 0) {
+          completeProductData.names = names.map((name) => ({
+            name_type_id: name.name_type_id,
+            name: name.name,
+          }));
+        }
+
+        // Add categories if available
+        const categories = sampleData.product_categories?.filter(
+          (category) => category.product_id === productData.id
+        );
+        if (categories && categories.length > 0) {
+          completeProductData.categories = categories.map((category) => ({
+            category_id: category.category_id,
+          }));
+        }
+
+        // Add packings if available
+        const packings = sampleData.product_packings?.filter(
+          (packing) => packing.product_id === productData.id
+        );
+        if (packings && packings.length > 0) {
+          completeProductData.packings = packings.map((packing) => ({
+            id: packing.id,
+            packing_type_id: packing.packing_type_id,
+            width: packing.width || null,
+            height: packing.height || null,
+            length: packing.length || null,
+            weight: packing.weight || null,
+            volume: packing.volume || null,
+            pcs_per_ctn: packing.pcs_per_ctn || null,
+            moq: packing.moq || null,
+            display_order: packing.display_order || 0,
+          }));
+        }
+
+        // Add alibaba IDs if available
+        const alibabaIds = sampleData.product_alibaba_ids?.filter(
+          (alibabaId) => alibabaId.product_id === productData.id
+        );
+        if (alibabaIds && alibabaIds.length > 0) {
+          completeProductData.alibaba_ids = alibabaIds.map((alibabaId) => ({
+            alibaba_id: alibabaId.alibaba_id,
+            url: alibabaId.url || null,
+          }));
+        }
+
+        // Use the existing createProduct function to create the product with all related data
+        const result = await createProduct(completeProductData);
+
+        results.successful++;
+        results.products.push({
+          id: productData.id,
+          product_id: productData.product_id,
+          status: 'success',
+        });
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          product_id: productData.product_id,
+          error: error.message,
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    throw new AppError(
+      `Failed to import sample products: ${error.message}`,
       error.statusCode || 500
     );
   }

@@ -2,7 +2,6 @@ import * as Products from '../../../models/trade_business/products/data_products
 import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import sampleProducts from '../../../samples/products.js';
-import { tb_pool } from '../../../utils/dbConn.js'; // Add this import
 
 /**
  * Create a new product
@@ -184,165 +183,16 @@ export const getProductStats = catchAsync(async (req, res, next) => {
  * @route POST /api/products/samples
  */
 export const importSampleProducts = catchAsync(async (req, res, next) => {
-  try {
-    // Get the sample data from the imported file
-    const productsData = sampleProducts.products;
+  const results = await Products.importSampleProducts(sampleProducts);
 
-    if (!productsData || !Array.isArray(productsData)) {
-      return next(new AppError('Invalid sample products data structure', 400));
-    }
+  // Store the results in res.prints for endController to use
+  res.prints = {
+    message: `Imported ${results.successful} out of ${results.total} sample products`,
+    data: results,
+  };
 
-    // Process each product in the sample data
-    const results = {
-      total: productsData.length,
-      successful: 0,
-      failed: 0,
-      errors: [],
-      products: [],
-    };
-
-    // Process each product individually
-    for (const productData of productsData) {
-      try {
-        console.log('before.....................');
-        // Insert the product
-        const [productResult] = await tb_pool.query(
-          'INSERT INTO products (id, product_id, icon_url, remark) VALUES (?, ?, ?, ?)',
-          [
-            productData.id,
-            productData.product_id,
-            productData.icon_url || null,
-            productData.remark || null,
-          ]
-        );
-        console.log('after......................');
-
-        if (productResult.affectedRows > 0) {
-          // Add product names if available
-          const names = sampleProducts.product_names.filter(
-            (name) => name.product_id === productData.id
-          );
-
-          if (names && names.length > 0) {
-            for (const name of names) {
-              try {
-                await tb_pool.query(
-                  'INSERT INTO data_product_names (product_id, name, name_type_id) VALUES (?, ?, ?)',
-                  [productData.id, name.name, name.name_type_id]
-                );
-              } catch (error) {
-                console.error(
-                  `Error adding name for product ${productData.id}:`,
-                  error.message
-                );
-              }
-            }
-          }
-
-          // Add categories if available
-          const categories = sampleProducts.product_categories.filter(
-            (category) => category.product_id === productData.id
-          );
-
-          if (categories && categories.length > 0) {
-            for (const category of categories) {
-              try {
-                await tb_pool.query(
-                  'INSERT INTO data_product_categories (product_id, category_id) VALUES (?, ?)',
-                  [productData.id, category.category_id]
-                );
-              } catch (error) {
-                console.error(
-                  `Error adding category for product ${productData.id}:`,
-                  error.message
-                );
-              }
-            }
-          }
-
-          // Add packings if available
-          const packings = sampleProducts.product_packings?.filter(
-            (packing) => packing.product_id === productData.id
-          );
-
-          if (packings && packings.length > 0) {
-            for (const packing of packings) {
-              try {
-                await tb_pool.query(
-                  'INSERT INTO data_product_packings (id, product_id, packing_type_id, width, height, length, weight, volume, pcs_per_ctn, moq, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                  [
-                    packing.id,
-                    productData.id,
-                    packing.packing_type_id,
-                    packing.width || null,
-                    packing.height || null,
-                    packing.length || null,
-                    packing.weight || null,
-                    packing.volume || null,
-                    packing.pcs_per_ctn || null,
-                    packing.moq || null,
-                    packing.display_order || 0,
-                  ]
-                );
-              } catch (error) {
-                console.error(
-                  `Error adding packing for product ${productData.id}:`,
-                  error.message
-                );
-              }
-            }
-          }
-
-          // Add alibaba IDs if available
-          const alibabaIds = sampleProducts.product_alibaba_ids?.filter(
-            (alibabaId) => alibabaId.product_id === productData.id
-          );
-
-          if (alibabaIds && alibabaIds.length > 0) {
-            for (const alibabaId of alibabaIds) {
-              try {
-                await tb_pool.query(
-                  'INSERT INTO data_product_alibaba_ids (product_id, alibaba_id, url) VALUES (?, ?, ?)',
-                  [productData.id, alibabaId.alibaba_id, alibabaId.url || null]
-                );
-              } catch (error) {
-                console.error(
-                  `Error adding alibaba ID for product ${productData.id}:`,
-                  error.message
-                );
-              }
-            }
-          }
-
-          results.successful++;
-          results.products.push({
-            id: productData.id,
-            product_id: productData.product_id,
-            status: 'success',
-          });
-        }
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          product_id: productData.product_id,
-          error: error.message,
-        });
-      }
-    }
-
-    // Store the results in res.prints for endController to use
-    res.prints = {
-      message: `Imported ${results.successful} out of ${results.total} sample products`,
-      data: results,
-    };
-
-    // Call next() to proceed to endController
-    next();
-  } catch (error) {
-    return next(
-      new AppError(`Failed to import sample products: ${error.message}`, 500)
-    );
-  }
+  // Call next() to proceed to endController
+  next();
 });
 
 /**
@@ -415,21 +265,14 @@ export const validateProductCode = (req, res, next) => {
  * @route POST /api/products/truncate
  */
 export const truncateProductTables = catchAsync(async (req, res, next) => {
-  try {
-    // Call the model function to truncate all product tables
-    const result = await Products.truncateAllProductTables();
+  const result = await Products.truncateAllProductTables();
 
-    res.status(200).json({
-      status: 'success',
-      message: result.message,
-      data: {
-        truncatedTables: result.truncatedTables,
-        errors: result.errors,
-      },
-    });
-  } catch (error) {
-    return next(
-      new AppError(`Failed to truncate product tables: ${error.message}`, 500)
-    );
-  }
+  res.status(200).json({
+    status: 'success',
+    message: result.message,
+    data: {
+      truncatedTables: result.truncatedTables,
+      errors: result.errors,
+    },
+  });
 });

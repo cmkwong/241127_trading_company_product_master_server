@@ -41,9 +41,8 @@ export const TABLE_MASTER = {
     name: 'master_product_name_types',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       name: {
@@ -65,9 +64,8 @@ export const TABLE_MASTER = {
     name: 'master_categories',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       name: {
@@ -80,7 +78,7 @@ export const TABLE_MASTER = {
         description: 'Category description',
       },
       parent_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         references: {
           table: 'master_categories',
           field: 'id',
@@ -95,9 +93,8 @@ export const TABLE_MASTER = {
     name: 'master_packing_types',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       name: {
@@ -119,9 +116,8 @@ export const TABLE_MASTER = {
     name: 'master_certificate_types',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       name: {
@@ -144,9 +140,8 @@ export const TABLE_MASTER = {
     name: 'product_names',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -161,7 +156,7 @@ export const TABLE_MASTER = {
         description: 'Product name',
       },
       name_type_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'master_product_name_types',
@@ -189,7 +184,7 @@ export const TABLE_MASTER = {
         description: 'Reference to products.id',
       },
       category_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'master_categories',
@@ -208,9 +203,8 @@ export const TABLE_MASTER = {
     name: 'product_customizations',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -236,13 +230,12 @@ export const TABLE_MASTER = {
     name: 'product_customization_images',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       customization_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'product_customizations',
@@ -257,7 +250,7 @@ export const TABLE_MASTER = {
         description: 'URL to customization image',
       },
       display_order: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         default: 0,
         description: 'Order for display purposes',
       },
@@ -268,9 +261,8 @@ export const TABLE_MASTER = {
     name: 'product_links',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -293,13 +285,12 @@ export const TABLE_MASTER = {
     name: 'product_link_images',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_link_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'product_links',
@@ -314,7 +305,7 @@ export const TABLE_MASTER = {
         description: 'URL to link-related image',
       },
       display_order: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         default: 0,
         description: 'Order for display purposes',
       },
@@ -325,9 +316,8 @@ export const TABLE_MASTER = {
     name: 'product_alibaba_ids',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -352,9 +342,8 @@ export const TABLE_MASTER = {
     name: 'product_packings',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -364,7 +353,7 @@ export const TABLE_MASTER = {
         description: 'Reference to products.id',
       },
       packing_type_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'master_packing_types',
@@ -389,7 +378,7 @@ export const TABLE_MASTER = {
         description: 'Height dimension',
       },
       quantity: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         default: 1,
         description: 'Quantity in this packing',
@@ -406,9 +395,8 @@ export const TABLE_MASTER = {
     name: 'product_certificates',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       product_id: {
@@ -418,7 +406,7 @@ export const TABLE_MASTER = {
         description: 'Reference to products.id',
       },
       certificate_type_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'master_certificate_types',
@@ -438,13 +426,12 @@ export const TABLE_MASTER = {
     name: 'product_certificate_files',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'Auto-incremented primary key',
       },
       certificate_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'product_certificates',

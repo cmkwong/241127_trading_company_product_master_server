@@ -5,14 +5,14 @@ import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
 // Table name constant for consistency
-const CATEGORIES_TABLE = TABLE_MASTER['CATEGORIES'].name;
+const CATEGORIES_TABLE = TABLE_MASTER['MASTER_CATEGORIES'].name;
 
 /**
  * Creates a new category
  * @param {Object} categoryData - The category data to create
  * @param {string} categoryData.name - The name of the category
  * @param {string} [categoryData.description] - Optional description of the category
- * @param {number} [categoryData.parent_id] - Optional parent category ID for hierarchical structure
+ * @param {string} [categoryData.parent_id] - Optional parent category ID for hierarchical structure
  * @returns {Promise<Object>} Promise that resolves with the created category
  */
 export const createCategory = async (categoryData) => {
@@ -78,7 +78,7 @@ export const createCategory = async (categoryData) => {
 
 /**
  * Gets a category by ID
- * @param {number} id - The ID of the category to retrieve
+ * @param {string} id - The ID of the category to retrieve
  * @returns {Promise<Object>} Promise that resolves with the category data
  */
 export const getCategoryById = async (id) => {
@@ -125,7 +125,7 @@ export const getCategoryById = async (id) => {
  * Gets all categories with optional filtering and pagination
  * @param {Object} [options] - Query options
  * @param {string} [options.search] - Search term for category name
- * @param {number} [options.parent_id] - Filter by parent category ID
+ * @param {string} [options.parent_id] - Filter by parent category ID
  * @param {number} [options.page=1] - Page number for pagination
  * @param {number} [options.limit=100] - Number of results per page
  * @returns {Promise<Object>} Promise that resolves with the categories and pagination info
@@ -293,11 +293,11 @@ export const getCategoryTree = async () => {
 
 /**
  * Updates a category
- * @param {number} id - The ID of the category to update
+ * @param {string} id - The ID of the category to update
  * @param {Object} updateData - The category data to update
  * @param {string} [updateData.name] - The updated name of the category
  * @param {string} [updateData.description] - The updated description of the category
- * @param {number|null} [updateData.parent_id] - The updated parent category ID
+ * @param {string|null} [updateData.parent_id] - The updated parent category ID
  * @returns {Promise<Object>} Promise that resolves with the updated category
  */
 export const updateCategory = async (id, updateData) => {
@@ -308,27 +308,24 @@ export const updateCategory = async (id, updateData) => {
     const existingCategory = await getCategoryById(id);
 
     // Prevent circular references in hierarchy
-    if (
-      updateData.parent_id &&
-      parseInt(updateData.parent_id) === parseInt(id)
-    ) {
+    if (updateData.parent_id && updateData.parent_id === id) {
       throw new AppError('A category cannot be its own parent', 400);
     }
 
     // Check for circular references in the hierarchy
     if (updateData.parent_id) {
       let parentId = updateData.parent_id;
-      const visited = new Set([parseInt(id)]);
+      const visited = new Set([id]);
 
       while (parentId) {
-        if (visited.has(parseInt(parentId))) {
+        if (visited.has(parentId)) {
           throw new AppError(
             'Circular reference detected in category hierarchy',
             400
           );
         }
 
-        visited.add(parseInt(parentId));
+        visited.add(parentId);
 
         // Get the parent's parent using CRUD utility
         const parentResult = await CrudOperations.performCrud({
@@ -388,7 +385,7 @@ export const updateCategory = async (id, updateData) => {
 
 /**
  * Deletes a category
- * @param {number} id - The ID of the category to delete
+ * @param {string} id - The ID of the category to delete
  * @param {boolean} [reassignChildren=false] - Whether to reassign children to parent
  * @returns {Promise<Object>} Promise that resolves with deletion result
  */
@@ -463,7 +460,7 @@ export const deleteCategory = async (id, reassignChildren = false) => {
 
 /**
  * Gets products in a category
- * @param {number} categoryId - The ID of the category
+ * @param {string} categoryId - The ID of the category
  * @param {Object} [options] - Query options
  * @param {number} [options.page=1] - Page number for pagination
  * @param {number} [options.limit=20] - Number of results per page
@@ -540,7 +537,7 @@ export const getProductsByCategory = async (categoryId, options = {}) => {
 
 /**
  * Gets child categories of a parent category
- * @param {number|null} parentId - The ID of the parent category, or null for root categories
+ * @param {string|null} parentId - The ID of the parent category, or null for root categories
  * @returns {Promise<Array>} Promise that resolves with the child categories
  */
 export const getChildCategories = async (parentId) => {
@@ -572,9 +569,9 @@ export const getChildCategories = async (parentId) => {
 
     const selectSQL = `
       SELECT c.*, 
-             (SELECT COUNT(*) FROM categories WHERE parent_id = c.id) as child_count,
+             (SELECT COUNT(*) FROM ${CATEGORIES_TABLE} WHERE parent_id = c.id) as child_count,
              (SELECT COUNT(*) FROM product_categories WHERE category_id = c.id) as product_count
-      FROM categories c
+      FROM ${CATEGORIES_TABLE} c
       ${whereClause}
       ORDER BY c.name ASC
     `;
@@ -592,7 +589,7 @@ export const getChildCategories = async (parentId) => {
 
 /**
  * Gets the full path of a category (breadcrumb)
- * @param {number} categoryId - The ID of the category
+ * @param {string} categoryId - The ID of the category
  * @returns {Promise<Array>} Promise that resolves with the category path
  */
 export const getCategoryPath = async (categoryId) => {
@@ -721,203 +718,47 @@ export const batchCreateCategories = async (categories) => {
  */
 export const insertDefaultCategories = async () => {
   try {
-    // Main categories (level 1)
-    const mainCategories = [
-      {
-        name: 'Pet Beds & Accessories',
-        description: 'Beds and accessories for pets',
-      },
-      {
-        name: 'Pet Bowls & Feeders',
-        description: 'Bowls and feeders for pets',
-      },
-      { name: 'Pet Cages & Houses', description: 'Cages and houses for pets' },
-      {
-        name: 'Pet Carriers & Travel',
-        description: 'Carriers and travel accessories for pets',
-      },
-      {
-        name: 'Pet Cleaning & Grooming',
-        description: 'Cleaning and grooming products for pets',
-      },
-      {
-        name: 'Cat Items & Accessories',
-        description: 'Items and accessories for cats',
-      },
-      { name: 'Pet Toys', description: 'Toys for pets' },
-      { name: 'Aquatic Items', description: 'Items for aquatic pets' },
-      { name: 'Others', description: 'Other pet products' },
-    ];
+    // Import categories from data file
+    const sampleProducts = await import('../../../datas/products.js');
+    const defaultCategories = sampleProducts.default.master_categories;
 
-    // Insert main categories
+    // Start with main categories (those with parent_id = null)
+    const mainCategories = defaultCategories.filter(
+      (category) => category.parent_id === null
+    );
+
+    // Insert main categories first
     const mainResults = await batchCreateCategories(mainCategories);
 
-    // Map to store main category IDs by name
+    // Map to store main category IDs by ID from data
     const categoryMap = {};
     mainResults.details.forEach((detail) => {
       if (detail.success) {
-        categoryMap[detail.name] = detail.id;
+        // Find the original category in the data to get its ID
+        const originalCategory = mainCategories.find(
+          (c) => c.name === detail.name
+        );
+        if (originalCategory) {
+          categoryMap[originalCategory.id] = detail.id;
+        }
       }
     });
 
-    // Subcategories (level 2)
-    const subcategories = [
-      // Pet Beds & Accessories subcategories
-      {
-        name: 'Pet Mats',
-        description: 'Mats for pets',
-        parent_id: categoryMap['Pet Beds & Accessories'],
-      },
+    // Get subcategories (those with parent_id !== null)
+    const subcategories = defaultCategories.filter(
+      (category) => category.parent_id !== null
+    );
 
-      // Pet Bowls & Feeders subcategories
-      {
-        name: 'Pet Dispensers',
-        description: 'Dispensers for pets',
-        parent_id: categoryMap['Pet Bowls & Feeders'],
-      },
-      {
-        name: 'Dog Bowl',
-        description: 'Bowls for dogs',
-        parent_id: categoryMap['Pet Bowls & Feeders'],
-      },
-      {
-        name: 'Cat Bowl',
-        description: 'Bowls for cats',
-        parent_id: categoryMap['Pet Bowls & Feeders'],
-      },
-
-      // Pet Cages & Houses subcategories
-      {
-        name: 'Pet Cages',
-        description: 'Cages for pets',
-        parent_id: categoryMap['Pet Cages & Houses'],
-      },
-      {
-        name: 'Pet Nests',
-        description: 'Nests for pets',
-        parent_id: categoryMap['Pet Cages & Houses'],
-      },
-
-      // Pet Carriers & Travel subcategories
-      {
-        name: 'Dog Leash',
-        description: 'Leashes for dogs',
-        parent_id: categoryMap['Pet Carriers & Travel'],
-      },
-      {
-        name: 'Dog Harness',
-        description: 'Harnesses for dogs',
-        parent_id: categoryMap['Pet Carriers & Travel'],
-      },
-      {
-        name: 'Dog Collar',
-        description: 'Collars for dogs',
-        parent_id: categoryMap['Pet Carriers & Travel'],
-      },
-      {
-        name: 'Cat Collar',
-        description: 'Collars for cats',
-        parent_id: categoryMap['Pet Carriers & Travel'],
-      },
-      {
-        name: 'Pet Carriers',
-        description: 'Carriers for pets',
-        parent_id: categoryMap['Pet Carriers & Travel'],
-      },
-
-      // Pet Cleaning & Grooming subcategories
-      {
-        name: 'Teeth Cleaning',
-        description: 'Teeth cleaning products for pets',
-        parent_id: categoryMap['Pet Cleaning & Grooming'],
-      },
-      {
-        name: 'Dog Grooming',
-        description: 'Grooming products for dogs',
-        parent_id: categoryMap['Pet Cleaning & Grooming'],
-      },
-      {
-        name: 'Cat Grooming',
-        description: 'Grooming products for cats',
-        parent_id: categoryMap['Pet Cleaning & Grooming'],
-      },
-
-      // Cat Items & Accessories subcategories
-      {
-        name: 'Pet Litter Cleaning',
-        description: 'Litter cleaning products for pets',
-        parent_id: categoryMap['Cat Items & Accessories'],
-      },
-      {
-        name: 'Cat Litter Box',
-        description: 'Litter boxes for cats',
-        parent_id: categoryMap['Cat Items & Accessories'],
-      },
-
-      // Pet Toys subcategories
-      {
-        name: 'Cat Toys',
-        description: 'Toys for cats',
-        parent_id: categoryMap['Pet Toys'],
-      },
-      {
-        name: 'Dog Toys',
-        description: 'Toys for dogs',
-        parent_id: categoryMap['Pet Toys'],
-      },
-
-      // Others subcategories
-      {
-        name: 'Pet Ramps',
-        description: 'Ramps for pets',
-        parent_id: categoryMap['Others'],
-      },
-      {
-        name: 'Pet Backrest Cover',
-        description: 'Backrest covers for pets',
-        parent_id: categoryMap['Others'],
-      },
-      {
-        name: 'Cat Scratching Board',
-        description: 'Scratching boards for cats',
-        parent_id: categoryMap['Others'],
-      },
-      {
-        name: 'Pet Clothing',
-        description: 'Clothing for pets',
-        parent_id: categoryMap['Others'],
-      },
-      {
-        name: 'Pet Water Fountain',
-        description: 'Water fountains for pets',
-        parent_id: categoryMap['Others'],
-      },
-
-      // Aquatic Items subcategories
-      {
-        name: 'Pumps',
-        description: 'Pumps for aquariums',
-        parent_id: categoryMap['Aquatic Items'],
-      },
-      {
-        name: 'Horse Supplies',
-        description: 'Supplies for horses',
-        parent_id: categoryMap['Aquatic Items'],
-      },
-      {
-        name: 'Bird Supplies',
-        description: 'Supplies for birds',
-        parent_id: categoryMap['Aquatic Items'],
-      },
-      {
-        name: 'Dog Barking Controller',
-        description: 'Controllers for dog barking',
-        parent_id: categoryMap['Aquatic Items'],
-      },
-    ];
+    // Update parent_id references to use the newly created category IDs
+    const updatedSubcategories = subcategories.map((category) => ({
+      ...category,
+      parent_id: categoryMap[category.parent_id] || null,
+    }));
 
     // Insert subcategories
-    const subcategoryResults = await batchCreateCategories(subcategories);
+    const subcategoryResults = await batchCreateCategories(
+      updatedSubcategories
+    );
 
     return {
       mainCategories: mainResults,

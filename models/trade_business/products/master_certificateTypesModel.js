@@ -4,9 +4,8 @@ import AppError from '../../../utils/appError.js';
 import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
-// Table name constants for consistency
-const CERTIFICATE_TYPES_TABLE = TABLE_MASTER['CERTIFICATE_TYPES'].name;
-const CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
+// Table name constant for consistency
+const CERTIFICATE_TYPES_TABLE = TABLE_MASTER['MASTER_CERTIFICATE_TYPES'].name;
 
 /**
  * Creates a new certificate type
@@ -52,14 +51,14 @@ export const createCertificateType = async (certificateTypeData) => {
 
 /**
  * Gets a certificate type by ID
- * @param {number} id - The ID of the certificate type to retrieve
+ * @param {string} id - The ID of the certificate type to retrieve
  * @returns {Promise<Object>} Promise that resolves with the certificate type data
  */
 export const getCertificateTypeById = async (id) => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Get the certificate type using CRUD utility
+    // Use CRUD utility to get the certificate type
     const result = await CrudOperations.performCrud({
       operation: 'read',
       tableName: CERTIFICATE_TYPES_TABLE,
@@ -92,54 +91,74 @@ export const getAllCertificateTypes = async (options = {}) => {
   try {
     const pool = dbConn.tb_pool;
 
-    // For this query with subqueries, we'll use direct SQL
-    // Build the WHERE clause based on filters
-    let whereClause = '1=1';
-    const params = [];
+    // Handle search separately since it requires LIKE operator
+    let searchCondition = '';
+    const searchParams = [];
 
     if (options.search) {
-      whereClause += ' AND name LIKE ?';
-      params.push(`%${options.search}%`);
+      searchCondition = 'name LIKE ?';
+      searchParams.push(`%${options.search}%`);
     }
 
-    // Get total count for pagination
-    const countSQL = `
-      SELECT COUNT(*) as total
-      FROM ${CERTIFICATE_TYPES_TABLE}
-      WHERE ${whereClause}
-    `;
+    // Get certificate types using CRUD utility with custom query for search
+    const result = await CrudOperations.performCrud({
+      operation: 'read',
+      tableName: CERTIFICATE_TYPES_TABLE,
+      page: options.page || 1,
+      limit: options.limit || 100,
+      orderBy: 'name',
+      orderDirection: 'ASC',
+      connection: pool,
+    });
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, params);
-    const total = countResult[0].total;
+    // Filter results by search if provided
+    let certificateTypes = result.records;
+    let total = result.pagination.total;
 
-    // Get certificate types with pagination
-    const selectSQL = `
-      SELECT id, name, description,
-             (SELECT COUNT(*) FROM ${CERTIFICATES_TABLE} WHERE certificate_type_id = ${CERTIFICATE_TYPES_TABLE}.id) as usage_count
-      FROM ${CERTIFICATE_TYPES_TABLE}
-      WHERE ${whereClause}
-      ORDER BY name ASC
-      LIMIT ? OFFSET ?
-    `;
+    if (options.search) {
+      // If search is provided, we need to filter the results manually
+      // or use a custom query instead of the CRUD utility
+      const searchSQL = `
+        SELECT *
+        FROM ${CERTIFICATE_TYPES_TABLE}
+        WHERE name LIKE ?
+        ORDER BY name ASC
+        LIMIT ? OFFSET ?
+      `;
 
-    // Add pagination parameters
-    const page = options.page || 1;
-    const limit = options.limit || 100;
-    const offset = (page - 1) * limit;
-    const queryParams = [...params, limit, offset];
-    const certificateTypes = await dbModel.executeQuery(
-      pool,
-      selectSQL,
-      queryParams
-    );
+      const limit = options.limit || 100;
+      const offset = ((options.page || 1) - 1) * limit;
+      const queryParams = [`%${options.search}%`, limit, offset];
+
+      certificateTypes = await dbModel.executeQuery(
+        pool,
+        searchSQL,
+        queryParams
+      );
+
+      // Get total count for search
+      const countSQL = `
+        SELECT COUNT(*) as total
+        FROM ${CERTIFICATE_TYPES_TABLE}
+        WHERE name LIKE ?
+      `;
+
+      const countParams = [`%${options.search}%`];
+      const countResult = await dbModel.executeQuery(
+        pool,
+        countSQL,
+        countParams
+      );
+      total = countResult[0].total;
+    }
 
     return {
       certificateTypes,
       pagination: {
         total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
+        page: options.page || 1,
+        limit: options.limit || 100,
+        pages: Math.ceil(total / (options.limit || 100)),
       },
     };
   } catch (error) {
@@ -152,7 +171,7 @@ export const getAllCertificateTypes = async (options = {}) => {
 
 /**
  * Updates a certificate type
- * @param {number} id - The ID of the certificate type to update
+ * @param {string} id - The ID of the certificate type to update
  * @param {Object} updateData - The certificate type data to update
  * @param {string} [updateData.name] - The updated name of the certificate type
  * @param {string} [updateData.description] - The updated description of the certificate type
@@ -194,152 +213,46 @@ export const updateCertificateType = async (id, updateData) => {
 
 /**
  * Deletes a certificate type
- * @param {number} id - The ID of the certificate type to delete
- * @param {boolean} [force=false] - Whether to force deletion even if in use
+ * @param {string} id - The ID of the certificate type to delete
  * @returns {Promise<Object>} Promise that resolves with deletion result
  */
-export const deleteCertificateType = async (id, force = false) => {
+export const deleteCertificateType = async (id) => {
   try {
     const pool = dbConn.tb_pool;
 
     // Check if certificate type exists
     await getCertificateTypeById(id);
 
-    // Check if the certificate type is in use
-    const usageResult = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CERTIFICATES_TABLE,
-      conditions: { certificate_type_id: id },
-      connection: pool,
-    });
+    // Check if certificate type is in use
+    const checkSQL = `
+      SELECT COUNT(*) as count
+      FROM product_certificates
+      WHERE certificate_type_id = ?
+    `;
 
-    const usageCount = usageResult.records.length;
+    const checkResult = await dbModel.executeQuery(pool, checkSQL, [id]);
 
-    if (usageCount > 0 && !force) {
+    if (checkResult[0].count > 0) {
       throw new AppError(
-        `Cannot delete certificate type that is in use by ${usageCount} certificates. Use force=true to override.`,
+        `Cannot delete certificate type that is in use by ${checkResult[0].count} products`,
         400
       );
     }
 
-    // Start transaction
-    await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-    try {
-      // If force is true and there are usages, delete the associated certificates first
-      if (force && usageCount > 0) {
-        await CrudOperations.performCrud({
-          operation: 'bulkdelete',
-          tableName: CERTIFICATES_TABLE,
-          ids: usageResult.records.map((record) => record.id),
-          connection: pool,
-        });
-      }
-
-      // Delete the certificate type using CRUD utility
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: CERTIFICATE_TYPES_TABLE,
-        id: id,
-        connection: pool,
-      });
-
-      // Commit transaction
-      await dbModel.executeQuery(pool, 'COMMIT');
-
-      return {
-        message: 'Certificate type deleted successfully',
-        deletedAssociations: force ? usageCount : 0,
-      };
-    } catch (error) {
-      // Rollback transaction on error
-      await dbModel.executeQuery(pool, 'ROLLBACK');
-      throw error;
-    }
-  } catch (error) {
-    throw new AppError(
-      `Failed to delete certificate type: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets products with a specific certificate type
- * @param {number} certificateTypeId - The ID of the certificate type
- * @param {Object} [options] - Query options
- * @param {number} [options.page=1] - Page number for pagination
- * @param {number} [options.limit=20] - Number of results per page
- * @returns {Promise<Object>} Promise that resolves with products and pagination info
- */
-export const getProductsByCertificateType = async (
-  certificateTypeId,
-  options = {}
-) => {
-  try {
-    const pool = dbConn.tb_pool;
-    const page = options.page || 1;
-    const limit = options.limit || 20;
-    const offset = (page - 1) * limit;
-
-    // Check if certificate type exists
-    await getCertificateTypeById(certificateTypeId);
-
-    // For this complex query with joins and aggregations, we'll use direct SQL
-    // Get total count for pagination
-    const countSQL = `
-      SELECT COUNT(DISTINCT p.id) as total
-      FROM products p
-      JOIN certificates c ON p.id = c.product_id
-      WHERE c.certificate_type_id = ?
-    `;
-
-    const countResult = await dbModel.executeQuery(pool, countSQL, [
-      certificateTypeId,
-    ]);
-    const total = countResult[0].total;
-
-    // Get products with pagination
-    const selectSQL = `
-      SELECT p.id, p.product_id, p.icon_url, p.remark,
-             GROUP_CONCAT(DISTINCT pn.name ORDER BY pn.name_type_id SEPARATOR '|') as names,
-             COUNT(DISTINCT c.id) as certificate_count
-      FROM products p
-      JOIN certificates c ON p.id = c.product_id
-      LEFT JOIN product_names pn ON p.id = pn.product_id
-      WHERE c.certificate_type_id = ?
-      GROUP BY p.id
-      ORDER BY p.product_id ASC
-      LIMIT ? OFFSET ?
-    `;
-
-    const products = await dbModel.executeQuery(pool, selectSQL, [
-      certificateTypeId,
-      limit,
-      offset,
-    ]);
-
-    // Format product names
-    products.forEach((product) => {
-      if (product.names) {
-        product.names = product.names.split('|');
-      } else {
-        product.names = [];
-      }
+    // Delete certificate type using CRUD utility
+    await CrudOperations.performCrud({
+      operation: 'delete',
+      tableName: CERTIFICATE_TYPES_TABLE,
+      id: id,
+      connection: pool,
     });
 
     return {
-      products,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
+      message: 'Certificate type deleted successfully',
     };
   } catch (error) {
     throw new AppError(
-      `Failed to get products by certificate type: ${error.message}`,
+      `Failed to delete certificate type: ${error.message}`,
       error.statusCode || 500
     );
   }
@@ -353,37 +266,40 @@ export const getProductsByCertificateType = async (
 export const batchCreateCertificateTypes = async (certificateTypes) => {
   try {
     const pool = dbConn.tb_pool;
-
-    // Use bulkCreate operation from CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'bulkcreate',
-      tableName: CERTIFICATE_TYPES_TABLE,
-      data: certificateTypes,
-      connection: pool,
-    });
-
-    return {
+    const results = {
       total: certificateTypes.length,
-      successful: result.count,
-      failed: certificateTypes.length - result.count,
-      details: result.records.map((record) => ({
+      successful: 0,
+      failed: 0,
+      details: [],
+    };
+
+    // Start transaction
+    await dbModel.executeQuery(pool, 'START TRANSACTION');
+
+    try {
+      // Use bulkCreate operation from CRUD utility
+      const bulkResult = await CrudOperations.performCrud({
+        operation: 'bulkcreate',
+        tableName: CERTIFICATE_TYPES_TABLE,
+        data: certificateTypes,
+        connection: pool,
+      });
+
+      // Process results
+      results.successful = bulkResult.count;
+      results.details = bulkResult.records.map((record) => ({
         name: record.name,
         success: true,
         id: record.id,
-      })),
-    };
-  } catch (error) {
-    // If bulk operation fails, try individual creates
-    try {
-      const pool = dbConn.tb_pool;
-      const results = {
-        total: certificateTypes.length,
-        successful: 0,
-        failed: 0,
-        details: [],
-      };
+      }));
 
-      // Start transaction
+      // Commit transaction
+      await dbModel.executeQuery(pool, 'COMMIT');
+    } catch (error) {
+      // Rollback transaction on error
+      await dbModel.executeQuery(pool, 'ROLLBACK');
+
+      // If bulk operation failed, try individual creates to get more detailed errors
       await dbModel.executeQuery(pool, 'START TRANSACTION');
 
       try {
@@ -408,18 +324,19 @@ export const batchCreateCertificateTypes = async (certificateTypes) => {
 
         // Commit transaction
         await dbModel.executeQuery(pool, 'COMMIT');
-        return results;
-      } catch (innerError) {
+      } catch (finalError) {
         // Rollback transaction on error
         await dbModel.executeQuery(pool, 'ROLLBACK');
-        throw innerError;
+        throw finalError;
       }
-    } catch (finalError) {
-      throw new AppError(
-        `Failed to batch create certificate types: ${finalError.message}`,
-        500
-      );
     }
+
+    return results;
+  } catch (error) {
+    throw new AppError(
+      `Failed to batch create certificate types: ${error.message}`,
+      500
+    );
   }
 };
 
@@ -429,32 +346,12 @@ export const batchCreateCertificateTypes = async (certificateTypes) => {
  */
 export const insertDefaultCertificateTypes = async () => {
   try {
-    const defaultCertificateTypes = [
-      { name: 'CE', description: 'European Conformity certification' },
-      { name: 'RoHS', description: 'Restriction of Hazardous Substances' },
-      { name: 'FCC', description: 'Federal Communications Commission' },
-      { name: 'ISO 9001', description: 'Quality Management System' },
-      {
-        name: 'REACH',
-        description:
-          'Registration, Evaluation, Authorization and Restriction of Chemicals',
-      },
-      { name: 'FDA', description: 'Food and Drug Administration' },
-      { name: 'UL', description: 'Underwriters Laboratories' },
-      {
-        name: 'ASTM',
-        description: 'American Society for Testing and Materials',
-      },
-      { name: 'BSCI', description: 'Business Social Compliance Initiative' },
-      { name: 'FSC', description: 'Forest Stewardship Council' },
-    ];
+    // Import certificate types from data file
+    const sampleProducts = await import('../../../datas/products.js');
+    const defaultCertificateTypes =
+      sampleProducts.default.master_certificate_types;
 
-    const results = await batchCreateCertificateTypes(defaultCertificateTypes);
-
-    return {
-      message: 'Default certificate types inserted successfully',
-      results,
-    };
+    return await batchCreateCertificateTypes(defaultCertificateTypes);
   } catch (error) {
     throw new AppError(
       `Failed to insert default certificate types: ${error.message}`,

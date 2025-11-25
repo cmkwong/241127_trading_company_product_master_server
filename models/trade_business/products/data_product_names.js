@@ -18,11 +18,12 @@ const productNameModel = new DataModelUtils({
     id: uuidv4,
   },
   joinConfig: {
-    joinTable: 'name_types',
+    joinTable: 'master_product_name_types',
     joinField: 'name_type_id',
-    selectFields: 'name_types.name as type_name',
+    selectFields: 'master_product_name_types.name as type_name',
     orderBy: 'product_names.name_type_id',
   },
+  database: 'trade_business', // Explicitly specify the database
 });
 
 /**
@@ -188,10 +189,8 @@ export const deleteProductName = async (id) => {
  */
 export const upsertProductNames = async (productId, names) => {
   try {
-    // Start transaction
-    await productNameModel.beginTransaction();
-
-    try {
+    // Use withTransaction for transaction management
+    return await productNameModel.withTransaction(async () => {
       // Get existing names for this product
       const existingNames = await getProductNamesByProductId(productId);
       const existingNamesByType = {};
@@ -230,20 +229,13 @@ export const upsertProductNames = async (productId, names) => {
         }
       }
 
-      // Commit transaction
-      await productNameModel.commitTransaction();
-
       return {
         message: 'Product names updated successfully',
         created: results.created.length,
         updated: results.updated.length,
         names: await getProductNamesByProductId(productId),
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await productNameModel.rollbackTransaction();
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to update product names: ${error.message}`,

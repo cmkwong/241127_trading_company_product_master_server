@@ -481,21 +481,16 @@ export const batchCreatePackingTypes = async (packingTypes) => {
  */
 export const insertDefaultPackingTypes = async () => {
   try {
-    const defaultPackingTypes = [
-      { name: 'Single Unit', description: 'Individual product packaging' },
-      { name: 'Carton', description: 'Bulk packaging carton' },
-      { name: 'Pallet', description: 'Pallet packaging for shipping' },
-      { name: 'Inner Box', description: 'Inner packaging box' },
-      {
-        name: 'Master Carton',
-        description: 'Master carton for multiple units',
-      },
-      { name: 'Polybag', description: 'Plastic polybag packaging' },
-      { name: 'Blister Pack', description: 'Blister packaging' },
-      { name: 'Shrink Wrap', description: 'Shrink wrapped packaging' },
-    ];
+    // Import packing types from data file
+    const sampleProducts = await import('../../../datas/products.js');
+    const defaultPackingTypes = sampleProducts.default.master_packing_types;
 
-    const results = await batchCreatePackingTypes(defaultPackingTypes);
+    // Remove the id field from each packing type as new IDs will be generated
+    const packingTypesToInsert = defaultPackingTypes.map(
+      ({ id, ...rest }) => rest
+    );
+
+    const results = await batchCreatePackingTypes(packingTypesToInsert);
 
     return {
       message: 'Default packing types inserted successfully',
