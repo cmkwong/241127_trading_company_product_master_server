@@ -635,16 +635,12 @@ export const getProductStats = async () => {
  */
 export const truncateAllProductTables = async () => {
   try {
-    console.log('before beginTransaction ......................');
     // Start transaction
     await productModel.beginTransaction();
-    console.log('after beginTransaction ......................');
 
     try {
-      console.log('before executeQuery ......................');
       // Disable foreign key checks to allow truncating tables with relationships
       await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
-      console.log('after executeQuery ......................');
 
       // List of product-related tables in the correct order for truncation
       // We need to truncate child tables before parent tables to avoid foreign key constraints

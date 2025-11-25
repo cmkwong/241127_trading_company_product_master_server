@@ -565,7 +565,7 @@ export default class DataModelUtils {
    */
   async beginTransaction() {
     try {
-      const pool = dbConn.tb_pool;
+      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
       await pool.query('START TRANSACTION');
     } catch (error) {
       throw new AppError(
@@ -581,7 +581,7 @@ export default class DataModelUtils {
    */
   async commitTransaction() {
     try {
-      const pool = dbConn.tb_pool;
+      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
       await pool.query('COMMIT');
     } catch (error) {
       throw new AppError(
@@ -597,7 +597,7 @@ export default class DataModelUtils {
    */
   async rollbackTransaction() {
     try {
-      const pool = dbConn.tb_pool;
+      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
       await pool.query('ROLLBACK');
     } catch (error) {
       throw new AppError(
@@ -615,9 +615,9 @@ export default class DataModelUtils {
    */
   async executeQuery(sql, params = []) {
     try {
-      const pool = dbConn.tb_pool;
-      const result = await pool.query(sql, params);
-      return result[0];
+      const pool = dbConn.tb_pool.promise(); // Get promise-based pool
+      const [rows] = await pool.query(sql, params);
+      return rows;
     } catch (error) {
       throw new AppError(
         `Query execution failed: ${error.message}`,
