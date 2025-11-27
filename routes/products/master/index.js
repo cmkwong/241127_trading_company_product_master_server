@@ -36,6 +36,16 @@ const createMasterDataRoutes = (basePath, controller) => {
   // Insert defaults route
   router.post(`${basePath}/defaults`, controller.insertDefaults, endController);
 
+  // Add truncate route if the controller supports it
+  if (controller.truncate) {
+    router.post(`${basePath}/truncate`, controller.truncate, endController);
+  }
+
+  // Add reset route if the controller supports it
+  if (controller.reset) {
+    router.post(`${basePath}/reset`, controller.reset, endController);
+  }
+
   return router;
 };
 
@@ -109,6 +119,19 @@ router.get(
 router.get(
   '/check-exists',
   masterDataController.checkEntityExists,
+  endController
+);
+
+// Add new combined operations for truncate and reset
+router.post(
+  '/truncate/all',
+  masterDataController.truncateAllTables,
+  endController
+);
+
+router.post(
+  '/reset/all',
+  masterDataController.resetAllMasterData,
   endController
 );
 

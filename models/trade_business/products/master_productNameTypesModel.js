@@ -1,12 +1,21 @@
-import * as dbConn from '../../../utils/dbConn.js';
-import * as dbModel from '../../../models/dbModel.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
-// Table name constant for consistency
+// Table name constants for consistency
 const PRODUCT_NAME_TYPES_TABLE = TABLE_MASTER['MASTER_PRODUCT_NAME_TYPES'].name;
 const PRODUCT_NAMES_TABLE = TABLE_MASTER['PRODUCT_NAMES'].name;
+
+// Create DataModelUtils instance for product name types
+const productNameTypeModel = new DataModelUtils({
+  tableName: PRODUCT_NAME_TYPES_TABLE,
+  entityName: 'product name type',
+  entityIdField: 'id',
+  requiredFields: ['name'],
+  validations: {
+    name: { required: true },
+  },
+});
 
 /**
  * Creates a new product name type
@@ -17,25 +26,7 @@ const PRODUCT_NAMES_TABLE = TABLE_MASTER['PRODUCT_NAMES'].name;
  */
 export const createProductNameType = async (nameTypeData) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Validate required fields
-    if (!nameTypeData.name) {
-      throw new AppError('Product name type name is required', 400);
-    }
-
-    // Create the product name type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'create',
-      tableName: PRODUCT_NAME_TYPES_TABLE,
-      data: nameTypeData,
-      connection: pool,
-    });
-
-    return {
-      message: 'Product name type created successfully',
-      productNameType: result.record,
-    };
+    return await productNameTypeModel.create(nameTypeData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError(
@@ -43,10 +34,7 @@ export const createProductNameType = async (nameTypeData) => {
         409
       );
     }
-    throw new AppError(
-      `Failed to create product name type: ${error.message}`,
-      error.statusCode || 500
-    );
+    throw error;
   }
 };
 
@@ -56,28 +44,7 @@ export const createProductNameType = async (nameTypeData) => {
  * @returns {Promise<Object>} Promise that resolves with the product name type data
  */
 export const getProductNameTypeById = async (id) => {
-  try {
-    const pool = dbConn.tb_pool;
-
-    // Get the product name type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: PRODUCT_NAME_TYPES_TABLE,
-      id: id,
-      connection: pool,
-    });
-
-    if (!result.record) {
-      throw new AppError('Product name type not found', 404);
-    }
-
-    return result.record;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get product name type: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
+  return await productNameTypeModel.getById(id);
 };
 
 /**
@@ -90,7 +57,9 @@ export const getProductNameTypeById = async (id) => {
  */
 export const getAllProductNameTypes = async (options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
+    const page = options.page || 1;
+    const limit = options.limit || 100;
+    const offset = (page - 1) * limit;
 
     // Build the WHERE clause based on filters
     let whereClause = '1=1';
@@ -108,7 +77,10 @@ export const getAllProductNameTypes = async (options = {}) => {
       WHERE ${whereClause}
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, params);
+    const countResult = await productNameTypeModel.executeQuery(
+      countSQL,
+      params
+    );
     const total = countResult[0].total;
 
     // Get product name types with pagination and usage count
@@ -122,12 +94,8 @@ export const getAllProductNameTypes = async (options = {}) => {
     `;
 
     // Add pagination parameters
-    const page = options.page || 1;
-    const limit = options.limit || 100;
-    const offset = (page - 1) * limit;
     const queryParams = [...params, limit, offset];
-    const productNameTypes = await dbModel.executeQuery(
-      pool,
+    const productNameTypes = await productNameTypeModel.executeQuery(
       selectSQL,
       queryParams
     );
@@ -159,24 +127,7 @@ export const getAllProductNameTypes = async (options = {}) => {
  */
 export const updateProductNameType = async (id, updateData) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Check if product name type exists
-    await getProductNameTypeById(id);
-
-    // Update the product name type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'update',
-      tableName: PRODUCT_NAME_TYPES_TABLE,
-      id: id,
-      data: updateData,
-      connection: pool,
-    });
-
-    return {
-      message: 'Product name type updated successfully',
-      productNameType: result.record,
-    };
+    return await productNameTypeModel.update(id, updateData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError(
@@ -184,10 +135,7 @@ export const updateProductNameType = async (id, updateData) => {
         409
       );
     }
-    throw new AppError(
-      `Failed to update product name type: ${error.message}`,
-      error.statusCode || 500
-    );
+    throw error;
   }
 };
 
@@ -199,20 +147,17 @@ export const updateProductNameType = async (id, updateData) => {
  */
 export const deleteProductNameType = async (id, force = false) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if product name type exists
     await getProductNameTypeById(id);
 
     // Check if the product name type is in use
-    const usageResult = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: PRODUCT_NAMES_TABLE,
-      conditions: { name_type_id: id },
-      connection: pool,
-    });
-
-    const usageCount = usageResult.records.length;
+    const usageSQL = `
+      SELECT COUNT(*) as count 
+      FROM ${PRODUCT_NAMES_TABLE} 
+      WHERE name_type_id = ?
+    `;
+    const usageResult = await productNameTypeModel.executeQuery(usageSQL, [id]);
+    const usageCount = usageResult[0].count;
 
     if (usageCount > 0 && !force) {
       throw new AppError(
@@ -221,40 +166,22 @@ export const deleteProductNameType = async (id, force = false) => {
       );
     }
 
-    // Start transaction
-    await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-    try {
+    // Use transaction for this operation
+    return await productNameTypeModel.withTransaction(async (connection) => {
       // If force is true and there are usages, delete the associated product names first
       if (force && usageCount > 0) {
-        await CrudOperations.performCrud({
-          operation: 'bulkdelete',
-          tableName: PRODUCT_NAMES_TABLE,
-          ids: usageResult.records.map((record) => record.id),
-          connection: pool,
-        });
+        const deleteNamesSQL = `DELETE FROM ${PRODUCT_NAMES_TABLE} WHERE name_type_id = ?`;
+        await productNameTypeModel.executeQuery(deleteNamesSQL, [id]);
       }
 
-      // Delete the product name type using CRUD utility
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: PRODUCT_NAME_TYPES_TABLE,
-        id: id,
-        connection: pool,
-      });
-
-      // Commit transaction
-      await dbModel.executeQuery(pool, 'COMMIT');
+      // Delete the product name type
+      await productNameTypeModel.delete(id);
 
       return {
         message: 'Product name type deleted successfully',
         deletedAssociations: force ? usageCount : 0,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await dbModel.executeQuery(pool, 'ROLLBACK');
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete product name type: ${error.message}`,
@@ -273,13 +200,12 @@ export const deleteProductNameType = async (id, force = false) => {
  */
 export const getProductsByNameType = async (nameTypeId, options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Check if product name type exists
+    await getProductNameTypeById(nameTypeId);
+
     const page = options.page || 1;
     const limit = options.limit || 20;
     const offset = (page - 1) * limit;
-
-    // Check if product name type exists
-    await getProductNameTypeById(nameTypeId);
 
     // Get total count for pagination
     const countSQL = `
@@ -289,7 +215,7 @@ export const getProductsByNameType = async (nameTypeId, options = {}) => {
       WHERE pn.name_type_id = ?
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, [
+    const countResult = await productNameTypeModel.executeQuery(countSQL, [
       nameTypeId,
     ]);
     const total = countResult[0].total;
@@ -309,7 +235,7 @@ export const getProductsByNameType = async (nameTypeId, options = {}) => {
       LIMIT ? OFFSET ?
     `;
 
-    const products = await dbModel.executeQuery(pool, selectSQL, [
+    const products = await productNameTypeModel.executeQuery(selectSQL, [
       nameTypeId,
       limit,
       offset,
@@ -348,30 +274,7 @@ export const getProductsByNameType = async (nameTypeId, options = {}) => {
  */
 export const batchCreateProductNameTypes = async (nameTypes) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Use bulkCreate operation from CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'bulkcreate',
-      tableName: PRODUCT_NAME_TYPES_TABLE,
-      data: nameTypes,
-      connection: pool,
-    });
-
-    return {
-      total: nameTypes.length,
-      successful: result.count,
-      failed: nameTypes.length - result.count,
-      details: result.records.map((record) => ({
-        name: record.name,
-        success: true,
-        id: record.id,
-      })),
-    };
-  } catch (error) {
-    // If bulk operation fails, try individual creates
-    try {
-      const pool = dbConn.tb_pool;
+    return await productNameTypeModel.withTransaction(async (connection) => {
       const results = {
         total: nameTypes.length,
         successful: 0,
@@ -379,43 +282,32 @@ export const batchCreateProductNameTypes = async (nameTypes) => {
         details: [],
       };
 
-      // Start transaction
-      await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-      try {
-        for (const nameType of nameTypes) {
-          try {
-            const result = await createProductNameType(nameType);
-            results.successful++;
-            results.details.push({
-              name: nameType.name,
-              success: true,
-              id: result.productNameType.id,
-            });
-          } catch (error) {
-            results.failed++;
-            results.details.push({
-              name: nameType.name,
-              success: false,
-              error: error.message,
-            });
-          }
+      for (const nameType of nameTypes) {
+        try {
+          const result = await createProductNameType(nameType);
+          results.successful++;
+          results.details.push({
+            name: nameType.name,
+            success: true,
+            id: result.productNameType.id,
+          });
+        } catch (error) {
+          results.failed++;
+          results.details.push({
+            name: nameType.name,
+            success: false,
+            error: error.message,
+          });
         }
-
-        // Commit transaction
-        await dbModel.executeQuery(pool, 'COMMIT');
-        return results;
-      } catch (innerError) {
-        // Rollback transaction on error
-        await dbModel.executeQuery(pool, 'ROLLBACK');
-        throw innerError;
       }
-    } catch (finalError) {
-      throw new AppError(
-        `Failed to batch create product name types: ${finalError.message}`,
-        500
-      );
-    }
+
+      return results;
+    });
+  } catch (error) {
+    throw new AppError(
+      `Failed to batch create product name types: ${error.message}`,
+      500
+    );
   }
 };
 
@@ -438,6 +330,21 @@ export const insertDefaultProductNameTypes = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to insert default product name types: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Truncates the product name types table
+ * @returns {Promise<Object>} Promise that resolves with truncation result
+ */
+export const truncateProductNameTypes = async () => {
+  try {
+    return await productNameTypeModel.truncateTable();
+  } catch (error) {
+    throw new AppError(
+      `Failed to truncate product name types: ${error.message}`,
       500
     );
   }

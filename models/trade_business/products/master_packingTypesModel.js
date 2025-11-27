@@ -1,12 +1,21 @@
-import * as dbConn from '../../../utils/dbConn.js';
-import * as dbModel from '../../../models/dbModel.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
-// Table name constant for consistency
+// Table name constants for consistency
 const PACKING_TYPES_TABLE = TABLE_MASTER['MASTER_PACKING_TYPES'].name;
 const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'].name;
+
+// Create DataModelUtils instance for packing types
+const packingTypeModel = new DataModelUtils({
+  tableName: PACKING_TYPES_TABLE,
+  entityName: 'packing type',
+  entityIdField: 'id',
+  requiredFields: ['name'],
+  validations: {
+    name: { required: true },
+  },
+});
 
 /**
  * Creates a new packing type
@@ -17,33 +26,12 @@ const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'].name;
  */
 export const createPackingType = async (packingTypeData) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Validate required fields
-    if (!packingTypeData.name) {
-      throw new AppError('Packing type name is required', 400);
-    }
-
-    // Create the packing type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'create',
-      tableName: PACKING_TYPES_TABLE,
-      data: packingTypeData,
-      connection: pool,
-    });
-
-    return {
-      message: 'Packing type created successfully',
-      packingType: result.record,
-    };
+    return await packingTypeModel.create(packingTypeData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError('A packing type with this name already exists', 409);
     }
-    throw new AppError(
-      `Failed to create packing type: ${error.message}`,
-      error.statusCode || 500
-    );
+    throw error;
   }
 };
 
@@ -53,28 +41,7 @@ export const createPackingType = async (packingTypeData) => {
  * @returns {Promise<Object>} Promise that resolves with the packing type data
  */
 export const getPackingTypeById = async (id) => {
-  try {
-    const pool = dbConn.tb_pool;
-
-    // Get the packing type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: PACKING_TYPES_TABLE,
-      id: id,
-      connection: pool,
-    });
-
-    if (!result.record) {
-      throw new AppError('Packing type not found', 404);
-    }
-
-    return result.record;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get packing type: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
+  return await packingTypeModel.getById(id);
 };
 
 /**
@@ -87,9 +54,10 @@ export const getPackingTypeById = async (id) => {
  */
 export const getAllPackingTypes = async (options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
+    const page = options.page || 1;
+    const limit = options.limit || 100;
+    const offset = (page - 1) * limit;
 
-    // For this query with subqueries, we'll use direct SQL
     // Build the WHERE clause based on filters
     let whereClause = '1=1';
     const params = [];
@@ -106,10 +74,10 @@ export const getAllPackingTypes = async (options = {}) => {
       WHERE ${whereClause}
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, params);
+    const countResult = await packingTypeModel.executeQuery(countSQL, params);
     const total = countResult[0].total;
 
-    // Get packing types with pagination
+    // Get packing types with pagination and usage count
     const selectSQL = `
       SELECT id, name, description,
              (SELECT COUNT(*) FROM ${PRODUCT_PACKINGS_TABLE} WHERE packing_type_id = ${PACKING_TYPES_TABLE}.id) as usage_count
@@ -120,12 +88,8 @@ export const getAllPackingTypes = async (options = {}) => {
     `;
 
     // Add pagination parameters
-    const page = options.page || 1;
-    const limit = options.limit || 100;
-    const offset = (page - 1) * limit;
     const queryParams = [...params, limit, offset];
-    const packingTypes = await dbModel.executeQuery(
-      pool,
+    const packingTypes = await packingTypeModel.executeQuery(
       selectSQL,
       queryParams
     );
@@ -154,32 +118,12 @@ export const getAllPackingTypes = async (options = {}) => {
  */
 export const updatePackingType = async (id, updateData) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Check if packing type exists
-    await getPackingTypeById(id);
-
-    // Update the packing type using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'update',
-      tableName: PACKING_TYPES_TABLE,
-      id: id,
-      data: updateData,
-      connection: pool,
-    });
-
-    return {
-      message: 'Packing type updated successfully',
-      packingType: result.record,
-    };
+    return await packingTypeModel.update(id, updateData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError('A packing type with this name already exists', 409);
     }
-    throw new AppError(
-      `Failed to update packing type: ${error.message}`,
-      error.statusCode || 500
-    );
+    throw error;
   }
 };
 
@@ -191,20 +135,17 @@ export const updatePackingType = async (id, updateData) => {
  */
 export const deletePackingType = async (id, force = false) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if packing type exists
     await getPackingTypeById(id);
 
     // Check if the packing type is in use
-    const usageResult = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: PRODUCT_PACKINGS_TABLE,
-      conditions: { packing_type_id: id },
-      connection: pool,
-    });
-
-    const usageCount = usageResult.records.length;
+    const usageSQL = `
+      SELECT COUNT(*) as count 
+      FROM ${PRODUCT_PACKINGS_TABLE} 
+      WHERE packing_type_id = ?
+    `;
+    const usageResult = await packingTypeModel.executeQuery(usageSQL, [id]);
+    const usageCount = usageResult[0].count;
 
     if (usageCount > 0 && !force) {
       throw new AppError(
@@ -213,40 +154,22 @@ export const deletePackingType = async (id, force = false) => {
       );
     }
 
-    // Start transaction
-    await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-    try {
+    // Use transaction for this operation
+    return await packingTypeModel.withTransaction(async (connection) => {
       // If force is true and there are usages, delete the associated product packings first
       if (force && usageCount > 0) {
-        await CrudOperations.performCrud({
-          operation: 'bulkdelete',
-          tableName: PRODUCT_PACKINGS_TABLE,
-          ids: usageResult.records.map((record) => record.id),
-          connection: pool,
-        });
+        const deletePackingsSQL = `DELETE FROM ${PRODUCT_PACKINGS_TABLE} WHERE packing_type_id = ?`;
+        await packingTypeModel.executeQuery(deletePackingsSQL, [id]);
       }
 
-      // Delete the packing type using CRUD utility
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: PACKING_TYPES_TABLE,
-        id: id,
-        connection: pool,
-      });
-
-      // Commit transaction
-      await dbModel.executeQuery(pool, 'COMMIT');
+      // Delete the packing type
+      await packingTypeModel.delete(id);
 
       return {
         message: 'Packing type deleted successfully',
         deletedAssociations: force ? usageCount : 0,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await dbModel.executeQuery(pool, 'ROLLBACK');
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete packing type: ${error.message}`,
@@ -265,15 +188,13 @@ export const deletePackingType = async (id, force = false) => {
  */
 export const getProductsByPackingType = async (packingTypeId, options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Check if packing type exists
+    await getPackingTypeById(packingTypeId);
+
     const page = options.page || 1;
     const limit = options.limit || 20;
     const offset = (page - 1) * limit;
 
-    // Check if packing type exists
-    await getPackingTypeById(packingTypeId);
-
-    // For this complex query with joins and aggregations, we'll use direct SQL
     // Get total count for pagination
     const countSQL = `
       SELECT COUNT(DISTINCT p.id) as total
@@ -282,7 +203,7 @@ export const getProductsByPackingType = async (packingTypeId, options = {}) => {
       WHERE pp.packing_type_id = ?
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, [
+    const countResult = await packingTypeModel.executeQuery(countSQL, [
       packingTypeId,
     ]);
     const total = countResult[0].total;
@@ -301,7 +222,7 @@ export const getProductsByPackingType = async (packingTypeId, options = {}) => {
       LIMIT ? OFFSET ?
     `;
 
-    const products = await dbModel.executeQuery(pool, selectSQL, [
+    const products = await packingTypeModel.executeQuery(selectSQL, [
       packingTypeId,
       limit,
       offset,
@@ -340,12 +261,9 @@ export const getProductsByPackingType = async (packingTypeId, options = {}) => {
  */
 export const getPackingStatistics = async (packingTypeId) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if packing type exists
     const packingType = await getPackingTypeById(packingTypeId);
 
-    // For this complex query with aggregations, we'll use direct SQL
     // Get statistics
     const statsSQL = `
       SELECT 
@@ -369,7 +287,9 @@ export const getPackingStatistics = async (packingTypeId) => {
       WHERE packing_type_id = ?
     `;
 
-    const stats = await dbModel.executeQuery(pool, statsSQL, [packingTypeId]);
+    const stats = await packingTypeModel.executeQuery(statsSQL, [
+      packingTypeId,
+    ]);
 
     // Get product count
     const productCountSQL = `
@@ -378,7 +298,7 @@ export const getPackingStatistics = async (packingTypeId) => {
       WHERE packing_type_id = ?
     `;
 
-    const productCount = await dbModel.executeQuery(pool, productCountSQL, [
+    const productCount = await packingTypeModel.executeQuery(productCountSQL, [
       packingTypeId,
     ]);
 
@@ -404,30 +324,7 @@ export const getPackingStatistics = async (packingTypeId) => {
  */
 export const batchCreatePackingTypes = async (packingTypes) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Use bulkCreate operation from CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'bulkcreate',
-      tableName: PACKING_TYPES_TABLE,
-      data: packingTypes,
-      connection: pool,
-    });
-
-    return {
-      total: packingTypes.length,
-      successful: result.count,
-      failed: packingTypes.length - result.count,
-      details: result.records.map((record) => ({
-        name: record.name,
-        success: true,
-        id: record.id,
-      })),
-    };
-  } catch (error) {
-    // If bulk operation fails, try individual creates
-    try {
-      const pool = dbConn.tb_pool;
+    return await packingTypeModel.withTransaction(async (connection) => {
       const results = {
         total: packingTypes.length,
         successful: 0,
@@ -435,43 +332,32 @@ export const batchCreatePackingTypes = async (packingTypes) => {
         details: [],
       };
 
-      // Start transaction
-      await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-      try {
-        for (const packingType of packingTypes) {
-          try {
-            const result = await createPackingType(packingType);
-            results.successful++;
-            results.details.push({
-              name: packingType.name,
-              success: true,
-              id: result.packingType.id,
-            });
-          } catch (error) {
-            results.failed++;
-            results.details.push({
-              name: packingType.name,
-              success: false,
-              error: error.message,
-            });
-          }
+      for (const packingType of packingTypes) {
+        try {
+          const result = await createPackingType(packingType);
+          results.successful++;
+          results.details.push({
+            name: packingType.name,
+            success: true,
+            id: result.packingType.id,
+          });
+        } catch (error) {
+          results.failed++;
+          results.details.push({
+            name: packingType.name,
+            success: false,
+            error: error.message,
+          });
         }
-
-        // Commit transaction
-        await dbModel.executeQuery(pool, 'COMMIT');
-        return results;
-      } catch (innerError) {
-        // Rollback transaction on error
-        await dbModel.executeQuery(pool, 'ROLLBACK');
-        throw innerError;
       }
-    } catch (finalError) {
-      throw new AppError(
-        `Failed to batch create packing types: ${finalError.message}`,
-        500
-      );
-    }
+
+      return results;
+    });
+  } catch (error) {
+    throw new AppError(
+      `Failed to batch create packing types: ${error.message}`,
+      500
+    );
   }
 };
 
@@ -494,6 +380,21 @@ export const insertDefaultPackingTypes = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to insert default packing types: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Truncates the packing types table
+ * @returns {Promise<Object>} Promise that resolves with truncation result
+ */
+export const truncatePackingTypes = async () => {
+  try {
+    return await packingTypeModel.truncateTable();
+  } catch (error) {
+    throw new AppError(
+      `Failed to truncate packing types: ${error.message}`,
       500
     );
   }

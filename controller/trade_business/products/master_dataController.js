@@ -170,6 +170,46 @@ const createMasterDataController = (modelMap, entityType) => {
 
       next();
     }),
+
+    // Add truncate functionality
+    truncate: catchAsync(async (req, res, next) => {
+      if (!modelMap.truncate) {
+        return next(
+          new AppError(`Truncate not supported for ${entityType}`, 400)
+        );
+      }
+
+      const result = await modelMap.truncate();
+
+      res.prints = {
+        status: 'success',
+        message: result.message,
+      };
+
+      next();
+    }),
+
+    // Reset functionality - truncate and then insert defaults
+    reset: catchAsync(async (req, res, next) => {
+      if (!modelMap.truncate) {
+        return next(new AppError(`Reset not supported for ${entityType}`, 400));
+      }
+
+      // First truncate the table
+      const truncateResult = await modelMap.truncate();
+
+      // Then insert default data
+      const insertResult = await modelMap.insertDefaults();
+
+      res.prints = {
+        status: 'success',
+        message: `${entityType} data has been reset successfully`,
+        truncate: truncateResult,
+        defaults: insertResult,
+      };
+
+      next();
+    }),
   };
 };
 
@@ -183,6 +223,7 @@ const packingTypesModelMap = {
   getRelatedProducts: packingTypesModel.getProductsByPackingType,
   batchCreate: packingTypesModel.batchCreatePackingTypes,
   insertDefaults: packingTypesModel.insertDefaultPackingTypes,
+  truncate: packingTypesModel.truncatePackingTypes, // Add truncate function reference
 };
 
 const productNameTypesModelMap = {
@@ -194,6 +235,7 @@ const productNameTypesModelMap = {
   getRelatedProducts: productNameTypesModel.getProductsByNameType,
   batchCreate: productNameTypesModel.batchCreateProductNameTypes,
   insertDefaults: productNameTypesModel.insertDefaultProductNameTypes,
+  truncate: productNameTypesModel.truncateProductNameTypes, // Add truncate function reference
 };
 
 const certificateTypesModelMap = {
@@ -205,6 +247,7 @@ const certificateTypesModelMap = {
   getRelatedProducts: certificateTypesModel.getProductsByCertificateType,
   batchCreate: certificateTypesModel.batchCreateCertificateTypes,
   insertDefaults: certificateTypesModel.insertDefaultCertificateTypes,
+  truncate: certificateTypesModel.truncateCertificateTypes, // Add truncate function reference
 };
 
 // Add categories model map
@@ -217,6 +260,7 @@ const categoriesModelMap = {
   getRelatedProducts: categoriesModel.getProductsByCategory,
   batchCreate: categoriesModel.batchCreateCategories,
   insertDefaults: categoriesModel.insertDefaultCategories,
+  truncate: categoriesModel.truncateCategories, // Add truncate function reference
 };
 
 // Create controllers for each master data type
@@ -362,6 +406,137 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
   res.prints = {
     status: 'success',
     message: 'Default data insertion completed',
+    results,
+  };
+
+  next();
+});
+
+/**
+ * Truncate all master data tables
+ */
+export const truncateAllTables = catchAsync(async (req, res, next) => {
+  const results = {
+    categories: null,
+    packingTypes: null,
+    productNameTypes: null,
+    certificateTypes: null,
+  };
+
+  try {
+    results.categories = await categoriesModel.truncateCategories();
+  } catch (error) {
+    results.categories = { error: error.message };
+  }
+
+  try {
+    results.packingTypes = await packingTypesModel.truncatePackingTypes();
+  } catch (error) {
+    results.packingTypes = { error: error.message };
+  }
+
+  try {
+    results.productNameTypes =
+      await productNameTypesModel.truncateProductNameTypes();
+  } catch (error) {
+    results.productNameTypes = { error: error.message };
+  }
+
+  try {
+    results.certificateTypes =
+      await certificateTypesModel.truncateCertificateTypes();
+  } catch (error) {
+    results.certificateTypes = { error: error.message };
+  }
+
+  res.prints = {
+    status: 'success',
+    message: 'All master data tables have been truncated',
+    results,
+  };
+
+  next();
+});
+
+/**
+ * Reset all master data - truncate and then insert defaults
+ */
+export const resetAllMasterData = catchAsync(async (req, res, next) => {
+  const results = {
+    truncate: {
+      categories: null,
+      packingTypes: null,
+      productNameTypes: null,
+      certificateTypes: null,
+    },
+    defaults: {
+      categories: null,
+      packingTypes: null,
+      productNameTypes: null,
+      certificateTypes: null,
+    },
+  };
+
+  // First truncate all tables
+  try {
+    results.truncate.categories = await categoriesModel.truncateCategories();
+  } catch (error) {
+    results.truncate.categories = { error: error.message };
+  }
+
+  try {
+    results.truncate.packingTypes =
+      await packingTypesModel.truncatePackingTypes();
+  } catch (error) {
+    results.truncate.packingTypes = { error: error.message };
+  }
+
+  try {
+    results.truncate.productNameTypes =
+      await productNameTypesModel.truncateProductNameTypes();
+  } catch (error) {
+    results.truncate.productNameTypes = { error: error.message };
+  }
+
+  try {
+    results.truncate.certificateTypes =
+      await certificateTypesModel.truncateCertificateTypes();
+  } catch (error) {
+    results.truncate.certificateTypes = { error: error.message };
+  }
+
+  // Then insert default data
+  try {
+    results.defaults.categories =
+      await categoriesModel.insertDefaultCategories();
+  } catch (error) {
+    results.defaults.categories = { error: error.message };
+  }
+
+  try {
+    results.defaults.packingTypes =
+      await packingTypesModel.insertDefaultPackingTypes();
+  } catch (error) {
+    results.defaults.packingTypes = { error: error.message };
+  }
+
+  try {
+    results.defaults.productNameTypes =
+      await productNameTypesModel.insertDefaultProductNameTypes();
+  } catch (error) {
+    results.defaults.productNameTypes = { error: error.message };
+  }
+
+  try {
+    results.defaults.certificateTypes =
+      await certificateTypesModel.insertDefaultCertificateTypes();
+  } catch (error) {
+    results.defaults.certificateTypes = { error: error.message };
+  }
+
+  res.prints = {
+    status: 'success',
+    message: 'All master data has been reset successfully',
     results,
   };
 

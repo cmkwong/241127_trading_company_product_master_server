@@ -1,236 +1,122 @@
-import * as dbConn from '../../../utils/dbConn.js';
-import * as dbModel from '../../../models/dbModel.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
-import CrudOperations from '../../../utils/crud.js';
 import { TABLE_MASTER } from '../../tables.js';
 
-// Table name constant for consistency
+// Table name constants for consistency
 const CATEGORIES_TABLE = TABLE_MASTER['MASTER_CATEGORIES'].name;
+const PRODUCT_CATEGORIES_TABLE = TABLE_MASTER['PRODUCT_CATEGORIES'].name;
+
+// Create DataModelUtils instance for categories
+const categoryModel = new DataModelUtils({
+  tableName: CATEGORIES_TABLE,
+  entityName: 'category',
+  entityIdField: 'id',
+  requiredFields: ['name'],
+  validations: {
+    name: { required: true },
+  },
+});
 
 /**
  * Creates a new category
  * @param {Object} categoryData - The category data to create
  * @param {string} categoryData.name - The name of the category
  * @param {string} [categoryData.description] - Optional description of the category
- * @param {string} [categoryData.parent_id] - Optional parent category ID for hierarchical structure
+ * @param {number} [categoryData.parent_id] - Optional parent category ID
  * @returns {Promise<Object>} Promise that resolves with the created category
  */
 export const createCategory = async (categoryData) => {
   try {
-    const pool = dbConn.tb_pool;
-
-    // Validate required fields
-    if (!categoryData.name) {
-      throw new AppError('Category name is required', 400);
-    }
-
-    // Check if parent category exists if provided
+    // If parent_id is provided, check if parent exists
     if (categoryData.parent_id) {
-      const parentResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: categoryData.parent_id,
-        connection: pool,
-      });
-
-      if (!parentResult.record) {
-        throw new AppError('Parent category not found', 404);
-      }
+      await getCategoryById(categoryData.parent_id);
     }
 
-    // Create the category using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'create',
-      tableName: CATEGORIES_TABLE,
-      data: categoryData,
-      connection: pool,
-    });
-
-    // Enhance the result with parent name if needed
-    if (result.record.parent_id) {
-      const parentResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: result.record.parent_id,
-        fields: ['name'],
-        connection: pool,
-      });
-
-      if (parentResult.record) {
-        result.record.parent_name = parentResult.record.name;
-      }
-    }
-
-    return {
-      message: 'Category created successfully',
-      category: result.record,
-    };
+    return await categoryModel.create(categoryData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError('A category with this name already exists', 409);
     }
-    throw new AppError(
-      `Failed to create category: ${error.message}`,
-      error.statusCode || 500
-    );
+    throw error;
   }
 };
 
 /**
  * Gets a category by ID
- * @param {string} id - The ID of the category to retrieve
+ * @param {number} id - The ID of the category to retrieve
  * @returns {Promise<Object>} Promise that resolves with the category data
  */
 export const getCategoryById = async (id) => {
-  try {
-    const pool = dbConn.tb_pool;
-
-    // Use CRUD utility to get the category
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CATEGORIES_TABLE,
-      id: id,
-      connection: pool,
-    });
-
-    if (!result.record) {
-      throw new AppError('Category not found', 404);
-    }
-
-    // Add parent name if parent_id exists
-    if (result.record.parent_id) {
-      const parentResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: result.record.parent_id,
-        fields: ['name'],
-        connection: pool,
-      });
-
-      if (parentResult.record) {
-        result.record.parent_name = parentResult.record.name;
-      }
-    }
-
-    return result.record;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get category: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
+  return await categoryModel.getById(id);
 };
 
 /**
  * Gets all categories with optional filtering and pagination
  * @param {Object} [options] - Query options
  * @param {string} [options.search] - Search term for category name
- * @param {string} [options.parent_id] - Filter by parent category ID
+ * @param {number} [options.parentId] - Filter by parent category ID
  * @param {number} [options.page=1] - Page number for pagination
  * @param {number} [options.limit=100] - Number of results per page
  * @returns {Promise<Object>} Promise that resolves with the categories and pagination info
  */
 export const getAllCategories = async (options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
+    const page = options.page || 1;
+    const limit = options.limit || 100;
+    const offset = (page - 1) * limit;
 
-    // Build conditions for CRUD utility
-    const conditions = {};
-
-    if (options.parent_id !== undefined) {
-      conditions.parent_id =
-        options.parent_id === null ? null : options.parent_id;
-    }
-
-    // Handle search separately since it requires LIKE operator
-    let searchCondition = '';
-    const searchParams = [];
+    // Build the WHERE clause based on filters
+    let whereClause = '1=1';
+    const params = [];
 
     if (options.search) {
-      searchCondition = 'name LIKE ?';
-      searchParams.push(`%${options.search}%`);
+      whereClause += ' AND c.name LIKE ?';
+      params.push(`%${options.search}%`);
     }
 
-    // Get categories using CRUD utility with custom query for search
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CATEGORIES_TABLE,
-      conditions: conditions,
-      page: options.page || 1,
-      limit: options.limit || 100,
-      orderBy: 'name',
-      orderDirection: 'ASC',
-      connection: pool,
-    });
-
-    // Filter results by search if provided
-    let categories = result.records;
-    let total = result.pagination.total;
-
-    if (options.search) {
-      // If search is provided, we need to filter the results manually
-      // or use a custom query instead of the CRUD utility
-      const searchSQL = `
-        SELECT c.*, p.name as parent_name
-        FROM ${CATEGORIES_TABLE} c
-        LEFT JOIN ${CATEGORIES_TABLE} p ON c.parent_id = p.id
-        WHERE c.name LIKE ?
-        ${
-          options.parent_id !== undefined
-            ? options.parent_id === null
-              ? 'AND c.parent_id IS NULL'
-              : 'AND c.parent_id = ?'
-            : ''
-        }
-        ORDER BY c.name ASC
-        LIMIT ? OFFSET ?
-      `;
-
-      const queryParams = [`%${options.search}%`];
-      if (options.parent_id !== undefined && options.parent_id !== null) {
-        queryParams.push(options.parent_id);
+    if (options.parentId !== undefined) {
+      if (options.parentId === null) {
+        whereClause += ' AND c.parent_id IS NULL';
+      } else {
+        whereClause += ' AND c.parent_id = ?';
+        params.push(options.parentId);
       }
-
-      const limit = options.limit || 100;
-      const offset = ((options.page || 1) - 1) * limit;
-      queryParams.push(limit, offset);
-
-      categories = await dbModel.executeQuery(pool, searchSQL, queryParams);
-
-      // Get total count for search
-      const countSQL = `
-        SELECT COUNT(*) as total
-        FROM ${CATEGORIES_TABLE} c
-        WHERE c.name LIKE ?
-        ${
-          options.parent_id !== undefined
-            ? options.parent_id === null
-              ? 'AND c.parent_id IS NULL'
-              : 'AND c.parent_id = ?'
-            : ''
-        }
-      `;
-
-      const countParams = [`%${options.search}%`];
-      if (options.parent_id !== undefined && options.parent_id !== null) {
-        countParams.push(options.parent_id);
-      }
-
-      const countResult = await dbModel.executeQuery(
-        pool,
-        countSQL,
-        countParams
-      );
-      total = countResult[0].total;
     }
+
+    // Get total count for pagination
+    const countSQL = `
+      SELECT COUNT(*) as total
+      FROM ${CATEGORIES_TABLE} c
+      WHERE ${whereClause}
+    `;
+
+    const countResult = await categoryModel.executeQuery(countSQL, params);
+    const total = countResult[0].total;
+
+    // Get categories with pagination, parent name, and usage count
+    const selectSQL = `
+      SELECT c.id, c.name, c.description, c.parent_id,
+             p.name as parent_name,
+             (SELECT COUNT(*) FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = c.id) as usage_count,
+             (SELECT COUNT(*) FROM ${CATEGORIES_TABLE} WHERE parent_id = c.id) as child_count
+      FROM ${CATEGORIES_TABLE} c
+      LEFT JOIN ${CATEGORIES_TABLE} p ON c.parent_id = p.id
+      WHERE ${whereClause}
+      ORDER BY c.name ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    // Add pagination parameters
+    const queryParams = [...params, limit, offset];
+    const categories = await categoryModel.executeQuery(selectSQL, queryParams);
 
     return {
       categories,
       pagination: {
         total,
-        page: options.page || 1,
-        limit: options.limit || 100,
-        pages: Math.ceil(total / (options.limit || 100)),
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
       },
     };
   } catch (error) {
@@ -239,31 +125,27 @@ export const getAllCategories = async (options = {}) => {
 };
 
 /**
- * Gets a hierarchical tree of categories
+ * Gets the category hierarchy as a tree structure
  * @returns {Promise<Array>} Promise that resolves with the category tree
  */
 export const getCategoryTree = async () => {
   try {
-    const pool = dbConn.tb_pool;
+    // Get all categories
+    const allCategoriesSQL = `
+      SELECT c.id, c.name, c.description, c.parent_id,
+             (SELECT COUNT(*) FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = c.id) as usage_count
+      FROM ${CATEGORIES_TABLE} c
+      ORDER BY c.name ASC
+    `;
 
-    // Get all categories using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'read',
-      tableName: CATEGORIES_TABLE,
-      orderBy: 'name',
-      orderDirection: 'ASC',
-      limit: 1000, // Set a high limit to get all categories
-      connection: pool,
-    });
+    const allCategories = await categoryModel.executeQuery(allCategoriesSQL);
 
-    const categories = result.records;
-
-    // Build tree structure
+    // Build the tree structure
     const categoryMap = {};
     const rootCategories = [];
 
     // First, map all categories by ID
-    categories.forEach((category) => {
+    allCategories.forEach((category) => {
       categoryMap[category.id] = {
         ...category,
         children: [],
@@ -271,16 +153,17 @@ export const getCategoryTree = async () => {
     });
 
     // Then, build the tree structure
-    categories.forEach((category) => {
+    allCategories.forEach((category) => {
       if (category.parent_id === null) {
-        // This is a root category
         rootCategories.push(categoryMap[category.id]);
       } else {
-        // This is a child category
         if (categoryMap[category.parent_id]) {
           categoryMap[category.parent_id].children.push(
             categoryMap[category.id]
           );
+        } else {
+          // If parent doesn't exist, treat as root
+          rootCategories.push(categoryMap[category.id]);
         }
       }
     });
@@ -293,163 +176,135 @@ export const getCategoryTree = async () => {
 
 /**
  * Updates a category
- * @param {string} id - The ID of the category to update
+ * @param {number} id - The ID of the category to update
  * @param {Object} updateData - The category data to update
  * @param {string} [updateData.name] - The updated name of the category
  * @param {string} [updateData.description] - The updated description of the category
- * @param {string|null} [updateData.parent_id] - The updated parent category ID
+ * @param {number} [updateData.parent_id] - The updated parent category ID
  * @returns {Promise<Object>} Promise that resolves with the updated category
  */
 export const updateCategory = async (id, updateData) => {
   try {
-    const pool = dbConn.tb_pool;
-
     // Check if category exists
     const existingCategory = await getCategoryById(id);
 
-    // Prevent circular references in hierarchy
-    if (updateData.parent_id && updateData.parent_id === id) {
-      throw new AppError('A category cannot be its own parent', 400);
-    }
+    // If parent_id is provided, check if parent exists and prevent circular references
+    if (updateData.parent_id !== undefined) {
+      if (updateData.parent_id !== null) {
+        // Check if parent exists
+        await getCategoryById(updateData.parent_id);
 
-    // Check for circular references in the hierarchy
-    if (updateData.parent_id) {
-      let parentId = updateData.parent_id;
-      const visited = new Set([id]);
+        // Check for circular reference
+        if (updateData.parent_id === id) {
+          throw new AppError('Category cannot be its own parent', 400);
+        }
 
-      while (parentId) {
-        if (visited.has(parentId)) {
+        // Check if the new parent is a descendant of this category
+        const isDescendant = await isDescendantOf(updateData.parent_id, id);
+        if (isDescendant) {
           throw new AppError(
-            'Circular reference detected in category hierarchy',
+            'Cannot set a descendant as parent (circular reference)',
             400
           );
         }
-
-        visited.add(parentId);
-
-        // Get the parent's parent using CRUD utility
-        const parentResult = await CrudOperations.performCrud({
-          operation: 'read',
-          tableName: CATEGORIES_TABLE,
-          id: parentId,
-          fields: ['parent_id'],
-          connection: pool,
-        });
-
-        if (!parentResult.record) {
-          break;
-        }
-
-        parentId = parentResult.record.parent_id;
       }
     }
 
-    // Update the category using CRUD utility
-    const result = await CrudOperations.performCrud({
-      operation: 'update',
-      tableName: CATEGORIES_TABLE,
-      id: id,
-      data: updateData,
-      connection: pool,
-    });
-
-    // Add parent name if parent_id exists
-    if (result.record.parent_id) {
-      const parentResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: result.record.parent_id,
-        fields: ['name'],
-        connection: pool,
-      });
-
-      if (parentResult.record) {
-        result.record.parent_name = parentResult.record.name;
-      }
-    }
-
-    return {
-      message: 'Category updated successfully',
-      category: result.record,
-    };
+    return await categoryModel.update(id, updateData);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       throw new AppError('A category with this name already exists', 409);
     }
+    throw error;
+  }
+};
+
+/**
+ * Checks if one category is a descendant of another
+ * @param {number} categoryId - The category to check
+ * @param {number} potentialAncestorId - The potential ancestor category
+ * @returns {Promise<boolean>} True if categoryId is a descendant of potentialAncestorId
+ * @private
+ */
+const isDescendantOf = async (categoryId, potentialAncestorId) => {
+  try {
+    const category = await getCategoryById(categoryId);
+
+    if (!category.parent_id) {
+      return false;
+    }
+
+    if (category.parent_id === potentialAncestorId) {
+      return true;
+    }
+
+    return await isDescendantOf(category.parent_id, potentialAncestorId);
+  } catch (error) {
     throw new AppError(
-      `Failed to update category: ${error.message}`,
-      error.statusCode || 500
+      `Failed to check category hierarchy: ${error.message}`,
+      500
     );
   }
 };
 
 /**
  * Deletes a category
- * @param {string} id - The ID of the category to delete
- * @param {boolean} [reassignChildren=false] - Whether to reassign children to parent
+ * @param {number} id - The ID of the category to delete
+ * @param {boolean} [force=false] - Whether to force deletion even if in use
  * @returns {Promise<Object>} Promise that resolves with deletion result
  */
-export const deleteCategory = async (id, reassignChildren = false) => {
+export const deleteCategory = async (id, force = false) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Check if category exists
+    await getCategoryById(id);
 
-    // Check if category exists and get its parent
-    const category = await getCategoryById(id);
+    // Check if the category has children
+    const childrenSQL = `SELECT COUNT(*) as count FROM ${CATEGORIES_TABLE} WHERE parent_id = ?`;
+    const childrenResult = await categoryModel.executeQuery(childrenSQL, [id]);
+    const childCount = childrenResult[0].count;
 
-    // Start transaction
-    await dbModel.executeQuery(pool, 'START TRANSACTION');
+    if (childCount > 0 && !force) {
+      throw new AppError(
+        `Cannot delete category that has ${childCount} subcategories. Use force=true to override.`,
+        400
+      );
+    }
 
-    try {
-      // Check for child categories
-      const childrenResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        conditions: { parent_id: id },
-        connection: pool,
-      });
+    // Check if the category is in use by products
+    const usageSQL = `SELECT COUNT(*) as count FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = ?`;
+    const usageResult = await categoryModel.executeQuery(usageSQL, [id]);
+    const usageCount = usageResult[0].count;
 
-      const childCount = childrenResult.records.length;
+    if (usageCount > 0 && !force) {
+      throw new AppError(
+        `Cannot delete category that is in use by ${usageCount} products. Use force=true to override.`,
+        400
+      );
+    }
 
-      if (childCount > 0) {
-        if (reassignChildren) {
-          // Reassign children to parent using bulk update
-          await CrudOperations.performCrud({
-            operation: 'bulkupdate',
-            tableName: CATEGORIES_TABLE,
-            data: childrenResult.records.map((child) => ({
-              id: child.id,
-              parent_id: category.parent_id,
-            })),
-            connection: pool,
-          });
-        } else {
-          throw new AppError(
-            `Cannot delete category with ${childCount} child categories. Use reassignChildren=true to reassign them.`,
-            400
-          );
-        }
+    // Use transaction for this operation
+    return await categoryModel.withTransaction(async (connection) => {
+      // If force is true and there are usages, delete the associated product categories first
+      if (force && usageCount > 0) {
+        const deleteCategoriesSQL = `DELETE FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = ?`;
+        await categoryModel.executeQuery(deleteCategoriesSQL, [id]);
       }
 
-      // Delete category using CRUD utility
-      await CrudOperations.performCrud({
-        operation: 'delete',
-        tableName: CATEGORIES_TABLE,
-        id: id,
-        connection: pool,
-      });
+      // If force is true and there are children, update children to have no parent
+      if (force && childCount > 0) {
+        const updateChildrenSQL = `UPDATE ${CATEGORIES_TABLE} SET parent_id = NULL WHERE parent_id = ?`;
+        await categoryModel.executeQuery(updateChildrenSQL, [id]);
+      }
 
-      // Commit transaction
-      await dbModel.executeQuery(pool, 'COMMIT');
+      // Delete the category
+      await categoryModel.delete(id);
 
       return {
         message: 'Category deleted successfully',
-        reassignedChildren: reassignChildren ? childCount : 0,
+        deletedAssociations: force ? usageCount : 0,
+        updatedChildren: force ? childCount : 0,
       };
-    } catch (error) {
-      // Rollback transaction on error
-      await dbModel.executeQuery(pool, 'ROLLBACK');
-      throw error;
-    }
+    });
   } catch (error) {
     throw new AppError(
       `Failed to delete category: ${error.message}`,
@@ -459,62 +314,78 @@ export const deleteCategory = async (id, reassignChildren = false) => {
 };
 
 /**
- * Gets products in a category
- * @param {string} categoryId - The ID of the category
+ * Gets products in a specific category
+ * @param {number} categoryId - The ID of the category
  * @param {Object} [options] - Query options
+ * @param {boolean} [options.includeSubcategories=false] - Whether to include products from subcategories
  * @param {number} [options.page=1] - Page number for pagination
  * @param {number} [options.limit=20] - Number of results per page
  * @returns {Promise<Object>} Promise that resolves with products and pagination info
  */
 export const getProductsByCategory = async (categoryId, options = {}) => {
   try {
-    const pool = dbConn.tb_pool;
-    const page = options.page || 1;
-    const limit = options.limit || 20;
-    const offset = (page - 1) * limit;
-
     // Check if category exists
     await getCategoryById(categoryId);
 
-    // For this complex query with joins, we'll use direct SQL instead of CRUD utility
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const offset = (page - 1) * limit;
+    const includeSubcategories = options.includeSubcategories || false;
+
+    let categoryIds = [categoryId];
+
+    // If including subcategories, get all descendant category IDs
+    if (includeSubcategories) {
+      const descendants = await getDescendantCategoryIds(categoryId);
+      categoryIds = [...categoryIds, ...descendants];
+    }
+
+    // Format the category IDs for the IN clause
+    const categoryIdsStr = categoryIds.join(',');
+
     // Get total count for pagination
     const countSQL = `
       SELECT COUNT(DISTINCT p.id) as total
       FROM products p
       JOIN product_categories pc ON p.id = pc.product_id
-      WHERE pc.category_id = ?
+      WHERE pc.category_id IN (${categoryIdsStr})
     `;
 
-    const countResult = await dbModel.executeQuery(pool, countSQL, [
-      categoryId,
-    ]);
+    const countResult = await categoryModel.executeQuery(countSQL);
     const total = countResult[0].total;
 
     // Get products with pagination
     const selectSQL = `
       SELECT p.id, p.product_id, p.icon_url, p.remark,
-             GROUP_CONCAT(DISTINCT pn.name ORDER BY pn.name_type_id SEPARATOR '|') as names
+             GROUP_CONCAT(DISTINCT pn.name ORDER BY pn.name_type_id SEPARATOR '|') as names,
+             GROUP_CONCAT(DISTINCT c.name ORDER BY c.id SEPARATOR '|') as categories
       FROM products p
       JOIN product_categories pc ON p.id = pc.product_id
+      JOIN ${CATEGORIES_TABLE} c ON pc.category_id = c.id
       LEFT JOIN product_names pn ON p.id = pn.product_id
-      WHERE pc.category_id = ?
+      WHERE pc.category_id IN (${categoryIdsStr})
       GROUP BY p.id
       ORDER BY p.product_id ASC
       LIMIT ? OFFSET ?
     `;
 
-    const products = await dbModel.executeQuery(pool, selectSQL, [
-      categoryId,
+    const products = await categoryModel.executeQuery(selectSQL, [
       limit,
       offset,
     ]);
 
-    // Format product names
+    // Format product names and categories
     products.forEach((product) => {
       if (product.names) {
         product.names = product.names.split('|');
       } else {
         product.names = [];
+      }
+
+      if (product.categories) {
+        product.categories = product.categories.split('|');
+      } else {
+        product.categories = [];
       }
     });
 
@@ -536,96 +407,37 @@ export const getProductsByCategory = async (categoryId, options = {}) => {
 };
 
 /**
- * Gets child categories of a parent category
- * @param {string|null} parentId - The ID of the parent category, or null for root categories
- * @returns {Promise<Array>} Promise that resolves with the child categories
+ * Gets all descendant category IDs for a given category
+ * @param {number} categoryId - The parent category ID
+ * @returns {Promise<Array<number>>} Array of descendant category IDs
+ * @private
  */
-export const getChildCategories = async (parentId) => {
+const getDescendantCategoryIds = async (categoryId) => {
   try {
-    const pool = dbConn.tb_pool;
+    // Get direct children
+    const childrenSQL = `SELECT id FROM ${CATEGORIES_TABLE} WHERE parent_id = ?`;
+    const children = await categoryModel.executeQuery(childrenSQL, [
+      categoryId,
+    ]);
 
-    // For this query with subqueries, we'll use direct SQL
-    let whereClause = 'WHERE 1=1';
-    const params = [];
-
-    if (parentId === null) {
-      whereClause += ' AND parent_id IS NULL';
-    } else {
-      whereClause += ' AND parent_id = ?';
-      params.push(parentId);
-
-      // Check if parent exists using CRUD utility
-      const parentResult = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: parentId,
-        connection: pool,
-      });
-
-      if (!parentResult.record) {
-        throw new AppError('Parent category not found', 404);
-      }
+    if (children.length === 0) {
+      return [];
     }
 
-    const selectSQL = `
-      SELECT c.*, 
-             (SELECT COUNT(*) FROM ${CATEGORIES_TABLE} WHERE parent_id = c.id) as child_count,
-             (SELECT COUNT(*) FROM product_categories WHERE category_id = c.id) as product_count
-      FROM ${CATEGORIES_TABLE} c
-      ${whereClause}
-      ORDER BY c.name ASC
-    `;
+    const childIds = children.map((child) => child.id);
+    let allDescendants = [...childIds];
 
-    const categories = await dbModel.executeQuery(pool, selectSQL, params);
-
-    return categories;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get child categories: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets the full path of a category (breadcrumb)
- * @param {string} categoryId - The ID of the category
- * @returns {Promise<Array>} Promise that resolves with the category path
- */
-export const getCategoryPath = async (categoryId) => {
-  try {
-    const pool = dbConn.tb_pool;
-
-    // Check if category exists
-    await getCategoryById(categoryId);
-
-    const path = [];
-    let currentId = categoryId;
-
-    while (currentId) {
-      // Use CRUD utility to get the category
-      const result = await CrudOperations.performCrud({
-        operation: 'read',
-        tableName: CATEGORIES_TABLE,
-        id: currentId,
-        fields: ['id', 'name', 'parent_id'],
-        connection: pool,
-      });
-
-      if (!result.record) {
-        break;
-      }
-
-      // Add to the beginning of the path (to get root → child order)
-      path.unshift(result.record);
-      currentId = result.record.parent_id;
+    // Recursively get descendants for each child
+    for (const childId of childIds) {
+      const descendants = await getDescendantCategoryIds(childId);
+      allDescendants = [...allDescendants, ...descendants];
     }
 
-    return path;
+    return allDescendants;
   } catch (error) {
     throw new AppError(
-      `Failed to get category path: ${error.message}`,
-      error.statusCode || 500
+      `Failed to get category descendants: ${error.message}`,
+      500
     );
   }
 };
@@ -637,73 +449,35 @@ export const getCategoryPath = async (categoryId) => {
  */
 export const batchCreateCategories = async (categories) => {
   try {
-    const pool = dbConn.tb_pool;
-    const results = {
-      total: categories.length,
-      successful: 0,
-      failed: 0,
-      details: [],
-    };
+    return await categoryModel.withTransaction(async (connection) => {
+      const results = {
+        total: categories.length,
+        successful: 0,
+        failed: 0,
+        details: [],
+      };
 
-    // Start transaction
-    await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-    try {
-      // Use bulkCreate operation from CRUD utility
-      const bulkResult = await CrudOperations.performCrud({
-        operation: 'bulkcreate',
-        tableName: CATEGORIES_TABLE,
-        data: categories,
-        connection: pool,
-      });
-
-      // Process results
-      results.successful = bulkResult.count;
-      results.details = bulkResult.records.map((record) => ({
-        name: record.name,
-        success: true,
-        id: record.id,
-      }));
-
-      // Commit transaction
-      await dbModel.executeQuery(pool, 'COMMIT');
-    } catch (error) {
-      // Rollback transaction on error
-      await dbModel.executeQuery(pool, 'ROLLBACK');
-
-      // If bulk operation failed, try individual creates to get more detailed errors
-      await dbModel.executeQuery(pool, 'START TRANSACTION');
-
-      try {
-        for (const category of categories) {
-          try {
-            const result = await createCategory(category);
-            results.successful++;
-            results.details.push({
-              name: category.name,
-              success: true,
-              id: result.category.id,
-            });
-          } catch (error) {
-            results.failed++;
-            results.details.push({
-              name: category.name,
-              success: false,
-              error: error.message,
-            });
-          }
+      for (const category of categories) {
+        try {
+          const result = await createCategory(category);
+          results.successful++;
+          results.details.push({
+            name: category.name,
+            success: true,
+            id: result.category.id,
+          });
+        } catch (error) {
+          results.failed++;
+          results.details.push({
+            name: category.name,
+            success: false,
+            error: error.message,
+          });
         }
-
-        // Commit transaction
-        await dbModel.executeQuery(pool, 'COMMIT');
-      } catch (finalError) {
-        // Rollback transaction on error
-        await dbModel.executeQuery(pool, 'ROLLBACK');
-        throw finalError;
       }
-    }
 
-    return results;
+      return results;
+    });
   } catch (error) {
     throw new AppError(
       `Failed to batch create categories: ${error.message}`,
@@ -722,52 +496,28 @@ export const insertDefaultCategories = async () => {
     const sampleProducts = await import('../../../datas/products.js');
     const defaultCategories = sampleProducts.default.master_categories;
 
-    // Start with main categories (those with parent_id = null)
-    const mainCategories = defaultCategories.filter(
-      (category) => category.parent_id === null
-    );
-
-    // Insert main categories first
-    const mainResults = await batchCreateCategories(mainCategories);
-
-    // Map to store main category IDs by ID from data
-    const categoryMap = {};
-    mainResults.details.forEach((detail) => {
-      if (detail.success) {
-        // Find the original category in the data to get its ID
-        const originalCategory = mainCategories.find(
-          (c) => c.name === detail.name
-        );
-        if (originalCategory) {
-          categoryMap[originalCategory.id] = detail.id;
-        }
-      }
-    });
-
-    // Get subcategories (those with parent_id !== null)
-    const subcategories = defaultCategories.filter(
-      (category) => category.parent_id !== null
-    );
-
-    // Update parent_id references to use the newly created category IDs
-    const updatedSubcategories = subcategories.map((category) => ({
-      ...category,
-      parent_id: categoryMap[category.parent_id] || null,
-    }));
-
-    // Insert subcategories
-    const subcategoryResults = await batchCreateCategories(
-      updatedSubcategories
-    );
+    const results = await batchCreateCategories(defaultCategories);
 
     return {
-      mainCategories: mainResults,
-      subcategories: subcategoryResults,
+      message: 'Default categories inserted successfully',
+      results,
     };
   } catch (error) {
     throw new AppError(
       `Failed to insert default categories: ${error.message}`,
       500
     );
+  }
+};
+
+/**
+ * Truncates the categories table
+ * @returns {Promise<Object>} Promise that resolves with truncation result
+ */
+export const truncateCategories = async () => {
+  try {
+    return await categoryModel.truncateTable();
+  } catch (error) {
+    throw new AppError(`Failed to truncate categories: ${error.message}`, 500);
   }
 };

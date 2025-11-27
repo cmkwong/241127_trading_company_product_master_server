@@ -1354,4 +1354,36 @@ export default class DataModelUtils {
       );
     }
   }
+
+  /**
+   * Truncates a database table
+   * @returns {Promise<Object>} Promise that resolves with truncation result
+   */
+  async truncateTable() {
+    try {
+      // Use transaction for this operation
+      return await this.withTransaction(async (connection) => {
+        // First disable foreign key checks to allow truncate
+        await this.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+
+        // Truncate the table
+        await this.executeQuery(`TRUNCATE TABLE ${this.tableName}`);
+
+        // Re-enable foreign key checks
+        await this.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+
+        return {
+          success: true,
+          message: `${this._capitalize(
+            this.entityName
+          )}s table has been truncated successfully`,
+        };
+      });
+    } catch (error) {
+      throw new AppError(
+        `Failed to truncate ${this.entityName}s: ${error.message}`,
+        500
+      );
+    }
+  }
 }
