@@ -28,22 +28,236 @@ const sampleProducts = {
     },
   ],
 
+  // Relationship data updated with UUID references
+  product_names: [
+    {
+      id: 'a4b5c6d7-e8f9-g0h1-i2j3-k4l5m6n7o8p9',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      name: 'Decorative Ceramic Vase',
+      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
+    },
+    {
+      id: 'b5c6d7e8-f9g0-h1i2-j3k4-l5m6n7o8p9q0',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      name: '装饰陶瓷花瓶',
+      name_type_id: '9b2c3d4e-5f6g-7h8i-9j0k-1l2m3n4o5p6q', // Chinese
+    },
+    {
+      id: 'c6d7e8f9-g0h1-i2j3-k4l5-m6n7o8p9q0r1',
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      name: 'Bamboo Cutting Board',
+      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
+    },
+    {
+      id: 'd7e8f9g0-h1i2-j3k4-l5m6-n7o8p9q0r1s2',
+      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
+      name: 'Solar Garden Light',
+      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
+    },
+  ],
+
+  // Update product_categories to use new category IDs
+  product_categories: [
+    {
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      category_id: 'c7500000-0000-0000-0000-000000000000', // Pet Water Fountain
+    },
+    {
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      category_id: 'c1400000-0000-0000-0000-000000000000', // Dog Bowl
+    },
+    {
+      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
+      category_id: 'c6200000-0000-0000-0000-000000000000', // Dog Toys
+    },
+  ],
+
+  product_customizations: [
+    {
+      id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      name: 'Color Variation',
+      code: 'CV-001',
+      remark: 'Available in blue, green, and red glazes',
+    },
+    {
+      id: 'f9g0h1i2-j3k4-l5m6-n7o8-p9q0r1s2t3u4',
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      name: 'Size Options',
+      code: 'SO-002',
+      remark: 'Available in small (20x15cm) and large (30x25cm)',
+    },
+  ],
+
+  product_customization_images: [
+    {
+      id: 'g0h1i2j3-k4l5-m6n7-o8p9-q0r1s2t3u4v5',
+      customization_id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
+      image_url:
+        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+      display_order: 1,
+    },
+    {
+      id: 'h1i2j3k4-l5m6-n7o8-p9q0-r1s2t3u4v5w6',
+      customization_id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
+      image_url:
+        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+      display_order: 2,
+    },
+    {
+      id: 'i2j3k4l5-m6n7-o8p9-q0r1-s2t3u4v5w6x7',
+      customization_id: 'f9g0h1i2-j3k4-l5m6-n7o8-p9q0r1s2t3u4',
+      image_url:
+        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+      display_order: 1,
+    },
+  ],
+
+  product_links: [
+    {
+      id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      link: 'https://example.com/supplier/vase-details',
+      remark: 'Supplier product page',
+      link_date: '2025-10-10',
+    },
+    {
+      id: 'k4l5m6n7-o8p9-q0r1-s2t3-u4v5w6x7y8z9',
+      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
+      link: 'https://example.com/catalog/solar-lights',
+      remark: 'Product catalog entry',
+      link_date: '2025-11-05',
+    },
+  ],
+
+  product_link_images: [
+    {
+      id: 'l5m6n7o8-p9q0-r1s2-t3u4-v5w6x7y8z9a0',
+      product_link_id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
+      image_url:
+        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+      display_order: 1,
+    },
+    {
+      id: 'm6n7o8p9-q0r1-s2t3-u4v5-w6x7y8z9a0b1',
+      product_link_id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
+      image_url:
+        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+      display_order: 2,
+    },
+  ],
+
+  product_alibaba_ids: [
+    {
+      id: 'n7o8p9q0-r1s2-t3u4-v5w6-x7y8z9a0b1c2',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      value: '1600189276392',
+      link: 'https://www.alibaba.com/product-detail/1600189276392.html',
+    },
+    {
+      id: 'o8p9q0r1-s2t3-u4v5-w6x7-y8z9a0b1c2d3',
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      value: '1600283947563',
+      link: 'https://www.alibaba.com/product-detail/1600283947563.html',
+    },
+  ],
+
+  product_packings: [
+    {
+      id: 'p9q0r1s2-t3u4-v5w6-x7y8-z9a0b1c2d3e4',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      packing_type_id: '5h8i9j0k-1l2m-3n4o-5p6q-7r8s9t0u1v2w', // Box
+      length: 30.5,
+      width: 20.75,
+      height: 40.0,
+      quantity: 1,
+      weight: 2.5,
+    },
+    {
+      id: 'q0r1s2t3-u4v5-w6x7-y8z9-a0b1c2d3e4f5',
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      packing_type_id: '7j0k1l2m-3n4o-5p6q-7r8s-9t0u1v2w3x4y', // Carton
+      length: 35.0,
+      width: 28.0,
+      height: 5.5,
+      quantity: 10,
+      weight: 4.75,
+    },
+    {
+      id: 'r1s2t3u4-v5w6-x7y8-z9a0-b1c2d3e4f5g6',
+      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
+      packing_type_id: '5h8i9j0k-1l2m-3n4o-5p6q-7r8s9t0u1v2w', // Box
+      length: 15.25,
+      width: 15.25,
+      height: 25.0,
+      quantity: 6,
+      weight: 3.2,
+    },
+  ],
+
+  product_certificates: [
+    {
+      id: 's2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7',
+      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
+      certificate_type_id: '8k1l2m3n-4o5p-6q7r-8s9t-0u1v2w3x4y5z', // CE
+      remark: 'Certified for European market',
+    },
+    {
+      id: 't3u4v5w6-x7y8-z9a0-b1c2-d3e4f5g6h7i8',
+      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
+      certificate_type_id: '0m3n4o5p-6q7r-8s9t-0u1v-2w3x4y5z6a7b', // RoHS
+      remark: 'Compliant with RoHS directive',
+    },
+    {
+      id: 'u4v5w6x7-y8z9-a0b1-c2d3-e4f5g6h7i8j9',
+      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
+      certificate_type_id: '9l2m3n4o-5p6q-7r8s-9t0u-1v2w3x4y5z6a', // ISO 9001
+      remark: 'Manufactured under ISO 9001 quality management',
+    },
+  ],
+
+  product_certificate_files: [
+    {
+      id: 'v5w6x7y8-z9a0-b1c2-d3e4-f5g6h7i8j9k0',
+      certificate_id: 's2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7',
+      file_url:
+        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+    },
+    {
+      id: 'w6x7y8z9-a0b1-c2d3-e4f5-g6h7i8j9k0l1',
+      certificate_id: 't3u4v5w6-x7y8-z9a0-b1c2-d3e4f5g6h7i8',
+      file_url:
+        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+    },
+    {
+      id: 'x7y8z9a0-b1c2-d3e4-f5g6-h7i8j9k0l1m2',
+      certificate_id: 'u4v5w6x7-y8z9-a0b1-c2d3-e4f5g6h7i8j9',
+      file_url:
+        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+    },
+  ],
+
   // Master data with UUID format
   master_product_name_types: [
     {
       id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p',
-      name: 'English',
-      description: 'English product name',
+      name: '1688',
+      description: '1688 product name',
     },
     {
       id: '9b2c3d4e-5f6g-7h8i-9j0k-1l2m3n4o5p6q',
-      name: 'Chinese',
-      description: 'Chinese product name',
+      name: 'Alibaba',
+      description: 'Alibaba product name',
     },
     {
       id: '0c3d4e5f-6g7h-8i9j-0k1l-2m3n4o5p6q7r',
-      name: 'Technical',
-      description: 'Technical specification name',
+      name: 'Amazon',
+      description: 'Amazon product name',
+    },
+    {
+      id: '0c3d4e5f-6g7h-8i9j-0k1l-124fg45563fg',
+      name: 'Shopify',
+      description: 'Shopify product name',
     },
   ],
 
@@ -375,215 +589,6 @@ const sampleProducts = {
       id: '5r8s9t0u-1v2w-3x4y-5z6a-7b8c9d0e1f2g',
       name: 'CPSC',
       description: 'Consumer Product Safety Commission compliance',
-    },
-  ],
-
-  // Relationship data updated with UUID references
-  product_names: [
-    {
-      id: 'a4b5c6d7-e8f9-g0h1-i2j3-k4l5m6n7o8p9',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      name: 'Decorative Ceramic Vase',
-      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
-    },
-    {
-      id: 'b5c6d7e8-f9g0-h1i2-j3k4-l5m6n7o8p9q0',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      name: '装饰陶瓷花瓶',
-      name_type_id: '9b2c3d4e-5f6g-7h8i-9j0k-1l2m3n4o5p6q', // Chinese
-    },
-    {
-      id: 'c6d7e8f9-g0h1-i2j3-k4l5-m6n7o8p9q0r1',
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      name: 'Bamboo Cutting Board',
-      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
-    },
-    {
-      id: 'd7e8f9g0-h1i2-j3k4-l5m6-n7o8p9q0r1s2',
-      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      name: 'Solar Garden Light',
-      name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
-    },
-  ],
-
-  // Update product_categories to use new category IDs
-  product_categories: [
-    {
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      category_id: 'c7500000-0000-0000-0000-000000000000', // Pet Water Fountain
-    },
-    {
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      category_id: 'c1400000-0000-0000-0000-000000000000', // Dog Bowl
-    },
-    {
-      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      category_id: 'c6200000-0000-0000-0000-000000000000', // Dog Toys
-    },
-  ],
-
-  product_customizations: [
-    {
-      id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      name: 'Color Variation',
-      code: 'CV-001',
-      remark: 'Available in blue, green, and red glazes',
-    },
-    {
-      id: 'f9g0h1i2-j3k4-l5m6-n7o8-p9q0r1s2t3u4',
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      name: 'Size Options',
-      code: 'SO-002',
-      remark: 'Available in small (20x15cm) and large (30x25cm)',
-    },
-  ],
-
-  product_customization_images: [
-    {
-      id: 'g0h1i2j3-k4l5-m6n7-o8p9-q0r1s2t3u4v5',
-      customization_id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
-      image_url:
-        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
-      display_order: 1,
-    },
-    {
-      id: 'h1i2j3k4-l5m6-n7o8-p9q0-r1s2t3u4v5w6',
-      customization_id: 'e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3',
-      image_url:
-        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
-      display_order: 2,
-    },
-    {
-      id: 'i2j3k4l5-m6n7-o8p9-q0r1-s2t3u4v5w6x7',
-      customization_id: 'f9g0h1i2-j3k4-l5m6-n7o8-p9q0r1s2t3u4',
-      image_url:
-        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
-      display_order: 1,
-    },
-  ],
-
-  product_links: [
-    {
-      id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      link: 'https://example.com/supplier/vase-details',
-      remark: 'Supplier product page',
-      link_date: '2025-10-10',
-    },
-    {
-      id: 'k4l5m6n7-o8p9-q0r1-s2t3-u4v5w6x7y8z9',
-      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      link: 'https://example.com/catalog/solar-lights',
-      remark: 'Product catalog entry',
-      link_date: '2025-11-05',
-    },
-  ],
-
-  product_link_images: [
-    {
-      id: 'l5m6n7o8-p9q0-r1s2-t3u4-v5w6x7y8z9a0',
-      product_link_id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
-      image_url:
-        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
-      display_order: 1,
-    },
-    {
-      id: 'm6n7o8p9-q0r1-s2t3-u4v5-w6x7y8z9a0b1',
-      product_link_id: 'j3k4l5m6-n7o8-p9q0-r1s2-t3u4v5w6x7y8',
-      image_url:
-        'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
-      display_order: 2,
-    },
-  ],
-
-  product_alibaba_ids: [
-    {
-      id: 'n7o8p9q0-r1s2-t3u4-v5w6-x7y8z9a0b1c2',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      value: '1600189276392',
-      link: 'https://www.alibaba.com/product-detail/1600189276392.html',
-    },
-    {
-      id: 'o8p9q0r1-s2t3-u4v5-w6x7-y8z9a0b1c2d3',
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      value: '1600283947563',
-      link: 'https://www.alibaba.com/product-detail/1600283947563.html',
-    },
-  ],
-
-  product_packings: [
-    {
-      id: 'p9q0r1s2-t3u4-v5w6-x7y8-z9a0b1c2d3e4',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      packing_type_id: '5h8i9j0k-1l2m-3n4o-5p6q-7r8s9t0u1v2w', // Box
-      length: 30.5,
-      width: 20.75,
-      height: 40.0,
-      quantity: 1,
-      weight: 2.5,
-    },
-    {
-      id: 'q0r1s2t3-u4v5-w6x7-y8z9-a0b1c2d3e4f5',
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      packing_type_id: '7j0k1l2m-3n4o-5p6q-7r8s-9t0u1v2w3x4y', // Carton
-      length: 35.0,
-      width: 28.0,
-      height: 5.5,
-      quantity: 10,
-      weight: 4.75,
-    },
-    {
-      id: 'r1s2t3u4-v5w6-x7y8-z9a0-b1c2d3e4f5g6',
-      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      packing_type_id: '5h8i9j0k-1l2m-3n4o-5p6q-7r8s9t0u1v2w', // Box
-      length: 15.25,
-      width: 15.25,
-      height: 25.0,
-      quantity: 6,
-      weight: 3.2,
-    },
-  ],
-
-  product_certificates: [
-    {
-      id: 's2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7',
-      product_id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      certificate_type_id: '8k1l2m3n-4o5p-6q7r-8s9t-0u1v2w3x4y5z', // CE
-      remark: 'Certified for European market',
-    },
-    {
-      id: 't3u4v5w6-x7y8-z9a0-b1c2-d3e4f5g6h7i8',
-      product_id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      certificate_type_id: '0m3n4o5p-6q7r-8s9t-0u1v-2w3x4y5z6a7b', // RoHS
-      remark: 'Compliant with RoHS directive',
-    },
-    {
-      id: 'u4v5w6x7-y8z9-a0b1-c2d3-e4f5g6h7i8j9',
-      product_id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      certificate_type_id: '9l2m3n4o-5p6q-7r8s-9t0u-1v2w3x4y5z6a', // ISO 9001
-      remark: 'Manufactured under ISO 9001 quality management',
-    },
-  ],
-
-  product_certificate_files: [
-    {
-      id: 'v5w6x7y8-z9a0-b1c2-d3e4-f5g6h7i8j9k0',
-      certificate_id: 's2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7',
-      file_url:
-        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
-    },
-    {
-      id: 'w6x7y8z9-a0b1-c2d3-e4f5-g6h7i8j9k0l1',
-      certificate_id: 't3u4v5w6-x7y8-z9a0-b1c2-d3e4f5g6h7i8',
-      file_url:
-        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
-    },
-    {
-      id: 'x7y8z9a0-b1c2-d3e4-f5g6-h7i8j9k0l1m2',
-      certificate_id: 'u4v5w6x7-y8z9-a0b1-c2d3-e4f5g6h7i8j9',
-      file_url:
-        'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
     },
   ],
 };

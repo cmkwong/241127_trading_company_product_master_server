@@ -618,74 +618,67 @@ export const getProductStats = async () => {
  */
 export const truncateAllProductTables = async () => {
   try {
-    // Use withTransaction for transaction management
-    return await productModel.withTransaction(async () => {
-      // Disable foreign key checks to allow truncating tables with relationships
-      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+    // List of product-related tables in the correct order for truncation
+    // We need to truncate child tables before parent tables to avoid foreign key constraints
+    const productTables = [
+      // Certificate files
+      TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name,
+      // Certificates
+      TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+      // Packing information
+      TABLE_MASTER['PRODUCT_PACKINGS'].name,
+      // Alibaba IDs
+      TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
+      // Link images
+      TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
+      // Links
+      TABLE_MASTER['PRODUCT_LINKS'].name,
+      // Customization images
+      TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
+      // Customizations
+      TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+      // Categories
+      TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+      // Names
+      TABLE_MASTER['PRODUCT_NAMES'].name,
+      // Main products table
+      TABLE_MASTER['PRODUCTS'].name,
+    ];
 
-      // List of product-related tables in the correct order for truncation
-      // We need to truncate child tables before parent tables to avoid foreign key constraints
-      const productTables = [
-        // Certificate files
-        'product_certificate_files',
-        // Certificates
-        'product_certificates',
-        // Packing information
-        'product_packings',
-        // Alibaba IDs
-        'product_alibaba_ids',
-        // Link images
-        'product_link_images',
-        // Links
-        'product_links',
-        // Customization images
-        'product_customization_images',
-        // Customizations
-        'product_customizations',
-        // Categories
-        'product_categories',
-        // Names
-        'product_names',
-        // Main products table
-        'products',
-      ];
+    const results = {
+      truncated: [],
+      errors: [],
+    };
 
-      const results = {
-        truncated: [],
-        errors: [],
-      };
+    // Create temporary model instances for each table and truncate them using truncateTable()
+    for (const tableName of productTables) {
+      try {
+        // Create a temporary model for this table
+        const tempModel = new DataModelUtils({
+          tableName: tableName,
+          entityName: tableName.replace(/_/g, ' ').toLowerCase(),
+          database: 'trade_business',
+        });
 
-      // Truncate each table
-      for (const table of productTables) {
-        try {
-          await productModel.executeQuery(`TRUNCATE TABLE ${table}`);
-          results.truncated.push(table);
-        } catch (error) {
-          results.errors.push({
-            table,
-            error: error.message,
-          });
-        }
+        // Use the truncateTable method which handles foreign key checks internally
+        await tempModel.truncateTable();
+
+        results.truncated.push(tableName);
+      } catch (error) {
+        results.errors.push({
+          table: tableName,
+          error: error.message,
+        });
       }
-
-      // Re-enable foreign key checks
-      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
-
-      return {
-        success: results.errors.length === 0,
-        message: `Truncated ${results.truncated.length} product-related tables`,
-        truncatedTables: results.truncated,
-        errors: results.errors,
-      };
-    });
-  } catch (error) {
-    // Make sure to re-enable foreign key checks even if there's an error
-    try {
-      await productModel.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
-    } catch (e) {
-      console.error('Failed to re-enable foreign key checks:', e);
     }
 
+    return {
+      success: results.errors.length === 0,
+      message: `Truncated ${results.truncated.length} product-related tables`,
+      truncatedTables: results.truncated,
+      errors: results.errors,
+    };
+  } catch (error) {
     throw new AppError(
       `Failed to truncate product tables: ${error.message}`,
       error.statusCode || 500
@@ -744,7 +737,7 @@ export const importSampleProducts = async (sampleData) => {
         );
         if (categories && categories.length > 0) {
           completeProductData.categories = categories.map((category) => ({
-            category_id: category.category_id,
+            ...category,
           }));
         }
 
@@ -754,7 +747,7 @@ export const importSampleProducts = async (sampleData) => {
         );
         if (packings && packings.length > 0) {
           completeProductData.packings = packings.map((packing) => ({
-            id: packing.id,
+            // Only include necessary fields for packing
             packing_type_id: packing.packing_type_id,
             width: packing.width || null,
             height: packing.height || null,

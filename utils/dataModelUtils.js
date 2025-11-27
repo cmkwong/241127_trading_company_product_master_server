@@ -488,6 +488,7 @@ export default class DataModelUtils {
             connection: connection,
           });
         }
+        console.log(console.log(this.tableName, '++++++++++++++++++++'));
 
         // Create new entities
         const createdEntities = [];
