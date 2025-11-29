@@ -765,6 +765,36 @@ export const importSampleProducts = async (sampleData) => {
           completeProductData.certificates = certificates;
         }
 
+        // Add customizations if available
+        const customizations = sampleData.product_customizations?.filter(
+          (cust) => cust.product_id === productData.id
+        );
+        if (customizations && customizations.length > 0) {
+          // Add images to each customization
+          customizations.forEach((customization) => {
+            customization.images =
+              sampleData.product_certificate_files?.filter(
+                (image) => image.customization_id === customization.id
+              ) || [];
+          });
+          completeProductData.customizations = customizations;
+        }
+
+        // Add links if available
+        const links = sampleData.product_links?.filter(
+          (link) => link.product_id === productData.id
+        );
+        if (links && links.length > 0) {
+          // Add images to each link
+          links.forEach((link) => {
+            link.images =
+              sampleData.product_certificate_files?.filter(
+                (image) => image.product_link_id === link.id
+              ) || [];
+          });
+          completeProductData.links = links;
+        }
+
         // Use the existing createProduct function to create the product with all related data
         const result = await createProduct(completeProductData);
 
