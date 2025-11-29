@@ -113,11 +113,11 @@ export const createProduct = async (data) => {
       const {
         names,
         packings,
-        customizations,
-        links,
+        customizations, // relation table - image
+        links, // relation table - image
         categories,
         alibaba_ids,
-        certificates,
+        certificates, // relation table - files
         ...productData
       } = { ...data };
 
@@ -142,18 +142,15 @@ export const createProduct = async (data) => {
 
       // Add customizations if provided
       if (customizations && customizations.length > 0) {
-        for (const customization of customizations) {
-          customization.product_id = productId;
-          await ProductCustomizations.createCustomization(customization);
-        }
+        await ProductCustomizations.upsertCustomizations(
+          productId,
+          customizations
+        );
       }
 
       // Add links if provided
       if (links && links.length > 0) {
-        for (const link of links) {
-          link.product_id = productId;
-          await ProductLinks.createProductLink(link);
-        }
+        await ProductLinks.upsertProductLinks(productId, links);
       }
 
       // Add categories if provided
@@ -168,10 +165,10 @@ export const createProduct = async (data) => {
 
       // Add certificates if provided
       if (certificates && certificates.length > 0) {
-        for (const certificate of certificates) {
-          certificate.product_id = productId;
-          await ProductCertificates.createProductCertificate(certificate);
-        }
+        await ProductCertificates.upsertProductCertificates(
+          productId,
+          certificates
+        );
       }
 
       // Get the complete product with all related data
@@ -725,10 +722,7 @@ export const importSampleProducts = async (sampleData) => {
           (name) => name.product_id === productData.id
         );
         if (names && names.length > 0) {
-          completeProductData.names = names.map((name) => ({
-            name_type_id: name.name_type_id,
-            name: name.name,
-          }));
+          completeProductData.names = names;
         }
 
         // Add categories if available
@@ -736,9 +730,7 @@ export const importSampleProducts = async (sampleData) => {
           (category) => category.product_id === productData.id
         );
         if (categories && categories.length > 0) {
-          completeProductData.categories = categories.map((category) => ({
-            ...category,
-          }));
+          completeProductData.categories = categories;
         }
 
         // Add packings if available
@@ -746,29 +738,31 @@ export const importSampleProducts = async (sampleData) => {
           (packing) => packing.product_id === productData.id
         );
         if (packings && packings.length > 0) {
-          completeProductData.packings = packings.map((packing) => ({
-            // Only include necessary fields for packing
-            packing_type_id: packing.packing_type_id,
-            width: packing.width || null,
-            height: packing.height || null,
-            length: packing.length || null,
-            weight: packing.weight || null,
-            volume: packing.volume || null,
-            pcs_per_ctn: packing.pcs_per_ctn || null,
-            moq: packing.moq || null,
-            display_order: packing.display_order || 0,
-          }));
+          // Make sure each packing has a product_id field which is required by validation
+          completeProductData.packings = packings;
         }
 
         // Add alibaba IDs if available
-        const alibabaIds = sampleData.product_alibaba_ids?.filter(
+        const alibaba_ids = sampleData.product_alibaba_ids?.filter(
           (alibabaId) => alibabaId.product_id === productData.id
         );
-        if (alibabaIds && alibabaIds.length > 0) {
-          completeProductData.alibaba_ids = alibabaIds.map((alibabaId) => ({
-            alibaba_id: alibabaId.alibaba_id,
-            url: alibabaId.url || null,
-          }));
+        if (alibaba_ids && alibaba_ids.length > 0) {
+          completeProductData.alibaba_ids = alibaba_ids;
+        }
+
+        // Add certificates if available
+        const certificates = sampleData.product_certificates?.filter(
+          (cert) => cert.product_id === productData.id
+        );
+        if (certificates && certificates.length > 0) {
+          // Add files to each certificate
+          certificates.forEach((certificate) => {
+            certificate.files =
+              sampleData.product_certificate_files?.filter(
+                (cert_file) => cert_file.certificate_id === certificate.id
+              ) || [];
+          });
+          completeProductData.certificates = certificates;
         }
 
         // Use the existing createProduct function to create the product with all related data

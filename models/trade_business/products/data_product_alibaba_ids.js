@@ -6,7 +6,7 @@ const alibabaIdModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
   entityName: 'product Alibaba ID',
   entityIdField: 'product_id',
-  requiredFields: ['product_id', 'alibaba_id'],
+  requiredFields: ['product_id'],
   validations: {
     alibaba_id: { required: true },
   },

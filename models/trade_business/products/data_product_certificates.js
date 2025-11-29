@@ -9,7 +9,7 @@ const certificateModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
   entityName: 'product certificate',
   entityIdField: 'product_id',
-  requiredFields: ['product_id', 'name'],
+  requiredFields: ['product_id', 'certificate_type_id'],
   validations: {
     name: { required: true },
     description: { required: false },
@@ -244,6 +244,80 @@ export const deleteProductCertificatesByProductId = async (productId) => {
   } catch (error) {
     throw new AppError(
       `Failed to delete product certificates: ${error.message}`,
+      error.statusCode || 500
+    );
+  }
+};
+
+/**
+ * Updates or creates certificates for a product (upsert operation)
+ * @param {string} productId - The product ID
+ * @param {Array<Object>} certificates - Array of certificate objects
+ * @returns {Promise<Object>} Promise that resolves with upsert result
+ */
+export const upsertProductCertificates = async (productId, certificates) => {
+  try {
+    return await certificateModel.withTransaction(async () => {
+      // Get existing certificates
+      const existingCertificates = await getProductCertificatesByProductId(
+        productId
+      );
+
+      // Delete all existing certificates and their files
+      if (existingCertificates.length > 0) {
+        for (const certificate of existingCertificates) {
+          // Delete files first
+          await CertificateFiles.deleteCertificateFilesByCertificateId(
+            certificate.id
+          );
+        }
+        // Delete certificates
+        await certificateModel.deleteAllByParentId(productId);
+      }
+
+      // Create new certificates
+      const createdCertificates = [];
+
+      for (const certificateData of certificates) {
+        // Ensure product_id is set
+        certificateData.product_id = productId;
+
+        // Extract files
+        const files = certificateData.files || [];
+        const dataToCreate = { ...certificateData };
+        delete dataToCreate.files;
+
+        // Generate ID if not provided
+        if (!dataToCreate.id) {
+          dataToCreate.id = uuidv4();
+        }
+
+        // Create certificate
+        await certificateModel.create(dataToCreate);
+
+        // Add files
+        if (files.length > 0) {
+          await CertificateFiles.upsertCertificateFiles(dataToCreate.id, files);
+        }
+
+        // Get complete certificate with files
+        const certificate = await getProductCertificateById(
+          dataToCreate.id,
+          true
+        );
+        createdCertificates.push(certificate);
+      }
+
+      return {
+        message: 'Product certificates updated successfully',
+        deleted: existingCertificates.length,
+        created: createdCertificates.length,
+        productCertificates: createdCertificates,
+      };
+    });
+  } catch (error) {
+    throw new AppError(
+      `Failed to update product certificates: ${error.message}`,
       error.statusCode || 500
     );
   }

@@ -4,7 +4,7 @@ const sampleProducts = {
   products: [
     {
       id: 'e7c8f8f0-1d8a-4d3c-9f3e-3b5e2e8a1d6c',
-      product_id: 'PRD-001',
+      product_id: '2511281325',
       icon_url: 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
       remark: 'Premium quality product with multiple customization options',
       created_at: '2025-10-15T10:30:00Z',
@@ -12,7 +12,7 @@ const sampleProducts = {
     },
     {
       id: 'a2b3c4d5-e6f7-8g9h-i0j1-k2l3m4n5o6p7',
-      product_id: 'PRD-002',
+      product_id: '2511281321',
       icon_url: 'public/products/202511201324/Alibaba 1688/display/Main_03.jpg',
       remark: 'Eco-friendly material, suitable for outdoor use',
       created_at: '2025-09-22T08:15:00Z',
@@ -20,7 +20,7 @@ const sampleProducts = {
     },
     {
       id: 'b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6',
-      product_id: 'PRD-003',
+      product_id: '2511281322',
       icon_url: 'public/products/202511201324/Alibaba 1688/display/Main_06.jpg',
       remark: 'Limited edition design with premium finish',
       created_at: '2025-11-01T16:40:00Z',
@@ -222,18 +222,21 @@ const sampleProducts = {
       certificate_id: 's2t3u4v5-w6x7-y8z9-a0b1-c2d3e4f5g6h7',
       file_url:
         'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+      display_order: 1,
     },
     {
       id: 'w6x7y8z9-a0b1-c2d3-e4f5-g6h7i8j9k0l1',
       certificate_id: 't3u4v5w6-x7y8-z9a0-b1c2-d3e4f5g6h7i8',
       file_url:
         'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+      display_order: 2,
     },
     {
       id: 'x7y8z9a0-b1c2-d3e4-f5g6-h7i8j9k0l1m2',
       certificate_id: 'u4v5w6x7-y8z9-a0b1-c2d3-e4f5g6h7i8j9',
       file_url:
         'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+      display_order: 3,
     },
   ],
 

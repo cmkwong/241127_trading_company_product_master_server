@@ -180,69 +180,14 @@ export const deleteProductName = async (id) => {
     );
   }
 };
-
 /**
  * Updates or creates product names (upsert operation)
  * @param {string} productId - The product ID
  * @param {Array<{name_type_id: number, name: string}>} names - Array of name objects
  * @returns {Promise<Object>} Promise that resolves with upsert result
- */
-export const upsertProductNames = async (productId, names) => {
-  try {
-    // Use withTransaction for transaction management
-    return await productNameModel.withTransaction(async () => {
-      // Get existing names for this product
-      const existingNames = await getProductNamesByProductId(productId);
-      const existingNamesByType = {};
-
-      existingNames.forEach((name) => {
-        existingNamesByType[name.name_type_id] = name;
-      });
-
-      const results = {
-        created: [],
-        updated: [],
-      };
-
-      // Process each name
-      for (const nameData of names) {
-        const existingName = existingNamesByType[nameData.name_type_id];
-
-        if (existingName) {
-          // Update existing name if it's different
-          if (existingName.name !== nameData.name) {
-            const result = await productNameModel.update(existingName.id, {
-              name: nameData.name,
-            });
-            results.updated.push(result.productName);
-          } else {
-            results.updated.push(existingName);
-          }
-        } else {
-          // Create new name
-          const result = await productNameModel.create({
-            product_id: productId,
-            name_type_id: nameData.name_type_id,
-            name: nameData.name,
-          });
-          results.created.push(result.productName);
-        }
-      }
-
-      return {
-        message: 'Product names updated successfully',
-        created: results.created.length,
-        updated: results.updated.length,
-        names: await getProductNamesByProductId(productId),
-      };
-    });
-  } catch (error) {
-    throw new AppError(
-      `Failed to update product names: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
+ * **/
+export const upsertProductNames = (productId, names) =>
+  productNameModel.upsertAll(productId, names);
 
 /**
  * Deletes all names for a product

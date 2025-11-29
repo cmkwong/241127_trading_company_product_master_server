@@ -245,11 +245,12 @@ export default class DataModelUtils {
    * @returns {Promise<Array>} Promise that resolves with the entities
    */
   async getAllByParentId(parentId) {
+    let sql;
     try {
       // If join configuration is provided, use it
       if (this.joinConfig) {
         // Build the SQL query with joins
-        let sql = `SELECT ${this.tableName}.*`;
+        sql = `SELECT ${this.tableName}.*`;
 
         // Handle multiple joins
         if (Array.isArray(this.joinConfig)) {
@@ -309,18 +310,59 @@ export default class DataModelUtils {
         return await this.db.executeQuery(sql, [parentId]);
       } else {
         // Simple query without joins
-        const sql = `
-          SELECT *
-          FROM ${this.tableName}
-          WHERE ${this.entityIdField} = ?
-          ORDER BY ${this.hasFileHandling ? 'display_order' : 'id'}
-        `;
+        // First, check if display_order column exists when file handling is enabled
+        if (this.hasFileHandling) {
+          try {
+            // Check if display_order column exists in the table schema
+            const checkColumnSql = `
+              SELECT COUNT(*) as column_exists 
+              FROM information_schema.COLUMNS 
+              WHERE TABLE_SCHEMA = ? 
+              AND TABLE_NAME = ? 
+              AND COLUMN_NAME = 'display_order'
+            `;
+
+            const columnCheckResult = await this.db.executeQuery(
+              checkColumnSql,
+              [this.database, this.tableName]
+            );
+
+            const hasDisplayOrderColumn =
+              columnCheckResult[0].column_exists > 0;
+
+            sql = `
+              SELECT *
+              FROM ${this.tableName}
+              WHERE ${this.entityIdField} = ?
+              ORDER BY ${hasDisplayOrderColumn ? 'display_order' : 'id'}
+            `;
+          } catch (error) {
+            // If there's an error checking the schema, default to ordering by id
+            console.warn(
+              `Error checking for display_order column: ${error.message}. Defaulting to id for ordering.`
+            );
+            sql = `
+              SELECT *
+              FROM ${this.tableName}
+              WHERE ${this.entityIdField} = ?
+              ORDER BY id
+            `;
+          }
+        } else {
+          // If not file handling, just use id for ordering
+          sql = `
+            SELECT *
+            FROM ${this.tableName}
+            WHERE ${this.entityIdField} = ?
+            ORDER BY id
+          `;
+        }
 
         return await this.db.executeQuery(sql, [parentId]);
       }
     } catch (error) {
       throw new AppError(
-        `Failed to get ${this.entityName}s: ${error.message}`,
+        `Failed to get ${this.entityName}s: ${error.message} \nsql: ${sql}`,
         error.statusCode || 500
       );
     }
@@ -485,10 +527,9 @@ export default class DataModelUtils {
             operation: 'delete',
             tableName: this.tableName,
             conditions: { [this.entityIdField]: parentId },
-            connection: connection,
+            connection: this.db.pool,
           });
         }
-        console.log(console.log(this.tableName, '++++++++++++++++++++'));
 
         // Create new entities
         const createdEntities = [];
@@ -507,7 +548,7 @@ export default class DataModelUtils {
             operation: 'create',
             tableName: this.tableName,
             data: entityData,
-            connection: connection,
+            connection: this.db.pool,
           });
 
           createdEntities.push(result.record);
@@ -924,7 +965,7 @@ export default class DataModelUtils {
             operation: 'delete',
             tableName: this.tableName,
             conditions: conditions,
-            connection: connection,
+            connection: this.db.pool,
           });
         }
 
@@ -1000,7 +1041,7 @@ export default class DataModelUtils {
               operation: 'bulkcreate',
               tableName: this.tableName,
               data: fileData,
-              connection: connection,
+              connection: this.db.pool,
             });
           }
         }
@@ -1053,7 +1094,7 @@ export default class DataModelUtils {
             tableName: this.tableName,
             id: item.id,
             data: { display_order: item.display_order },
-            connection: connection,
+            connection: this.db.pool,
           });
         }
 
