@@ -218,6 +218,7 @@ export const dropAllProductTables = async () => {
       'PRODUCT_CUSTOMIZATIONS',
       'PRODUCT_CATEGORIES',
       'PRODUCT_NAMES',
+      'PRODUCT_IMAGES',
       'MASTER_PACKING_TYPES',
       'MASTER_CERTIFICATE_TYPES',
       'MASTER_CATEGORIES',

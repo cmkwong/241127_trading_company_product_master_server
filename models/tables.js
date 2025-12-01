@@ -19,6 +19,10 @@ export const TABLE_MASTER = {
         type: 'VARCHAR(255)',
         description: 'URL to product icon image',
       },
+      hs_code: {
+        type: 'VARCHAR(255)',
+        description: 'HS Code for the product',
+      },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the product',
@@ -36,102 +40,44 @@ export const TABLE_MASTER = {
     },
   },
 
-  // Master tables
-  MASTER_PRODUCT_NAME_TYPES: {
-    name: 'master_product_name_types',
+  PRODUCT_IMAGES: {
+    name: 'product_images',
     fields: {
       id: {
         type: 'VARCHAR(36)',
         primaryKey: true,
-        description: 'Auto-incremented primary key',
+        description: 'UUID primary key',
       },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Name type identifier',
-      },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Description of the name type',
-      },
-    },
-    constraints: {
-      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
-    },
-  },
-
-  MASTER_CATEGORIES: {
-    name: 'master_categories',
-    fields: {
-      id: {
+      product_id: {
         type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
         notNull: true,
-        description: 'Category name',
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
       },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Category description',
-      },
-      parent_id: {
+      image_type_id: {
         type: 'VARCHAR(36)',
+        notNull: true,
         references: {
-          table: 'master_categories',
+          table: 'master_product_image_types',
           field: 'id',
-          onDelete: 'SET NULL',
+          onDelete: 'RESTRICT',
         },
-        description: 'Parent category ID for hierarchical structure',
+        description: 'Reference to master_product_image_types.id',
       },
-    },
-  },
-
-  MASTER_PACKING_TYPES: {
-    name: 'master_packing_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Packing type name',
-      },
-      description: {
+      image_url: {
         type: 'VARCHAR(255)',
-        description: 'Packing type description',
-      },
-    },
-    constraints: {
-      unique_packing_name: { type: 'UNIQUE', fields: ['name'] },
-    },
-  },
-
-  MASTER_CERTIFICATE_TYPES: {
-    name: 'master_certificate_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
         notNull: true,
-        description: 'Certificate type name',
+        description: 'URL to product image',
       },
-      description: {
+      alt_text: {
         type: 'VARCHAR(255)',
-        description: 'Certificate type description',
+        description: 'alt text to product image',
       },
-    },
-    constraints: {
-      unique_certificate_type_name: { type: 'UNIQUE', fields: ['name'] },
+      display_order: {
+        type: 'VARCHAR(36)',
+        default: 0,
+        description: 'Order for display purposes',
+      },
     },
   },
 
@@ -445,6 +391,127 @@ export const TABLE_MASTER = {
         notNull: true,
         description: 'URL to certificate file',
       },
+    },
+  },
+
+  // Master tables
+  MASTER_PRODUCT_NAME_TYPES: {
+    name: 'master_product_name_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'uuid',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Name type identifier',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Description of the name type',
+      },
+    },
+    constraints: {
+      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  MASTER_PRODUCT_IMAGE_TYPES: {
+    name: 'master_product_image_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'uuid',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Name type of image',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Description of the name type',
+      },
+    },
+    constraints: {
+      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
+  MASTER_CATEGORIES: {
+    name: 'master_categories',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Category name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Category description',
+      },
+      parent_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_categories',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Parent category ID for hierarchical structure',
+      },
+    },
+  },
+
+  MASTER_PACKING_TYPES: {
+    name: 'master_packing_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Packing type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Packing type description',
+      },
+    },
+    constraints: {
+      unique_packing_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
+  MASTER_CERTIFICATE_TYPES: {
+    name: 'master_certificate_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Certificate type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Certificate type description',
+      },
+    },
+    constraints: {
+      unique_certificate_type_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
 };
