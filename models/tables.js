@@ -39,7 +39,28 @@ export const TABLE_MASTER = {
       },
     },
   },
-
+  MASTER_PRODUCT_IMAGE_TYPES: {
+    name: 'master_product_image_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'id for master product image types',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Image type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Image type description',
+      },
+    },
+    constraints: {
+      unique_product_image_type: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
   PRODUCT_IMAGES: {
     name: 'product_images',
     fields: {
@@ -174,6 +195,11 @@ export const TABLE_MASTER = {
   PRODUCT_CATEGORIES: {
     name: 'product_categories',
     fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
       product_id: {
         type: 'VARCHAR(36)',
         notNull: true,
@@ -192,7 +218,10 @@ export const TABLE_MASTER = {
       },
     },
     constraints: {
-      primary: { type: 'PRIMARY KEY', fields: ['product_id', 'category_id'] },
+      unique_product_category: {
+        type: 'UNIQUE',
+        fields: ['product_id', 'category_id'],
+      },
     },
   },
 
@@ -501,29 +530,6 @@ export const TABLE_MASTER = {
         type: 'VARCHAR(255)',
         description: 'Description of the certificate file',
       },
-    },
-  },
-
-  MASTER_PRODUCT_IMAGE_TYPES: {
-    name: 'master_product_image_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'uuid',
-      },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Name type of image',
-      },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Description of the name type',
-      },
-    },
-    constraints: {
-      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
     },
   },
 };
