@@ -100,11 +100,4 @@ router.get('/check-exists', tableController.checkTablesExist, endController);
 // Route for getting schema information for all product tables
 router.get('/schema', tableController.getTablesSchema, endController);
 
-// Route for initializing master data (optional)
-router.post(
-  '/init-master-data',
-  tableController.initializeMasterData,
-  endController
-);
-
 export default router;

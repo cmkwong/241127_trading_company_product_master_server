@@ -278,28 +278,3 @@ export const getTablesSchema = catchAsync(async (req, res, next) => {
     },
   });
 });
-
-/**
- * Initialize master data for product-related tables
- * @route POST /api/products/table/init-master-data
- */
-export const initializeMasterData = catchAsync(async (req, res, next) => {
-  // This function would need to be implemented in the table model
-  // It would insert default values into master tables like name types, categories, etc.
-
-  // For now, we'll return a message indicating this is not implemented
-  res.status(501).json({
-    status: 'error',
-    message: 'Master data initialization not yet implemented',
-  });
-
-  // Once implemented, it would look something like:
-  /*
-  const result = await TableModel.initializeMasterData();
-  
-  res.status(200).json({
-    status: 'success',
-    message: result.message
-  });
-  */
-});

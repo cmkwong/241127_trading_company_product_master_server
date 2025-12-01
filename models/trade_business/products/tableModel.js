@@ -52,7 +52,7 @@ export const createProductsTable = async () => {
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createProductNameTypesTable = async () => {
-  return createTable('PRODUCT_NAME_TYPES');
+  return createTable('MASTER_PRODUCT_NAME_TYPES');
 };
 
 /**
@@ -68,7 +68,7 @@ export const createProductNamesTable = async () => {
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCategoriesTable = async () => {
-  return createTable('CATEGORIES');
+  return createTable('MASTER_CATEGORIES');
 };
 
 /**
@@ -124,7 +124,7 @@ export const createAlibabaIdsTable = async () => {
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createPackingTypesTable = async () => {
-  return createTable('PACKING_TYPES');
+  return createTable('MASTER_PACKING_TYPES');
 };
 
 /**
@@ -140,7 +140,7 @@ export const createProductPackingsTable = async () => {
  * @returns {Promise} Promise that resolves when the table is created
  */
 export const createCertificateTypesTable = async () => {
-  return createTable('CERTIFICATE_TYPES');
+  return createTable('MASTER_CERTIFICATE_TYPES');
 };
 
 /**
@@ -160,30 +160,22 @@ export const createProductCertificateFilesTable = async () => {
 };
 
 /**
+ * Get the table creation order from TABLE_MASTER
+ * @returns {string[]} Array of table keys in the correct creation order
+ */
+const getTableCreationOrder = () => {
+  // The order of keys in TABLE_MASTER determines the creation order
+  return Object.keys(TABLE_MASTER);
+};
+
+/**
  * Creates all product-related tables in the correct order to respect foreign key constraints
  * @returns {Promise} Promise that resolves when all tables are created
  */
 export const createAllProductTables = async () => {
   try {
-    // Create tables in order to respect foreign key constraints
-    // The order is important due to foreign key constraints
-    const tableCreationOrder = [
-      'PRODUCTS',
-      'MASTER_PRODUCT_NAME_TYPES',
-      'PRODUCT_NAMES',
-      'MASTER_CATEGORIES',
-      'PRODUCT_CATEGORIES',
-      'PRODUCT_CUSTOMIZATIONS',
-      'PRODUCT_CUSTOMIZATION_IMAGES',
-      'PRODUCT_LINKS',
-      'PRODUCT_LINK_IMAGES',
-      'PRODUCT_ALIBABA_IDS',
-      'MASTER_PACKING_TYPES',
-      'PRODUCT_PACKINGS',
-      'MASTER_CERTIFICATE_TYPES',
-      'PRODUCT_CERTIFICATES',
-      'PRODUCT_CERTIFICATE_FILES',
-    ];
+    // Get table keys in the order they appear in TABLE_MASTER
+    const tableCreationOrder = getTableCreationOrder();
 
     for (const tableKey of tableCreationOrder) {
       await createTable(tableKey);
@@ -206,25 +198,8 @@ export const dropAllProductTables = async () => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Drop tables in reverse order to respect foreign key constraints
-    const tableDropOrder = [
-      'PRODUCT_CERTIFICATE_FILES',
-      'PRODUCT_CERTIFICATES',
-      'PRODUCT_PACKINGS',
-      'PRODUCT_ALIBABA_IDS',
-      'PRODUCT_LINK_IMAGES',
-      'PRODUCT_LINKS',
-      'PRODUCT_CUSTOMIZATION_IMAGES',
-      'PRODUCT_CUSTOMIZATIONS',
-      'PRODUCT_CATEGORIES',
-      'PRODUCT_NAMES',
-      'PRODUCT_IMAGES',
-      'MASTER_PACKING_TYPES',
-      'MASTER_CERTIFICATE_TYPES',
-      'MASTER_CATEGORIES',
-      'MASTER_PRODUCT_NAME_TYPES',
-      'PRODUCTS',
-    ];
+    // Get table keys in reverse order of TABLE_MASTER
+    const tableDropOrder = getTableCreationOrder().reverse();
 
     for (const tableKey of tableDropOrder) {
       const tableName = TABLE_MASTER[tableKey].name;
@@ -289,71 +264,6 @@ export const getProductTablesSchema = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to get product tables schema: ${error.message}`,
-      500
-    );
-  }
-};
-
-/**
- * Initializes master data for product-related tables
- * @returns {Promise} Promise that resolves when data is initialized
- */
-export const initializeMasterData = async () => {
-  try {
-    const pool = dbConn.tb_pool;
-
-    // Initialize product name types
-    const nameTypes = [
-      { name: 'English', description: 'English product name' },
-      { name: 'Chinese', description: 'Chinese product name' },
-      { name: 'Internal', description: 'Internal reference name' },
-      { name: 'Marketing', description: 'Marketing/promotional name' },
-    ];
-
-    for (const type of nameTypes) {
-      await dbModel.executeQuery(
-        pool,
-        `INSERT IGNORE INTO ${TABLE_MASTER.PRODUCT_NAME_TYPES.name} (name, description) VALUES (?, ?)`,
-        [type.name, type.description]
-      );
-    }
-
-    // Initialize packing types
-    const packingTypes = [
-      { name: 'Carton', description: 'Standard cardboard carton' },
-      { name: 'Pallet', description: 'Wooden pallet' },
-      { name: 'Container', description: 'Shipping container' },
-      { name: 'Individual', description: 'Individual product packaging' },
-    ];
-
-    for (const type of packingTypes) {
-      await dbModel.executeQuery(
-        pool,
-        `INSERT IGNORE INTO ${TABLE_MASTER.PACKING_TYPES.name} (name, description) VALUES (?, ?)`,
-        [type.name, type.description]
-      );
-    }
-
-    // Initialize certificate types
-    const certificateTypes = [
-      { name: 'CE', description: 'European Conformity' },
-      { name: 'RoHS', description: 'Restriction of Hazardous Substances' },
-      { name: 'FDA', description: 'Food and Drug Administration' },
-      { name: 'ISO9001', description: 'Quality Management System' },
-    ];
-
-    for (const type of certificateTypes) {
-      await dbModel.executeQuery(
-        pool,
-        `INSERT IGNORE INTO ${TABLE_MASTER.CERTIFICATE_TYPES.name} (name, description) VALUES (?, ?)`,
-        [type.name, type.description]
-      );
-    }
-
-    return { message: 'Master data initialized successfully' };
-  } catch (error) {
-    throw new AppError(
-      `Failed to initialize master data: ${error.message}`,
       500
     );
   }

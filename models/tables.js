@@ -81,7 +81,29 @@ export const TABLE_MASTER = {
     },
   },
 
-  // Relationship tables
+  MASTER_PRODUCT_NAME_TYPES: {
+    name: 'master_product_name_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'uuid',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Name type identifier',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Description of the name type',
+      },
+    },
+    constraints: {
+      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
   PRODUCT_NAMES: {
     name: 'product_names',
     fields: {
@@ -116,6 +138,35 @@ export const TABLE_MASTER = {
       unique_product_name_type: {
         type: 'UNIQUE',
         fields: ['product_id', 'name_type_id'],
+      },
+    },
+  },
+
+  MASTER_CATEGORIES: {
+    name: 'master_categories',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Category name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Category description',
+      },
+      parent_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_categories',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Parent category ID for hierarchical structure',
       },
     },
   },
@@ -284,6 +335,29 @@ export const TABLE_MASTER = {
     },
   },
 
+  MASTER_PACKING_TYPES: {
+    name: 'master_packing_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Packing type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Packing type description',
+      },
+    },
+    constraints: {
+      unique_packing_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
   PRODUCT_PACKINGS: {
     name: 'product_packings',
     fields: {
@@ -334,6 +408,29 @@ export const TABLE_MASTER = {
         notNull: true,
         description: 'Weight of the packing',
       },
+    },
+  },
+
+  MASTER_CERTIFICATE_TYPES: {
+    name: 'master_certificate_types',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Certificate type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Certificate type description',
+      },
+    },
+    constraints: {
+      unique_certificate_type_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
 
@@ -391,32 +488,22 @@ export const TABLE_MASTER = {
         notNull: true,
         description: 'URL to certificate file',
       },
-    },
-  },
-
-  // Master tables
-  MASTER_PRODUCT_NAME_TYPES: {
-    name: 'master_product_name_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'uuid',
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
       },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Name type identifier',
+      file_type: {
+        type: 'VARCHAR(50)',
+        description: 'Type of certificate file',
       },
       description: {
         type: 'VARCHAR(255)',
-        description: 'Description of the name type',
+        description: 'Description of the certificate file',
       },
     },
-    constraints: {
-      unique_name_type: { type: 'UNIQUE', fields: ['name'] },
-    },
   },
+
   MASTER_PRODUCT_IMAGE_TYPES: {
     name: 'master_product_image_types',
     fields: {
@@ -437,81 +524,6 @@ export const TABLE_MASTER = {
     },
     constraints: {
       unique_name_type: { type: 'UNIQUE', fields: ['name'] },
-    },
-  },
-
-  MASTER_CATEGORIES: {
-    name: 'master_categories',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Category name',
-      },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Category description',
-      },
-      parent_id: {
-        type: 'VARCHAR(36)',
-        references: {
-          table: 'master_categories',
-          field: 'id',
-          onDelete: 'SET NULL',
-        },
-        description: 'Parent category ID for hierarchical structure',
-      },
-    },
-  },
-
-  MASTER_PACKING_TYPES: {
-    name: 'master_packing_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Packing type name',
-      },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Packing type description',
-      },
-    },
-    constraints: {
-      unique_packing_name: { type: 'UNIQUE', fields: ['name'] },
-    },
-  },
-
-  MASTER_CERTIFICATE_TYPES: {
-    name: 'master_certificate_types',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'Auto-incremented primary key',
-      },
-      name: {
-        type: 'VARCHAR(100)',
-        notNull: true,
-        description: 'Certificate type name',
-      },
-      description: {
-        type: 'VARCHAR(255)',
-        description: 'Certificate type description',
-      },
-    },
-    constraints: {
-      unique_certificate_type_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
 };
@@ -546,7 +558,14 @@ export const generateCreateTableSQL = (tableDefinition) => {
       fieldSql += ' UNIQUE';
     }
     if (fieldDef.default !== undefined) {
-      fieldSql += ` DEFAULT ${fieldDef.default}`;
+      if (
+        typeof fieldDef.default === 'string' &&
+        !fieldDef.default.includes('CURRENT_TIMESTAMP')
+      ) {
+        fieldSql += ` DEFAULT '${fieldDef.default}'`;
+      } else {
+        fieldSql += ` DEFAULT ${fieldDef.default}`;
+      }
     }
 
     fieldDefinitions.push(fieldSql);
