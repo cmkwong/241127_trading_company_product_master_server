@@ -81,38 +81,5 @@ export const getCustomizationImageWithBase64ById = (id, options = {}) =>
  * @param {Array<string>} images - Array of image URLs
  * @returns {Promise<Array<Object>>} Promise that resolves with the upserted images
  */
-export const upsertCustomizationImages = async (customizationId, images) => {
-  if (!images || !Array.isArray(images)) {
-    return [];
-  }
-
-  return await customizationImageModel.withTransaction(async () => {
-    // Delete existing images
-    await deleteCustomizationImagesByCustomizationId(customizationId);
-
-    // Add new images if provided
-    if (images.length > 0) {
-      const imageData = images.map((imageUrl, index) => ({
-        customization_id: customizationId,
-        image_url: imageUrl,
-        display_order: index,
-      }));
-
-      // Use bulkcreate through executeQuery
-      await customizationImageModel.executeQuery(
-        `INSERT INTO ${TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name} 
-         (customization_id, image_url, display_order) VALUES ?`,
-        [
-          imageData.map((img) => [
-            img.customization_id,
-            img.image_url,
-            img.display_order,
-          ]),
-        ]
-      );
-    }
-
-    // Return the updated images
-    return await getCustomizationImagesByCustomizationId(customizationId);
-  });
-};
+export const upsertCustomizationImages = (customizationId, images) =>
+  customizationImageModel.upsertAll(customizationId, images);

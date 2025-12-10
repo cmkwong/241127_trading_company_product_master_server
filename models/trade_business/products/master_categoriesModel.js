@@ -7,7 +7,7 @@ const CATEGORIES_TABLE = TABLE_MASTER['MASTER_CATEGORIES'].name;
 const PRODUCT_CATEGORIES_TABLE = TABLE_MASTER['PRODUCT_CATEGORIES'].name;
 
 // Create DataModelUtils instance for categories
-const categoryModel = new DataModelUtils({
+const categoryMasterModel = new DataModelUtils({
   tableName: CATEGORIES_TABLE,
   entityName: 'category',
   entityIdField: 'id',
@@ -25,21 +25,8 @@ const categoryModel = new DataModelUtils({
  * @param {number} [categoryData.parent_id] - Optional parent category ID
  * @returns {Promise<Object>} Promise that resolves with the created category
  */
-export const createCategory = async (categoryData) => {
-  try {
-    // If parent_id is provided, check if parent exists
-    if (categoryData.parent_id) {
-      await getCategoryById(categoryData.parent_id);
-    }
-
-    return await categoryModel.create(categoryData);
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      throw new AppError('A category with this name already exists', 409);
-    }
-    throw error;
-  }
-};
+export const createCategory = (categoryData) =>
+  categoryMasterModel.create(categoryData);
 
 /**
  * Gets a category by ID
@@ -47,7 +34,7 @@ export const createCategory = async (categoryData) => {
  * @returns {Promise<Object>} Promise that resolves with the category data
  */
 export const getCategoryById = async (id) => {
-  return await categoryModel.getById(id);
+  return await categoryMasterModel.getById(id);
 };
 
 /**
@@ -90,7 +77,10 @@ export const getAllCategories = async (options = {}) => {
       WHERE ${whereClause}
     `;
 
-    const countResult = await categoryModel.executeQuery(countSQL, params);
+    const countResult = await categoryMasterModel.executeQuery(
+      countSQL,
+      params
+    );
     const total = countResult[0].total;
 
     // Get categories with pagination, parent name, and usage count
@@ -108,7 +98,10 @@ export const getAllCategories = async (options = {}) => {
 
     // Add pagination parameters
     const queryParams = [...params, limit, offset];
-    const categories = await categoryModel.executeQuery(selectSQL, queryParams);
+    const categories = await categoryMasterModel.executeQuery(
+      selectSQL,
+      queryParams
+    );
 
     return {
       categories,
@@ -138,7 +131,9 @@ export const getCategoryTree = async () => {
       ORDER BY c.name ASC
     `;
 
-    const allCategories = await categoryModel.executeQuery(allCategoriesSQL);
+    const allCategories = await categoryMasterModel.executeQuery(
+      allCategoriesSQL
+    );
 
     // Build the tree structure
     const categoryMap = {};
@@ -183,41 +178,8 @@ export const getCategoryTree = async () => {
  * @param {number} [updateData.parent_id] - The updated parent category ID
  * @returns {Promise<Object>} Promise that resolves with the updated category
  */
-export const updateCategory = async (id, updateData) => {
-  try {
-    // Check if category exists
-    const existingCategory = await getCategoryById(id);
-
-    // If parent_id is provided, check if parent exists and prevent circular references
-    if (updateData.parent_id !== undefined) {
-      if (updateData.parent_id !== null) {
-        // Check if parent exists
-        await getCategoryById(updateData.parent_id);
-
-        // Check for circular reference
-        if (updateData.parent_id === id) {
-          throw new AppError('Category cannot be its own parent', 400);
-        }
-
-        // Check if the new parent is a descendant of this category
-        const isDescendant = await isDescendantOf(updateData.parent_id, id);
-        if (isDescendant) {
-          throw new AppError(
-            'Cannot set a descendant as parent (circular reference)',
-            400
-          );
-        }
-      }
-    }
-
-    return await categoryModel.update(id, updateData);
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      throw new AppError('A category with this name already exists', 409);
-    }
-    throw error;
-  }
-};
+export const updateCategory = (id, updateData) =>
+  categoryMasterModel.update(id, updateData);
 
 /**
  * Checks if one category is a descendant of another
@@ -260,7 +222,9 @@ export const deleteCategory = async (id, force = false) => {
 
     // Check if the category has children
     const childrenSQL = `SELECT COUNT(*) as count FROM ${CATEGORIES_TABLE} WHERE parent_id = ?`;
-    const childrenResult = await categoryModel.executeQuery(childrenSQL, [id]);
+    const childrenResult = await categoryMasterModel.executeQuery(childrenSQL, [
+      id,
+    ]);
     const childCount = childrenResult[0].count;
 
     if (childCount > 0 && !force) {
@@ -272,7 +236,7 @@ export const deleteCategory = async (id, force = false) => {
 
     // Check if the category is in use by products
     const usageSQL = `SELECT COUNT(*) as count FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = ?`;
-    const usageResult = await categoryModel.executeQuery(usageSQL, [id]);
+    const usageResult = await categoryMasterModel.executeQuery(usageSQL, [id]);
     const usageCount = usageResult[0].count;
 
     if (usageCount > 0 && !force) {
@@ -283,21 +247,21 @@ export const deleteCategory = async (id, force = false) => {
     }
 
     // Use transaction for this operation
-    return await categoryModel.withTransaction(async (connection) => {
+    return await categoryMasterModel.withTransaction(async (connection) => {
       // If force is true and there are usages, delete the associated product categories first
       if (force && usageCount > 0) {
         const deleteCategoriesSQL = `DELETE FROM ${PRODUCT_CATEGORIES_TABLE} WHERE category_id = ?`;
-        await categoryModel.executeQuery(deleteCategoriesSQL, [id]);
+        await categoryMasterModel.executeQuery(deleteCategoriesSQL, [id]);
       }
 
       // If force is true and there are children, update children to have no parent
       if (force && childCount > 0) {
         const updateChildrenSQL = `UPDATE ${CATEGORIES_TABLE} SET parent_id = NULL WHERE parent_id = ?`;
-        await categoryModel.executeQuery(updateChildrenSQL, [id]);
+        await categoryMasterModel.executeQuery(updateChildrenSQL, [id]);
       }
 
       // Delete the category
-      await categoryModel.delete(id);
+      await categoryMasterModel.delete(id);
 
       return {
         message: 'Category deleted successfully',
@@ -351,7 +315,7 @@ export const getProductsByCategory = async (categoryId, options = {}) => {
       WHERE pc.category_id IN (${categoryIdsStr})
     `;
 
-    const countResult = await categoryModel.executeQuery(countSQL);
+    const countResult = await categoryMasterModel.executeQuery(countSQL);
     const total = countResult[0].total;
 
     // Get products with pagination
@@ -369,7 +333,7 @@ export const getProductsByCategory = async (categoryId, options = {}) => {
       LIMIT ? OFFSET ?
     `;
 
-    const products = await categoryModel.executeQuery(selectSQL, [
+    const products = await categoryMasterModel.executeQuery(selectSQL, [
       limit,
       offset,
     ]);
@@ -416,7 +380,7 @@ const getDescendantCategoryIds = async (categoryId) => {
   try {
     // Get direct children
     const childrenSQL = `SELECT id FROM ${CATEGORIES_TABLE} WHERE parent_id = ?`;
-    const children = await categoryModel.executeQuery(childrenSQL, [
+    const children = await categoryMasterModel.executeQuery(childrenSQL, [
       categoryId,
     ]);
 
@@ -449,7 +413,7 @@ const getDescendantCategoryIds = async (categoryId) => {
  */
 export const batchCreateCategories = async (categories) => {
   try {
-    return await categoryModel.withTransaction(async (connection) => {
+    return await categoryMasterModel.withTransaction(async (connection) => {
       const results = {
         total: categories.length,
         successful: 0,
@@ -487,6 +451,12 @@ export const batchCreateCategories = async (categories) => {
 };
 
 /**
+ * Truncates the categories table
+ * @returns {Promise<Object>} Promise that resolves with truncation result
+ */
+export const truncateCategories = () => categoryMasterModel.truncateTable();
+
+/**
  * Inserts default categories
  * @returns {Promise<Object>} Promise that resolves with insertion results
  */
@@ -507,17 +477,5 @@ export const insertDefaultCategories = async () => {
       `Failed to insert default categories: ${error.message}`,
       500
     );
-  }
-};
-
-/**
- * Truncates the categories table
- * @returns {Promise<Object>} Promise that resolves with truncation result
- */
-export const truncateCategories = async () => {
-  try {
-    return await categoryModel.truncateTable();
-  } catch (error) {
-    throw new AppError(`Failed to truncate categories: ${error.message}`, 500);
   }
 };

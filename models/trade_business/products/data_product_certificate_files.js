@@ -93,66 +93,7 @@ export const reorderCertificateFiles = (certificateId, orderData) =>
  * Updates or creates certificate files (upsert operation)
  * @param {string} certificateId - The certificate ID
  * @param {Array<Object>} files - Array of file objects
- * @param {string} [fileType=null] - Optional file type filter to only replace files of a specific type
  * @returns {Promise<Object>} Promise that resolves with upsert result
  */
-export const upsertCertificateFiles = async (
-  certificateId,
-  files,
-  fileType = null
-) => {
-  try {
-    return await certificateFileModel.withTransaction(async () => {
-      // Get existing files for this certificate
-      let existingFiles = await getCertificateFilesByCertificateId(
-        certificateId
-      );
-
-      // If fileType is specified, filter existing files to only delete files of that type
-      if (fileType) {
-        existingFiles = existingFiles.filter(
-          (file) => file.file_type === fileType
-        );
-      }
-
-      // Delete existing files
-      if (existingFiles.length > 0) {
-        for (const file of existingFiles) {
-          await certificateFileModel.delete(file.id);
-        }
-      }
-
-      // Create new files
-      const createdFiles = [];
-
-      if (files && files.length > 0) {
-        for (const fileData of files) {
-          // Ensure certificate_id is set
-          const dataToCreate = {
-            ...fileData,
-            certificate_id: certificateId,
-          };
-
-          // If it's a base64 file, use addFileFromBase64
-          if (fileData.base64) {
-            const result = await addCertificateFileFromBase64(dataToCreate);
-            createdFiles.push(result.certificateFile);
-          } else {
-            // Otherwise, just create a regular file record
-            const result = await certificateFileModel.create(dataToCreate);
-            createdFiles.push(result.certificateFile);
-          }
-        }
-      }
-
-      return {
-        message: 'Certificate files updated successfully',
-        deleted: existingFiles.length,
-        created: createdFiles.length,
-        files: await getCertificateFilesByCertificateId(certificateId),
-      };
-    });
-  } catch (error) {
-    throw new Error(`Failed to update certificate files: ${error.message}`);
-  }
-};
+export const upsertCertificateFiles = (certificateId, files) =>
+  certificateFileModel.upsertAll(certificateId, files);

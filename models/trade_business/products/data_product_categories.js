@@ -1,6 +1,7 @@
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
+import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
 
 // Create a data model utility for product categories with multiple joins
 const productCategoryModel = new DataModelUtils({
@@ -39,31 +40,13 @@ export const upsertProductCategories = (productId, categories) =>
   productCategoryModel.upsertAll(productId, categories);
 
 /**
- * Gets all categories from master table
- * @returns {Promise<Array>} Promise that resolves with the categories
- */
-export const getAllCategories = async () => {
-  try {
-    const result = await productCategoryModel.executeQuery(
-      `SELECT * FROM master_categories ORDER BY name`
-    );
-    return result;
-  } catch (error) {
-    throw new AppError(
-      `Failed to get categories: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
  * Gets categories with hierarchical structure
  * @returns {Promise<Array>} Promise that resolves with the hierarchical categories
  */
 export const getCategoryHierarchy = async () => {
   try {
     // Get all categories first
-    const allCategories = await getAllCategories();
+    const allCategories = await master_categoriesModel.getAllCategories();
 
     // Build hierarchy
     const categoryMap = {};

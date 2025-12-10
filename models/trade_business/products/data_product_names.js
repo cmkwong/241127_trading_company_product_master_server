@@ -35,46 +35,57 @@ const productNameModel = new DataModelUtils({
  * @param {string} [data.id] - Optional UUID (generated if not provided)
  * @returns {Promise<Object>} Promise that resolves with the created product name
  */
-export const createProductName = async (data) => {
-  try {
-    // Check if a name of this type already exists for this product
-    const existingName = await getProductNameByTypeAndProductId(
-      data.product_id,
-      data.name_type_id
-    );
-
-    if (existingName) {
-      throw new AppError(
-        `A name of type ${data.name_type_id} already exists for this product`,
-        409
-      );
-    }
-
-    // Create the product name using the model
-    return await productNameModel.create(data);
-  } catch (error) {
-    throw new AppError(
-      `Failed to create product name: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
+export const createProductName = (data) => productNameModel.create(data);
 
 /**
  * Gets a product name by ID
  * @param {string} id - The ID of the product name to retrieve
  * @returns {Promise<Object>} Promise that resolves with the product name data
  */
-export const getProductNameById = async (id) => {
-  try {
-    return await productNameModel.getById(id);
-  } catch (error) {
-    throw new AppError(
-      `Failed to get product name: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
+export const getProductNameById = (id) => productNameModel.getById(id);
+
+/**
+ * Gets all names for a product
+ * @param {string} productId - The product ID to get names for
+ * @returns {Promise<Array>} Promise that resolves with the product names
+ */
+export const getProductNamesByProductId = (productId) =>
+  productNameModel.getAllByParentId(productId);
+
+/**
+ * Updates a product name
+ * @param {string} id - The ID of the product name to update
+ * @param {Object} data - The product name data to update
+ * @param {string} [data.name] - The updated name
+ * @param {number} [data.name_type_id] - The updated name type ID
+ * @returns {Promise<Object>} Promise that resolves with the updated product name
+ */
+export const updateProductName = (id, data) =>
+  productNameModel.update(id, data);
+
+/**
+ * Deletes a product name
+ * @param {string} id - The ID of the product name to delete
+ * @returns {Promise<Object>} Promise that resolves with deletion result
+ */
+export const deleteProductName = async (id) => productNameModel.delete(id);
+
+/**
+ * Updates or creates product names (upsert operation)
+ * @param {string} productId - The product ID
+ * @param {Array<{name_type_id: number, name: string}>} names - Array of name objects
+ * @returns {Promise<Object>} Promise that resolves with upsert result
+ * **/
+export const upsertProductNames = (productId, names) =>
+  productNameModel.upsertAll(productId, names);
+
+/**
+ * Deletes all names for a product
+ * @param {string} productId - The product ID to delete names for
+ * @returns {Promise<Object>} Promise that resolves with deletion result
+ */
+export const deleteProductNamesByProductId = (productId) =>
+  productNameModel.deleteAllByParentId(productId);
 
 /**
  * Gets a product name by product ID and name type ID
@@ -102,105 +113,6 @@ export const getProductNameByTypeAndProductId = async (
   } catch (error) {
     throw new AppError(
       `Failed to get product name: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Gets all names for a product
- * @param {string} productId - The product ID to get names for
- * @returns {Promise<Array>} Promise that resolves with the product names
- */
-export const getProductNamesByProductId = async (productId) => {
-  try {
-    return await productNameModel.getAllByParentId(productId);
-  } catch (error) {
-    throw new AppError(
-      `Failed to get product names: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Updates a product name
- * @param {string} id - The ID of the product name to update
- * @param {Object} data - The product name data to update
- * @param {string} [data.name] - The updated name
- * @param {number} [data.name_type_id] - The updated name type ID
- * @returns {Promise<Object>} Promise that resolves with the updated product name
- */
-export const updateProductName = async (id, data) => {
-  try {
-    // Get existing product name
-    const existingName = await getProductNameById(id);
-
-    // Check if changing name type and if that type already exists for this product
-    if (
-      data.name_type_id !== undefined &&
-      data.name_type_id !== existingName.name_type_id
-    ) {
-      const nameWithSameType = await getProductNameByTypeAndProductId(
-        existingName.product_id,
-        data.name_type_id
-      );
-
-      if (nameWithSameType) {
-        throw new AppError(
-          `A name of type ${data.name_type_id} already exists for this product`,
-          409
-        );
-      }
-    }
-
-    // Update the product name using the model
-    return await productNameModel.update(id, data);
-  } catch (error) {
-    throw new AppError(
-      `Failed to update product name: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-
-/**
- * Deletes a product name
- * @param {string} id - The ID of the product name to delete
- * @returns {Promise<Object>} Promise that resolves with deletion result
- */
-export const deleteProductName = async (id) => {
-  try {
-    // Delete the product name using the model
-    return await productNameModel.delete(id);
-  } catch (error) {
-    throw new AppError(
-      `Failed to delete product name: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
-/**
- * Updates or creates product names (upsert operation)
- * @param {string} productId - The product ID
- * @param {Array<{name_type_id: number, name: string}>} names - Array of name objects
- * @returns {Promise<Object>} Promise that resolves with upsert result
- * **/
-export const upsertProductNames = (productId, names) =>
-  productNameModel.upsertAll(productId, names);
-
-/**
- * Deletes all names for a product
- * @param {string} productId - The product ID to delete names for
- * @returns {Promise<Object>} Promise that resolves with deletion result
- */
-export const deleteProductNamesByProductId = async (productId) => {
-  try {
-    // Delete all product names for this product using the model
-    return await productNameModel.deleteAllByParentId(productId);
-  } catch (error) {
-    throw new AppError(
-      `Failed to delete product names: ${error.message}`,
       error.statusCode || 500
     );
   }

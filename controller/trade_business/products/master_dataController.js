@@ -1,7 +1,7 @@
-import * as packingTypesModel from '../../../models/trade_business/products/master_packingTypesModel.js';
-import * as productNameTypesModel from '../../../models/trade_business/products/master_productNameTypesModel.js';
-import * as certificateTypesModel from '../../../models/trade_business/products/master_certificateTypesModel.js';
-import * as categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
+import * as master_packingTypesModel from '../../../models/trade_business/products/master_packingTypesModel.js';
+import * as master_productNameTypesModel from '../../../models/trade_business/products/master_productNameTypesModel.js';
+import * as master_certificateTypesModel from '../../../models/trade_business/products/master_certificateTypesModel.js';
+import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 
@@ -215,52 +215,52 @@ const createMasterDataController = (modelMap, entityType) => {
 
 // Model function maps for each master data type
 const packingTypesModelMap = {
-  create: packingTypesModel.createPackingType,
-  getById: packingTypesModel.getPackingTypeById,
-  getAll: packingTypesModel.getAllPackingTypes,
-  update: packingTypesModel.updatePackingType,
-  delete: packingTypesModel.deletePackingType,
-  getRelatedProducts: packingTypesModel.getProductsByPackingType,
-  batchCreate: packingTypesModel.batchCreatePackingTypes,
-  insertDefaults: packingTypesModel.insertDefaultPackingTypes,
-  truncate: packingTypesModel.truncatePackingTypes, // Add truncate function reference
+  create: master_packingTypesModel.createPackingType,
+  getById: master_packingTypesModel.getPackingTypeById,
+  getAll: master_packingTypesModel.getAllPackingTypes,
+  update: master_packingTypesModel.updatePackingType,
+  delete: master_packingTypesModel.deletePackingType,
+  getRelatedProducts: master_packingTypesModel.getProductsByPackingType,
+  batchCreate: master_packingTypesModel.batchCreatePackingTypes,
+  insertDefaults: master_packingTypesModel.insertDefaultPackingTypes,
+  truncate: master_packingTypesModel.truncatePackingTypes, // Add truncate function reference
 };
 
 const productNameTypesModelMap = {
-  create: productNameTypesModel.createProductNameType,
-  getById: productNameTypesModel.getProductNameTypeById,
-  getAll: productNameTypesModel.getAllProductNameTypes,
-  update: productNameTypesModel.updateProductNameType,
-  delete: productNameTypesModel.deleteProductNameType,
-  getRelatedProducts: productNameTypesModel.getProductsByNameType,
-  batchCreate: productNameTypesModel.batchCreateProductNameTypes,
-  insertDefaults: productNameTypesModel.insertDefaultProductNameTypes,
-  truncate: productNameTypesModel.truncateProductNameTypes, // Add truncate function reference
+  create: master_productNameTypesModel.createProductNameType,
+  getById: master_productNameTypesModel.getProductNameTypeById,
+  getAll: master_productNameTypesModel.getAllProductNameTypes,
+  update: master_productNameTypesModel.updateProductNameType,
+  delete: master_productNameTypesModel.deleteProductNameType,
+  getRelatedProducts: master_productNameTypesModel.getProductsByNameType,
+  batchCreate: master_productNameTypesModel.batchCreateProductNameTypes,
+  insertDefaults: master_productNameTypesModel.insertDefaultProductNameTypes,
+  truncate: master_productNameTypesModel.truncateProductNameTypes, // Add truncate function reference
 };
 
 const certificateTypesModelMap = {
-  create: certificateTypesModel.createCertificateType,
-  getById: certificateTypesModel.getCertificateTypeById,
-  getAll: certificateTypesModel.getAllCertificateTypes,
-  update: certificateTypesModel.updateCertificateType,
-  delete: certificateTypesModel.deleteCertificateType,
-  getRelatedProducts: certificateTypesModel.getProductsByCertificateType,
-  batchCreate: certificateTypesModel.batchCreateCertificateTypes,
-  insertDefaults: certificateTypesModel.insertDefaultCertificateTypes,
-  truncate: certificateTypesModel.truncateCertificateTypes, // Add truncate function reference
+  create: master_certificateTypesModel.createCertificateType,
+  getById: master_certificateTypesModel.getCertificateTypeById,
+  getAll: master_certificateTypesModel.getAllCertificateTypes,
+  update: master_certificateTypesModel.updateCertificateType,
+  delete: master_certificateTypesModel.deleteCertificateType,
+  getRelatedProducts: master_certificateTypesModel.getProductsByCertificateType,
+  batchCreate: master_certificateTypesModel.batchCreateCertificateTypes,
+  insertDefaults: master_certificateTypesModel.insertDefaultCertificateTypes,
+  truncate: master_certificateTypesModel.truncateCertificateTypes, // Add truncate function reference
 };
 
 // Add categories model map
 const categoriesModelMap = {
-  create: categoriesModel.createCategory,
-  getById: categoriesModel.getCategoryById,
-  getAll: categoriesModel.getAllCategories,
-  update: categoriesModel.updateCategory,
-  delete: categoriesModel.deleteCategory,
-  getRelatedProducts: categoriesModel.getProductsByCategory,
-  batchCreate: categoriesModel.batchCreateCategories,
-  insertDefaults: categoriesModel.insertDefaultCategories,
-  truncate: categoriesModel.truncateCategories, // Add truncate function reference
+  create: master_categoriesModel.createCategory,
+  getById: master_categoriesModel.getCategoryById,
+  getAll: master_categoriesModel.getAllCategories,
+  update: master_categoriesModel.updateCategory,
+  delete: master_categoriesModel.deleteCategory,
+  getRelatedProducts: master_categoriesModel.getProductsByCategory,
+  batchCreate: master_categoriesModel.batchCreateCategories,
+  insertDefaults: master_categoriesModel.insertDefaultCategories,
+  truncate: master_categoriesModel.truncateCategories, // Add truncate function reference
 };
 
 // Create controllers for each master data type
@@ -289,7 +289,9 @@ export const categoryExtensions = {
     // If id is 'root', get root categories (parent_id is null)
     const parentId = id === 'root' ? null : id;
 
-    const categories = await categoriesModel.getChildCategories(parentId);
+    const categories = await master_categoriesModel.getChildCategories(
+      parentId
+    );
 
     res.prints = {
       status: 'success',
@@ -306,7 +308,7 @@ export const categoryExtensions = {
       return next(new AppError('Category ID is required', 400));
     }
 
-    const path = await categoriesModel.getCategoryPath(id);
+    const path = await master_categoriesModel.getCategoryPath(id);
 
     res.prints = {
       status: 'success',
@@ -317,7 +319,7 @@ export const categoryExtensions = {
   }),
 
   getCategoryTree: catchAsync(async (req, res, next) => {
-    const categoryTree = await categoriesModel.getCategoryTree();
+    const categoryTree = await master_categoriesModel.getCategoryTree();
 
     res.prints = {
       status: 'success',
@@ -340,7 +342,7 @@ export const categoryExtensions = {
         limit: 1,
       };
 
-      const result = await categoriesModel.getAllCategories(options);
+      const result = await master_categoriesModel.getAllCategories(options);
       const exists =
         result.categories.length > 0 &&
         result.categories[0].name.toLowerCase() === name.toLowerCase();
@@ -378,27 +380,28 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
   };
 
   try {
-    results.categories = await categoriesModel.insertDefaultCategories();
+    results.categories = await master_categoriesModel.insertDefaultCategories();
   } catch (error) {
     results.categories = { error: error.message };
   }
 
   try {
-    results.packingTypes = await packingTypesModel.insertDefaultPackingTypes();
+    results.packingTypes =
+      await master_packingTypesModel.insertDefaultPackingTypes();
   } catch (error) {
     results.packingTypes = { error: error.message };
   }
 
   try {
     results.productNameTypes =
-      await productNameTypesModel.insertDefaultProductNameTypes();
+      await master_productNameTypesModel.insertDefaultProductNameTypes();
   } catch (error) {
     results.productNameTypes = { error: error.message };
   }
 
   try {
     results.certificateTypes =
-      await certificateTypesModel.insertDefaultCertificateTypes();
+      await master_certificateTypesModel.insertDefaultCertificateTypes();
   } catch (error) {
     results.certificateTypes = { error: error.message };
   }
@@ -424,27 +427,28 @@ export const truncateAllTables = catchAsync(async (req, res, next) => {
   };
 
   try {
-    results.categories = await categoriesModel.truncateCategories();
+    results.categories = await master_categoriesModel.truncateCategories();
   } catch (error) {
     results.categories = { error: error.message };
   }
 
   try {
-    results.packingTypes = await packingTypesModel.truncatePackingTypes();
+    results.packingTypes =
+      await master_packingTypesModel.truncatePackingTypes();
   } catch (error) {
     results.packingTypes = { error: error.message };
   }
 
   try {
     results.productNameTypes =
-      await productNameTypesModel.truncateProductNameTypes();
+      await master_productNameTypesModel.truncateProductNameTypes();
   } catch (error) {
     results.productNameTypes = { error: error.message };
   }
 
   try {
     results.certificateTypes =
-      await certificateTypesModel.truncateCertificateTypes();
+      await master_certificateTypesModel.truncateCertificateTypes();
   } catch (error) {
     results.certificateTypes = { error: error.message };
   }
@@ -479,28 +483,29 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
 
   // First truncate all tables
   try {
-    results.truncate.categories = await categoriesModel.truncateCategories();
+    results.truncate.categories =
+      await master_categoriesModel.truncateCategories();
   } catch (error) {
     results.truncate.categories = { error: error.message };
   }
 
   try {
     results.truncate.packingTypes =
-      await packingTypesModel.truncatePackingTypes();
+      await master_packingTypesModel.truncatePackingTypes();
   } catch (error) {
     results.truncate.packingTypes = { error: error.message };
   }
 
   try {
     results.truncate.productNameTypes =
-      await productNameTypesModel.truncateProductNameTypes();
+      await master_productNameTypesModel.truncateProductNameTypes();
   } catch (error) {
     results.truncate.productNameTypes = { error: error.message };
   }
 
   try {
     results.truncate.certificateTypes =
-      await certificateTypesModel.truncateCertificateTypes();
+      await master_certificateTypesModel.truncateCertificateTypes();
   } catch (error) {
     results.truncate.certificateTypes = { error: error.message };
   }
@@ -508,28 +513,28 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
   // Then insert default data
   try {
     results.defaults.categories =
-      await categoriesModel.insertDefaultCategories();
+      await master_categoriesModel.insertDefaultCategories();
   } catch (error) {
     results.defaults.categories = { error: error.message };
   }
 
   try {
     results.defaults.packingTypes =
-      await packingTypesModel.insertDefaultPackingTypes();
+      await master_packingTypesModel.insertDefaultPackingTypes();
   } catch (error) {
     results.defaults.packingTypes = { error: error.message };
   }
 
   try {
     results.defaults.productNameTypes =
-      await productNameTypesModel.insertDefaultProductNameTypes();
+      await master_productNameTypesModel.insertDefaultProductNameTypes();
   } catch (error) {
     results.defaults.productNameTypes = { error: error.message };
   }
 
   try {
     results.defaults.certificateTypes =
-      await certificateTypesModel.insertDefaultCertificateTypes();
+      await master_certificateTypesModel.insertDefaultCertificateTypes();
   } catch (error) {
     results.defaults.certificateTypes = { error: error.message };
   }
@@ -551,9 +556,10 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
 
   try {
     // Get packing types count
-    const packingTypesResult = await packingTypesModel.getAllPackingTypes({
-      limit: 1,
-    });
+    const packingTypesResult =
+      await master_packingTypesModel.getAllPackingTypes({
+        limit: 1,
+      });
     stats.packingTypes = {
       total: packingTypesResult.pagination.total,
     };
@@ -563,9 +569,10 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
 
   try {
     // Get product name types count
-    const nameTypesResult = await productNameTypesModel.getAllProductNameTypes({
-      limit: 1,
-    });
+    const nameTypesResult =
+      await master_productNameTypesModel.getAllProductNameTypes({
+        limit: 1,
+      });
     stats.productNameTypes = {
       total: nameTypesResult.pagination.total,
     };
@@ -575,9 +582,10 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
 
   try {
     // Get certificate types count
-    const certTypesResult = await certificateTypesModel.getAllCertificateTypes({
-      limit: 1,
-    });
+    const certTypesResult =
+      await master_certificateTypesModel.getAllCertificateTypes({
+        limit: 1,
+      });
     stats.certificateTypes = {
       total: certTypesResult.pagination.total,
     };
@@ -587,7 +595,7 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
 
   try {
     // Get categories count
-    const categoriesResult = await categoriesModel.getAllCategories({
+    const categoriesResult = await master_categoriesModel.getAllCategories({
       limit: 1,
     });
     stats.categories = {
@@ -595,7 +603,9 @@ export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
     };
 
     // Get additional category stats
-    const rootCategories = await categoriesModel.getChildCategories(null);
+    const rootCategories = await master_categoriesModel.getChildCategories(
+      null
+    );
     stats.categories.rootCount = rootCategories.length;
   } catch (error) {
     stats.categories = { error: error.message };
@@ -632,7 +642,7 @@ export const checkEntityExists = catchAsync(async (req, res, next) => {
 
     switch (type) {
       case 'packingType':
-        result = await packingTypesModel.getAllPackingTypes(options);
+        result = await master_packingTypesModel.getAllPackingTypes(options);
         if (result.packingTypes.length > 0) {
           exists =
             result.packingTypes[0].name.toLowerCase() === name.toLowerCase();
@@ -641,7 +651,9 @@ export const checkEntityExists = catchAsync(async (req, res, next) => {
         break;
 
       case 'productNameType':
-        result = await productNameTypesModel.getAllProductNameTypes(options);
+        result = await master_productNameTypesModel.getAllProductNameTypes(
+          options
+        );
         if (result.productNameTypes.length > 0) {
           exists =
             result.productNameTypes[0].name.toLowerCase() ===
@@ -651,7 +663,9 @@ export const checkEntityExists = catchAsync(async (req, res, next) => {
         break;
 
       case 'certificateType':
-        result = await certificateTypesModel.getAllCertificateTypes(options);
+        result = await master_certificateTypesModel.getAllCertificateTypes(
+          options
+        );
         if (result.certificateTypes.length > 0) {
           exists =
             result.certificateTypes[0].name.toLowerCase() ===
@@ -661,7 +675,7 @@ export const checkEntityExists = catchAsync(async (req, res, next) => {
         break;
 
       case 'category':
-        result = await categoriesModel.getAllCategories(options);
+        result = await master_categoriesModel.getAllCategories(options);
         if (result.categories.length > 0) {
           exists =
             result.categories[0].name.toLowerCase() === name.toLowerCase();

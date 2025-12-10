@@ -80,38 +80,5 @@ export const getProductLinkImageWithBase64ById = (id, options = {}) =>
  * @param {Array<string>} images - Array of image URLs
  * @returns {Promise<Array<Object>>} Promise that resolves with the upserted images
  */
-export const upsertProductLinkImages = async (productLinkId, images) => {
-  if (!images || !Array.isArray(images)) {
-    return [];
-  }
-
-  return await productLinkImageModel.withTransaction(async () => {
-    // Delete existing images
-    await deleteProductLinkImagesByLinkId(productLinkId);
-
-    // Add new images if provided
-    if (images.length > 0) {
-      const imageData = images.map((imageUrl, index) => ({
-        product_link_id: productLinkId,
-        image_url: imageUrl,
-        display_order: index,
-      }));
-
-      // Use bulkcreate through executeQuery
-      await productLinkImageModel.executeQuery(
-        `INSERT INTO ${TABLE_MASTER['PRODUCT_LINK_IMAGES'].name} 
-         (product_link_id, image_url, display_order) VALUES ?`,
-        [
-          imageData.map((img) => [
-            img.product_link_id,
-            img.image_url,
-            img.display_order,
-          ]),
-        ]
-      );
-    }
-
-    // Return the updated images
-    return await getProductLinkImagesByLinkId(productLinkId);
-  });
-};
+export const upsertProductLinkImages = (productLinkId, images) =>
+  productLinkImageModel.upsertAll(productLinkId, images);
