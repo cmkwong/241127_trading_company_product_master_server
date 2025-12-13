@@ -368,8 +368,8 @@ export const batchCreatePackingTypes = async (packingTypes) => {
 export const insertDefaultPackingTypes = async () => {
   try {
     // Import packing types from data file
-    const sampleProducts = await import('../../../datas/products.js');
-    const defaultPackingTypes = sampleProducts.default.master_packing_types;
+    const defaultProducts = await import('../../../datas/products.js');
+    const defaultPackingTypes = defaultProducts.default.master_packing_types;
 
     const results = await batchCreatePackingTypes(defaultPackingTypes);
 

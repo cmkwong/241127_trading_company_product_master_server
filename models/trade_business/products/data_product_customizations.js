@@ -229,9 +229,6 @@ export const updateCustomization = async (id, data) => {
  */
 export const deleteCustomization = async (id) => {
   try {
-    // Check if customization exists
-    await customizationModel.getById(id);
-
     return await customizationModel.withTransaction(async () => {
       // Delete customization images first
       await CustomizationImages.deleteCustomizationImagesByCustomizationId(id);
@@ -315,7 +312,6 @@ export const upsertCustomizations = async (productId, customizations) => {
             customization.id
           );
         }
-
         // Delete customizations
         await customizationModel.deleteAllByParentId(productId);
       }

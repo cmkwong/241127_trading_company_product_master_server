@@ -617,30 +617,9 @@ export const truncateAllProductTables = async () => {
   try {
     // List of product-related tables in the correct order for truncation
     // We need to truncate child tables before parent tables to avoid foreign key constraints
-    const productTables = [
-      // Certificate files
-      TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name,
-      // Certificates
-      TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
-      // Packing information
-      TABLE_MASTER['PRODUCT_PACKINGS'].name,
-      // Alibaba IDs
-      TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
-      // Link images
-      TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
-      // Links
-      TABLE_MASTER['PRODUCT_LINKS'].name,
-      // Customization images
-      TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
-      // Customizations
-      TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
-      // Categories
-      TABLE_MASTER['PRODUCT_CATEGORIES'].name,
-      // Names
-      TABLE_MASTER['PRODUCT_NAMES'].name,
-      // Main products table
-      TABLE_MASTER['PRODUCTS'].name,
-    ];
+    const productTables = Object.values(TABLE_MASTER)
+      .map((table) => table.table_type === 'data' && table.name)
+      .reverse();
 
     const results = {
       truncated: [],
@@ -688,7 +667,7 @@ export const truncateAllProductTables = async () => {
  * @param {Object} sampleData - The sample data object containing products and related data
  * @returns {Promise<Object>} Promise that resolves with import results
  */
-export const importSampleProducts = async (sampleData) => {
+export const importDefaultProducts = async (sampleData) => {
   try {
     // Get the sample data
     const productsData = sampleData.products;
@@ -773,7 +752,7 @@ export const importSampleProducts = async (sampleData) => {
           // Add images to each customization
           customizations.forEach((customization) => {
             customization.images =
-              sampleData.product_certificate_files?.filter(
+              sampleData.product_customization_images?.filter(
                 (image) => image.customization_id === customization.id
               ) || [];
           });
@@ -788,7 +767,7 @@ export const importSampleProducts = async (sampleData) => {
           // Add images to each link
           links.forEach((link) => {
             link.images =
-              sampleData.product_certificate_files?.filter(
+              sampleData.product_link_images?.filter(
                 (image) => image.product_link_id === link.id
               ) || [];
           });

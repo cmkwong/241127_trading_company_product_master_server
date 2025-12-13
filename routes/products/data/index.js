@@ -1,4 +1,5 @@
 import express from 'express';
+import customizationRouter from './customization/index.js';
 import * as productsController from '../../../controller/trade_business/products/data_productsController.js';
 import * as authController from '../../../middleware/authController.js';
 import endController from '../../../middleware/endController.js';
@@ -26,12 +27,12 @@ router.post(
   productsController.truncateProductTables
 );
 
-// samples
+// defaults
 router
-  .route('/samples')
+  .route('/defaults')
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.importSampleProducts,
+    productsController.importDefaultProducts,
     endController
   );
 
@@ -90,5 +91,7 @@ router.get(
   productsController.checkProductExists,
   endController
 );
+
+router.use('/customization', customizationRouter);
 
 export default router;

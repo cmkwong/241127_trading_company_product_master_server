@@ -318,8 +318,8 @@ export const batchCreateProductNameTypes = async (nameTypes) => {
 export const insertDefaultProductNameTypes = async () => {
   try {
     // Import product name types from data file
-    const sampleProducts = await import('../../../datas/products.js');
-    const defaultNameTypes = sampleProducts.default.master_product_name_types;
+    const defaultProducts = await import('../../../datas/products.js');
+    const defaultNameTypes = defaultProducts.default.master_product_name_types;
 
     const results = await batchCreateProductNameTypes(defaultNameTypes);
 

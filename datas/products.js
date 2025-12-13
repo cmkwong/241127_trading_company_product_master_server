@@ -1,5 +1,5 @@
 // Sample product data based on TABLE_MASTER schema
-const sampleProducts = {
+const defaultProducts = {
   // Main products
   products: [
     {
@@ -596,4 +596,4 @@ const sampleProducts = {
   ],
 };
 
-export default sampleProducts;
+export default defaultProducts;

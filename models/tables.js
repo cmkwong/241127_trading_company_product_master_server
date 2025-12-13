@@ -3,6 +3,7 @@ export const TABLE_MASTER = {
   // Main tables
   PRODUCTS: {
     name: 'products',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -41,6 +42,7 @@ export const TABLE_MASTER = {
   },
   MASTER_PRODUCT_IMAGE_TYPES: {
     name: 'master_product_image_types',
+    table_type: 'master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -63,6 +65,7 @@ export const TABLE_MASTER = {
   },
   PRODUCT_IMAGES: {
     name: 'product_images',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -104,6 +107,7 @@ export const TABLE_MASTER = {
 
   MASTER_PRODUCT_NAME_TYPES: {
     name: 'master_product_name_types',
+    table_type: 'master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -127,6 +131,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_NAMES: {
     name: 'product_names',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -165,6 +170,7 @@ export const TABLE_MASTER = {
 
   MASTER_CATEGORIES: {
     name: 'master_categories',
+    table_type: 'master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -194,6 +200,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_CATEGORIES: {
     name: 'product_categories',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -227,6 +234,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_CUSTOMIZATIONS: {
     name: 'product_customizations',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -254,6 +262,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_CUSTOMIZATION_IMAGES: {
     name: 'product_customization_images',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -285,6 +294,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_LINKS: {
     name: 'product_links',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -309,6 +319,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_LINK_IMAGES: {
     name: 'product_link_images',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -340,6 +351,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_ALIBABA_IDS: {
     name: 'product_alibaba_ids',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -366,6 +378,7 @@ export const TABLE_MASTER = {
 
   MASTER_PACKING_TYPES: {
     name: 'master_packing_types',
+    table_type: 'master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -389,6 +402,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_PACKINGS: {
     name: 'product_packings',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -442,6 +456,7 @@ export const TABLE_MASTER = {
 
   MASTER_CERTIFICATE_TYPES: {
     name: 'master_certificate_types',
+    table_type: 'master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -465,6 +480,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_CERTIFICATES: {
     name: 'product_certificates',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -496,6 +512,7 @@ export const TABLE_MASTER = {
 
   PRODUCT_CERTIFICATE_FILES: {
     name: 'product_certificate_files',
+    table_type: 'data',
     fields: {
       id: {
         type: 'VARCHAR(36)',

@@ -320,9 +320,9 @@ export const batchCreateCertificateTypes = async (certificateTypes) => {
 export const insertDefaultCertificateTypes = async () => {
   try {
     // Import certificate types from data file
-    const sampleProducts = await import('../../../datas/products.js');
+    const defaultProducts = await import('../../../datas/products.js');
     const defaultCertificateTypes =
-      sampleProducts.default.master_certificate_types;
+      defaultProducts.default.master_certificate_types;
 
     const results = await batchCreateCertificateTypes(defaultCertificateTypes);
 

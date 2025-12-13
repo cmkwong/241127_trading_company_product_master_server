@@ -1,7 +1,7 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
 import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
-import sampleProducts from '../../../datas/products.js';
+import defaultProducts from '../../../datas/products.js';
 
 /**
  * Create a new product
@@ -182,8 +182,8 @@ export const getProductStats = catchAsync(async (req, res, next) => {
  * Import sample products data
  * @route POST /api/products/samples
  */
-export const importSampleProducts = catchAsync(async (req, res, next) => {
-  const results = await Products.importSampleProducts(sampleProducts);
+export const importDefaultProducts = catchAsync(async (req, res, next) => {
+  const results = await Products.importDefaultProducts(defaultProducts);
 
   // Store the results in res.prints for endController to use
   res.prints = {
@@ -203,7 +203,7 @@ export const getSampleProductsData = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     data: {
-      sampleProducts,
+      defaultProducts,
     },
   });
 });
