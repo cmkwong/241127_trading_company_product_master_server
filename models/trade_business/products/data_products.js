@@ -4,6 +4,7 @@ import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
 // Import related data models
+import * as ProductImages from './data_product_images.js';
 import * as ProductNames from './data_product_names.js';
 import * as ProductCustomizations from './data_product_customizations.js';
 import * as ProductLinks from './data_product_links.js';
@@ -13,7 +14,8 @@ import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
 
 // Create a data model utility for products
-const productModel = new DataModelUtils({
+export const productModel = new DataModelUtils({
+  database: 'trade_business', // Explicitly specify the database
   tableName: TABLE_MASTER['PRODUCTS'].name,
   entityName: 'product',
   entityIdField: 'id',
@@ -26,7 +28,50 @@ const productModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
-  database: 'trade_business', // Explicitly specify the database
+  // Add relationship with child table (customization images)
+  // TODO - add complete tables config and add logic into dataModelUtils.js
+  childTableConfig: [
+    {
+      tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductNames.productNameModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_NAMES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductImages.productImagesModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductCategories.productCategoryModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductCustomizations.customizationModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductLinks.productLinkModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductAlibabaIds.alibabaIdModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductPackings.packingModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductCertificates.certificateModel,
+    },
+  ],
 });
 
 /**

@@ -2,13 +2,16 @@ import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
 // Create a data model utility for customization images with file handling
-const customizationImageModel = new DataModelUtils({
+export const customizationImageModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
   entityName: 'customization image',
   entityIdField: 'customization_id',
   requiredFields: ['customization_id', 'image_url'],
   validations: {
     image_url: { required: true },
+  },
+  defaults: {
+    id: uuidv4,
   },
   fileConfig: {
     fileUrlField: 'image_url',

@@ -1,11 +1,8 @@
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
-import AppError from '../../../utils/appError.js';
-import * as dbConn from '../../../utils/dbConn.js';
-import CrudOperations from '../../../utils/crud.js';
 
 // Create a data model utility for product packings
-const packingModel = new DataModelUtils({
+export const packingModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
   entityName: 'product packing',
   entityIdField: 'product_id',

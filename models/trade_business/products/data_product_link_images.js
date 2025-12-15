@@ -2,7 +2,7 @@ import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
 // Create a data model utility for product link images with file handling
-const productLinkImageModel = new DataModelUtils({
+export const productLinkImageModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
   entityName: 'product link image',
   entityIdField: 'product_link_id',

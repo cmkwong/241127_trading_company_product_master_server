@@ -4,7 +4,7 @@ import AppError from '../../../utils/appError.js';
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
 
 // Create a data model utility for product categories with multiple joins
-const productCategoryModel = new DataModelUtils({
+export const productCategoryModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
   entityName: 'product category',
   entityIdField: 'product_id',

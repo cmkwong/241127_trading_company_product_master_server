@@ -2,7 +2,8 @@ import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
 // Create a data model utility for certificate files with file handling
-const certificateFileModel = new DataModelUtils({
+export const certificateFileModel = new DataModelUtils({
+  database: 'trade_business',
   tableName: TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name,
   entityName: 'certificate file',
   entityIdField: 'certificate_id',

@@ -7,7 +7,7 @@ const PACKING_TYPES_TABLE = TABLE_MASTER['MASTER_PACKING_TYPES'].name;
 const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'].name;
 
 // Create DataModelUtils instance for packing types
-const packingTypeModel = new DataModelUtils({
+export const packingTypeModel = new DataModelUtils({
   tableName: PACKING_TYPES_TABLE,
   entityName: 'packing type',
   entityIdField: 'id',

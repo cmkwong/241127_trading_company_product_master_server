@@ -1,0 +1,24 @@
+import { TABLE_MASTER } from '../../tables.js';
+import DataModelUtils from '../../../utils/dataModelUtils.js';
+
+// Create a data model utility for product categories with multiple joins
+export const productImagesModel = new DataModelUtils({
+  tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
+  entityName: 'product images',
+  entityIdField: 'product_id',
+  requiredFields: ['product_id', 'image_type_id'],
+  validations: {
+    category_id: { required: true },
+    bulk_id: { required: false },
+  },
+  joinConfig: [
+    {
+      joinTable: 'master_product_image_types',
+      joinField: 'image_type_id',
+      targetField: 'id', // Optional, defaults to 'id'
+      selectFields:
+        'master_product_image_types.name as product_image_type_name, master_product_image_types.description as type_description, master_product_image_types.parent_id', // TODO - change into object for easily debug OR just select all fields
+      orderBy: 'master_product_image_types.name',
+    },
+  ],
+});
