@@ -8,10 +8,9 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(authController.protect);
 
-router.get('/id/:id/:includeImages', customizationController.getCustomizations);
-router.get(
-  '/productId/:productId/:includeImages',
-  customizationController.getCustomizations
-);
+router
+  .get('/id/:id', customizationController.getCustomizations)
+  .get('/productId/:productId', customizationController.getCustomizations);
 
+router.post('/', customizationController.createCustomization);
 export default router;

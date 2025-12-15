@@ -768,6 +768,7 @@ export default class DataModelUtils {
 
       // Save the file to the filesystem
       const uploadDir = this.getUploadDir(data[this.entityIdField], fileType);
+      console.log('uploadDir: ', uploadDir);
 
       // Use appropriate save function based on file type
       let fileUrl;

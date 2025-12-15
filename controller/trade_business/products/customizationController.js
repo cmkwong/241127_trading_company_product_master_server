@@ -1,8 +1,9 @@
 import * as customizationModel from '../../../models/trade_business/products/data_product_customizations.js';
 import catchAsync from '../../../utils/catchAsync.js';
+import { parseStringToBoolean } from '../../../utils/http.js';
 
 export const createCustomization = catchAsync(async (req, res, next) => {
-  const { data } = res.body;
+  const { data } = req.body;
 
   const result = await customizationModel.createCustomization(data);
 
@@ -13,26 +14,26 @@ export const createCustomization = catchAsync(async (req, res, next) => {
 });
 
 export const getCustomizations = catchAsync(async (req, res, next) => {
-  const { includeBase64, compress } = req.query;
-  const { id, productId, includeImages } = req.params;
+  const { includeImages, includeBase64, compress } = req.query;
+  const { id, productId } = req.params;
 
   let customizations;
   if (productId) {
     customizations = await customizationModel.getCustomizationsByProductId(
       productId,
-      includeImages === '1' ? true : false,
+      parseStringToBoolean(includeImages),
       {
-        includeBase64: includeBase64 === '1' ? true : false,
-        compress: compress === '1' ? true : false,
+        includeBase64: parseStringToBoolean(includeBase64),
+        compress: parseStringToBoolean(compress),
       }
     );
   } else {
     customizations = await customizationModel.getCustomizationById(
       id,
-      includeImages === '1' ? true : false,
+      parseStringToBoolean(includeImages),
       {
-        includeBase64: includeBase64 === '1' ? true : false,
-        compress: compress === '1' ? true : false,
+        includeBase64: parseStringToBoolean(includeBase64),
+        compress: parseStringToBoolean(compress),
       }
     );
   }

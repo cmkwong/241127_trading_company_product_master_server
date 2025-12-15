@@ -12,7 +12,7 @@ const customizationImageModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'image_url',
-    uploadDir: 'public/uploads/customizations/{id}',
+    uploadDir: 'public/products/{id}/customizations/',
     imagesOnly: true,
   },
 });
@@ -28,8 +28,6 @@ export const deleteCustomizationImage = (id) =>
   customizationImageModel.delete(id);
 export const deleteCustomizationImagesByCustomizationId = (customizationId) =>
   customizationImageModel.deleteAllByParentId(customizationId);
-
-// Export file-specific operations
 export const addCustomizationImageFromBase64 = (data) =>
   customizationImageModel.addFileFromBase64(data);
 export const updateCustomizationImageWithBase64 = (id, data) =>

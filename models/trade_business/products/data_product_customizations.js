@@ -18,6 +18,14 @@ const customizationModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
+  // Add relationship with child table (customization images)
+  childTableConfig: [
+    {
+      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
+      connectedKeys: { id: 'customization_id' }, // parent table -> child table
+      entityName: 'image',
+    },
+  ],
 });
 
 /**
@@ -147,18 +155,20 @@ export const createCustomization = async (data) => {
 
       // Create the customization using the model
       const result = await customizationModel.create(customizationData);
-      const customizationId = result.customization.id;
+      const customization_id = result.customization.id;
 
       // Add customization images if provided
       if (images && images.length > 0) {
-        await CustomizationImages.upsertCustomizationImages(
-          customizationId,
-          images
-        );
+        images.forEach(async (image) => {
+          await CustomizationImages.addCustomizationImageFromBase64({
+            ...image,
+            customization_id,
+          });
+        });
       }
 
       // Get the complete customization with images
-      const customization = await getCustomizationById(customizationId);
+      const customization = await getCustomizationById(customization_id);
 
       return {
         message: 'Customization created successfully',

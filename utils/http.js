@@ -24,3 +24,8 @@ export const request = async (
     logger.error(`http error: ${err}`);
   }
 };
+
+export const parseStringToBoolean = (value) => {
+  if (value === '1' || value === 'true' || value === 'yes') return true;
+  else return false;
+};
