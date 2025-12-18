@@ -220,12 +220,6 @@ export default class DataModelUtils {
     return;
   };
 
-  /**
-   * Generates and inserts dynamic data into the database based on the provided schema.
-   * Handles parent-child and child-child relationships recursively.
-   * @param {Object} jsonData - The JSON data to generate and insert.
-   * @returns {Promise<Object>} Result of the insertion.
-   */
   async refactoringData(jsonData) {
     try {
       // Validate input JSON data
@@ -238,15 +232,15 @@ export default class DataModelUtils {
       if (!schemaConfig || typeof schemaConfig !== 'object') {
         throw new AppError('Failed to generate schema configuration', 500);
       }
-      console.log('schemaConfig++: ', JSON.stringify(schemaConfig));
-      const results = {};
+
+      // Separate JSON data for create and update
+      const createData = {};
+      const updateData = {};
 
       // Recursive function to process data based on schema
       const processTableData = async (
         tableName,
         tableData,
-        parentTableName = null,
-        parentData = null,
         parentId = null
       ) => {
         const tableSchema = schemaConfig[tableName];
@@ -254,81 +248,80 @@ export default class DataModelUtils {
           throw new AppError(`Schema for table "${tableName}" not found`, 400);
         }
 
-        if (!tableData || typeof tableData !== 'object') {
-          throw new AppError(`Invalid data for table "${tableName}"`, 400);
-        }
+        // Separate create and update data
+        const createEntries = [];
+        const updateEntries = [];
 
-        // Generate a new ID for the current table if not provided
-        const entityId = tableData.id || uuidv4();
+        for (const entry of tableData) {
+          const isUpdate = !!entry.id; // Check if the entry has an `id` field
 
-        // Prepare the data for insertion
-        const entityData = { ...tableData, id: entityId };
-
-        // Add parent reference if applicable
-        if (parentId && tableSchema.foreignKey) {
-          entityData[tableSchema.foreignKey] = parentId;
-        }
-
-        // Validate data before insertion
-        this.validateData(entityData);
-
-        // Apply default values
-        const finalEntityData = this.applyDefaults(entityData);
-
-        // Remove child table data from the current entity data
-        const childTables = Object.keys(tableSchema.children || {});
-        for (const childTable of childTables) {
-          delete finalEntityData[childTable];
-        }
-
-        // Insert data into the current table
-        const entityResult = await this.create(finalEntityData);
-        results[tableName] = results[tableName] || [];
-        results[tableName].push({
-          id: entityId,
-          message: `${tableName} inserted successfully`,
-        });
-
-        // Process child tables
-        for (const childTable of childTables) {
-          const childTableDataArray = tableData[childTable];
-          if (!childTableDataArray) continue; // Skip if no child data exists
-
-          if (Array.isArray(childTableDataArray)) {
-            for (const childTableData of childTableDataArray) {
-              await processTableData(childTable, childTableData, entityId);
-            }
-          } else if (typeof childTableDataArray === 'object') {
-            await processTableData(childTable, childTableDataArray, entityId);
-          }
-        }
-
-        // Handle file processing if applicable
-        if (this.hasFileHandling && tableSchema.fileHandling) {
-          const fileDataArray = tableData[tableSchema.fileHandling.fieldName];
-          if (fileDataArray && Array.isArray(fileDataArray)) {
-            for (const fileData of fileDataArray) {
-              await this.addFileFromBase64({
-                ...fileData,
-                [this.entityIdField]: entityId,
-              });
+          // Validate the fields against the schema
+          const validEntry = {};
+          for (const field in entry) {
+            if (tableSchema[field]) {
+              validEntry[field] = entry[field];
             }
           }
+
+          // Add parent reference if applicable
+          if (parentId && tableSchema.foreignKey) {
+            validEntry[tableSchema.foreignKey] = parentId;
+          }
+
+          // Separate into create or update
+          if (isUpdate) {
+            updateEntries.push(validEntry);
+          } else {
+            validEntry.id = uuidv4(); // Generate a new ID for create entries
+            createEntries.push(validEntry);
+          }
+
+          // Process child tables if any
+          const childTables = Object.keys(schemaConfig).filter((childTable) =>
+            Object.values(schemaConfig[childTable]).some(
+              (field) =>
+                field.references &&
+                field.references.table === tableName &&
+                field.references.field === 'id'
+            )
+          );
+
+          for (const childTable of childTables) {
+            if (entry[childTable]) {
+              await processTableData(
+                childTable,
+                entry[childTable],
+                validEntry.id // Pass the parent ID to the child table
+              );
+            }
+          }
+        }
+
+        // Store the create and update entries for this table
+        if (createEntries.length > 0) {
+          createData[tableName] = createData[tableName] || [];
+          createData[tableName].push(...createEntries);
+        }
+        if (updateEntries.length > 0) {
+          updateData[tableName] = updateData[tableName] || [];
+          updateData[tableName].push(...updateEntries);
         }
       };
 
-      // Start processing the top-level tables in the JSON data
+      // Process the top-level tables in the JSON data
       for (const [tableName, tableDatas] of Object.entries(jsonData)) {
-        for (const tableData of tableDatas) {
-          await processTableData(tableName, tableData);
+        if (schemaConfig[tableName]) {
+          await processTableData(tableName, tableDatas);
+        } else {
+          throw new AppError(`Table "${tableName}" not found in schema`, 400);
         }
       }
 
-      return results;
+      return { createData, updateData };
     } catch (error) {
       throw new AppError(
-        `Failed to generate and insert data: ${error.message}`,
-        500
+        `Failed to process data: ${error.message}`,
+        error.statusCode || 500
       );
     }
   }
