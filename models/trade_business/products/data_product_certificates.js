@@ -7,6 +7,7 @@ import * as CertificateFiles from './data_product_certificate_files.js';
 // Create a data model utility for product certificates
 export const certificateModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_CERTIFICATES'].fields,
   entityName: 'product certificate',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'certificate_type_id'],

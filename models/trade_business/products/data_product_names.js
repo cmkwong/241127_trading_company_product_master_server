@@ -6,6 +6,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 // Create a data model utility for product names
 export const productNameModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_NAMES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_NAMES'].fields,
   entityName: 'product name',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'name', 'name_type_id'],

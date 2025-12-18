@@ -7,6 +7,7 @@ import * as ProductLinkImages from './data_product_link_images.js';
 // Create a data model utility for product links
 export const productLinkModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
+  tableFields: TABLE_MASTER['PRODUCT_LINKS'].fields,
   entityName: 'product link',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'link'],

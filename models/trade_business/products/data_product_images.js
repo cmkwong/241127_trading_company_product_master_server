@@ -4,6 +4,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 // Create a data model utility for product categories with multiple joins
 export const productImagesModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_IMAGES'].fields,
   entityName: 'product images',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'image_type_id'],

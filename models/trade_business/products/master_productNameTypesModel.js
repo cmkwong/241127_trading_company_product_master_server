@@ -9,6 +9,7 @@ const PRODUCT_NAMES_TABLE = TABLE_MASTER['PRODUCT_NAMES'].name;
 // Create DataModelUtils instance for product name types
 export const productNameTypeModel = new DataModelUtils({
   tableName: PRODUCT_NAME_TYPES_TABLE,
+  tableFields: TABLE_MASTER['MASTER_PRODUCT_NAME_TYPES'].fields,
   entityName: 'product name type',
   entityIdField: 'id',
   requiredFields: ['name'],

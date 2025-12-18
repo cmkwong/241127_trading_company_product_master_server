@@ -9,6 +9,7 @@ const PRODUCT_CATEGORIES_TABLE = TABLE_MASTER['PRODUCT_CATEGORIES'].name;
 // Create DataModelUtils instance for categories
 export const categoryMasterModel = new DataModelUtils({
   tableName: CATEGORIES_TABLE,
+  tableFields: TABLE_MASTER['MASTER_CATEGORIES'].fields,
   entityName: 'category',
   entityIdField: 'id',
   requiredFields: ['name'],

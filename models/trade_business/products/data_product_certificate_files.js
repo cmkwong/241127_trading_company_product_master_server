@@ -5,6 +5,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 export const certificateFileModel = new DataModelUtils({
   database: 'trade_business',
   tableName: TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].fields,
   entityName: 'certificate file',
   entityIdField: 'certificate_id',
   requiredFields: ['certificate_id'],

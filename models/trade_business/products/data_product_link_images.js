@@ -4,6 +4,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 // Create a data model utility for product link images with file handling
 export const productLinkImageModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_LINK_IMAGES'].fields,
   entityName: 'product link image',
   entityIdField: 'product_link_id',
   requiredFields: ['product_link_id'],

@@ -17,6 +17,7 @@ import * as ProductCertificates from './data_product_certificates.js';
 export const productModel = new DataModelUtils({
   database: 'trade_business', // Explicitly specify the database
   tableName: TABLE_MASTER['PRODUCTS'].name,
+  tableFields: TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
   entityIdField: 'id',
   requiredFields: ['product_id'],
@@ -47,7 +48,7 @@ export const productModel = new DataModelUtils({
       model: ProductCategories.productCategoryModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION'].name,
+      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCustomizations.customizationModel,
     },

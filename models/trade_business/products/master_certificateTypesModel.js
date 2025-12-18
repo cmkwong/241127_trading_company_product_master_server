@@ -9,6 +9,7 @@ const PRODUCT_CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
 // Create DataModelUtils instance for certificate types
 export const certificateTypeModel = new DataModelUtils({
   tableName: CERTIFICATE_TYPES_TABLE,
+  tableFields: TABLE_MASTER['MASTER_CERTIFICATE_TYPES'].fields,
   entityName: 'certificate type',
   entityIdField: 'id',
   requiredFields: ['name'],

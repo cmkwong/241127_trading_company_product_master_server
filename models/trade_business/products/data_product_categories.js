@@ -6,6 +6,7 @@ import * as master_categoriesModel from '../../../models/trade_business/products
 // Create a data model utility for product categories with multiple joins
 export const productCategoryModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_CATEGORIES'].fields,
   entityName: 'product category',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'category_id'],

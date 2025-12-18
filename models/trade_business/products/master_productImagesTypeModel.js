@@ -5,6 +5,7 @@ import { TABLE_MASTER } from '../../tables.js';
 // Create DataModelUtils instance for product name types
 export const productImagesTypeModel = new DataModelUtils({
   tableName: TABLE_MASTER['MASTER_PRODUCT_IMAGE_TYPES'].name,
+  tableFields: TABLE_MASTER['MASTER_PRODUCT_IMAGE_TYPES'].fields,
   entityName: 'product image type',
   entityIdField: 'id',
   requiredFields: ['name'],

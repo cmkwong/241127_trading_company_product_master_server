@@ -7,6 +7,7 @@ import * as CustomizationImages from './data_product_customization_images.js';
 // Create a data model utility for product customizations
 export const customizationModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+  tableFields: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].fields,
   entityName: 'customization',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'name'],
@@ -23,6 +24,7 @@ export const customizationModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
       connectedKeys: { id: 'customization_id' }, // parent table -> child table
+      model: CustomizationImages.customizationImageModel,
     },
   ],
 });
