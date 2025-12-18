@@ -220,11 +220,19 @@ export default class DataModelUtils {
     return;
   };
 
-  async refactoringData(jsonData) {
+  async refactoringData(jsonData, actionType) {
     try {
       // Validate input JSON data
       if (!jsonData || typeof jsonData !== 'object') {
         throw new AppError('Invalid JSON data provided', 400);
+      }
+
+      // Validate actionType
+      if (!['create', 'update'].includes(actionType)) {
+        throw new AppError(
+          'Invalid actionType. Must be "create" or "update".',
+          400
+        );
       }
 
       // Generate schema configuration
@@ -233,28 +241,23 @@ export default class DataModelUtils {
         throw new AppError('Failed to generate schema configuration', 500);
       }
 
-      // Separate JSON data for create and update
+      // Separate JSON data for inspection
       const createData = {};
       const updateData = {};
 
-      // Recursive function to process data based on schema
+      // Recursive function to process data based on schema and actionType
       const processTableData = async (
         tableName,
         tableData,
-        parentId = null
+        parentId = null,
+        parentTableName = null
       ) => {
         const tableSchema = schemaConfig[tableName];
         if (!tableSchema) {
           throw new AppError(`Schema for table "${tableName}" not found`, 400);
         }
 
-        // Separate create and update data
-        const createEntries = [];
-        const updateEntries = [];
-
         for (const entry of tableData) {
-          const isUpdate = !!entry.id; // Check if the entry has an `id` field
-
           // Validate the fields against the schema
           const validEntry = {};
           for (const field in entry) {
@@ -264,16 +267,32 @@ export default class DataModelUtils {
           }
 
           // Add parent reference if applicable
-          if (parentId && tableSchema.foreignKey) {
-            validEntry[tableSchema.foreignKey] = parentId;
+          if (parentId && parentTableName) {
+            for (const [field, fieldConfig] of Object.entries(tableSchema)) {
+              if (
+                fieldConfig.references &&
+                fieldConfig.references.table === parentTableName &&
+                fieldConfig.references.field === 'id'
+              ) {
+                validEntry[field] = parentId;
+              }
+            }
           }
 
-          // Separate into create or update
-          if (isUpdate) {
-            updateEntries.push(validEntry);
-          } else {
+          // Separate data for create or update based on actionType
+          if (actionType === 'create') {
             validEntry.id = uuidv4(); // Generate a new ID for create entries
-            createEntries.push(validEntry);
+            createData[tableName] = createData[tableName] || [];
+            createData[tableName].push(validEntry);
+          } else if (actionType === 'update') {
+            if (!validEntry.id) {
+              throw new AppError(
+                `Missing "id" field for update in table "${tableName}"`,
+                400
+              );
+            }
+            updateData[tableName] = updateData[tableName] || [];
+            updateData[tableName].push(validEntry);
           }
 
           // Process child tables if any
@@ -291,20 +310,11 @@ export default class DataModelUtils {
               await processTableData(
                 childTable,
                 entry[childTable],
-                validEntry.id // Pass the parent ID to the child table
+                validEntry.id, // Pass the parent ID to the child table
+                tableName // Pass the parent table name
               );
             }
           }
-        }
-
-        // Store the create and update entries for this table
-        if (createEntries.length > 0) {
-          createData[tableName] = createData[tableName] || [];
-          createData[tableName].push(...createEntries);
-        }
-        if (updateEntries.length > 0) {
-          updateData[tableName] = updateData[tableName] || [];
-          updateData[tableName].push(...updateEntries);
         }
       };
 
@@ -317,6 +327,7 @@ export default class DataModelUtils {
         }
       }
 
+      // Return refactored data for inspection
       return { createData, updateData };
     } catch (error) {
       throw new AppError(

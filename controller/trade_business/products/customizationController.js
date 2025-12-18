@@ -6,7 +6,7 @@ export const createCustomization = catchAsync(async (req, res, next) => {
   const { data } = req.body;
 
   const refactorData =
-    await CustomizationModel.customizationModel.refactoringData(data);
+    await CustomizationModel.customizationModel.refactoringData(data, 'create');
   console.log('\nrefactorData: \n', JSON.stringify(refactorData));
 
   const result = await CustomizationModel.createCustomization(data);
