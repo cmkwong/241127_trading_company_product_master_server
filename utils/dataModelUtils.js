@@ -61,6 +61,124 @@ export default class DataModelUtils {
   }
 
   /**
+   * Common helper function to validate and save Base64 file or image
+   * @param {Object} data - Data containing Base64 file
+   * @param {Object} options - Options such as entityId and fileType
+   * @returns {Promise<string>} - Returns the file URL
+   */
+  async _validateAndSaveFile(data, options = {}) {
+    const { entityId, fileType } = options;
+    const base64FieldName = this.imagesOnly ? 'base64_image' : 'base64_file';
+
+    if (!data[base64FieldName]) return null;
+
+    if (this.fileTypeField && !this.imagesOnly && !fileType) {
+      throw new AppError('File type is required', 400);
+    }
+
+    // Determine allowed file types if needed
+    let allowedTypes = ['IMAGE'];
+    if (!this.imagesOnly && fileType) {
+      if (fileType === 'document') allowedTypes = ['DOCUMENT'];
+      else if (fileType === 'pdf') allowedTypes = ['PDF'];
+      else if (fileType === 'spreadsheet') allowedTypes = ['SPREADSHEET'];
+      else if (fileType === 'presentation') allowedTypes = ['PRESENTATION'];
+      else if (fileType === 'archive') allowedTypes = ['ARCHIVE'];
+    }
+
+    // Save the file to the filesystem
+    const uploadDir = this.getUploadDir(entityId, fileType);
+    let fileUrl;
+
+    if (this.imagesOnly) {
+      fileUrl = await saveBase64Image(data.base64_image, uploadDir);
+    } else {
+      fileUrl = await saveBase64File(data.base64_file, uploadDir, {
+        allowedTypes,
+      });
+    }
+
+    return fileUrl;
+  }
+
+  /**
+   * Common helper function to process Base64 content for a file
+   * @param {Object} file - File entity containing file URL
+   * @param {Object} options - Options for compression and Base64 generation
+   * @returns {Promise<Object>} - Returns the file entity with Base64 content
+   */
+  async _processBase64Content(file, options = {}) {
+    const {
+      compress = false,
+      maxWidth = 800,
+      maxHeight = 800,
+      quality = 0.7,
+    } = options;
+
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    let sharp;
+
+    if (compress) {
+      try {
+        sharp = (await import('sharp')).default;
+      } catch (error) {
+        console.warn('Sharp module not available. Compression disabled.');
+      }
+    }
+
+    try {
+      const filePath = file[this.fileUrlField]?.replace(/^\//, ''); // Remove leading slash if present
+      if (!filePath) throw new AppError('File URL is not available', 400);
+
+      await fs.access(filePath);
+
+      const ext = path.extname(filePath).toLowerCase();
+      let mimeType = 'application/octet-stream';
+
+      // Determine MIME type
+      if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
+      else if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.gif') mimeType = 'image/gif';
+      else if (ext === '.pdf') mimeType = 'application/pdf';
+
+      const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+
+      if (isImage && compress && sharp) {
+        const imageBuffer = await fs.readFile(filePath);
+        const compressedBuffer = await sharp(imageBuffer)
+          .resize({
+            width: maxWidth,
+            height: maxHeight,
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: quality * 100 })
+          .toBuffer();
+
+        const base64Content = compressedBuffer.toString('base64');
+        file[
+          this.imagesOnly ? 'base64_image' : 'base64_file'
+        ] = `data:image/jpeg;base64,${base64Content}`;
+        file.is_compressed = true;
+      } else {
+        const fileBuffer = await fs.readFile(filePath);
+        const base64Content = fileBuffer.toString('base64');
+        file[
+          this.imagesOnly ? 'base64_image' : 'base64_file'
+        ] = `data:${mimeType};base64,${base64Content}`;
+        file.is_compressed = false;
+      }
+    } catch (error) {
+      console.error(`Error processing file: ${error.message}`);
+      file[this.imagesOnly ? 'base64_image' : 'base64_file'] = null;
+      file.error = error.message;
+    }
+
+    return file;
+  }
+
+  /**
    * Retrieves all field names from `this.tableFields`.
    * @returns {Array<string>} Array of field names.
    */
@@ -334,69 +452,20 @@ export default class DataModelUtils {
    */
   async create(data) {
     try {
-      // Validate data for creation
       this.validateData(data);
 
-      // Handle file creation if base64 data is provided
       if (this.hasFileHandling) {
-        const base64FieldName = this.imagesOnly
-          ? 'base64_image'
-          : 'base64_file';
-
-        if (data[base64FieldName]) {
-          if (
-            this.fileTypeField &&
-            !this.imagesOnly &&
-            !data[this.fileTypeField]
-          ) {
-            throw new AppError('File type is required', 400);
-          }
-
-          // Determine allowed file types if needed
-          let allowedTypes = ['IMAGE'];
-          let fileType = null;
-
-          if (!this.imagesOnly && this.fileTypeField) {
-            fileType = data[this.fileTypeField];
-            if (fileType === 'document') {
-              allowedTypes = ['DOCUMENT'];
-            } else if (fileType === 'pdf') {
-              allowedTypes = ['PDF'];
-            } else if (fileType === 'spreadsheet') {
-              allowedTypes = ['SPREADSHEET'];
-            } else if (fileType === 'presentation') {
-              allowedTypes = ['PRESENTATION'];
-            } else if (fileType === 'archive') {
-              allowedTypes = ['ARCHIVE'];
-            }
-          }
-
-          // Save the file to the filesystem
-          const uploadDir = this.getUploadDir(
-            data[this.entityIdField],
-            fileType
-          );
-
-          // Use appropriate save function based on file type
-          let fileUrl;
-          if (this.imagesOnly) {
-            fileUrl = await saveBase64Image(data.base64_image, uploadDir);
-          } else {
-            fileUrl = await saveBase64File(data.base64_file, uploadDir, {
-              allowedTypes,
-            });
-          }
-
-          // Add the file URL to the data object
-          data[this.fileUrlField] = fileUrl;
-        }
+        const fileType = data[this.fileTypeField];
+        data[this.fileUrlField] = await this._validateAndSaveFile(data, {
+          entityId: data[this.entityIdField],
+          fileType,
+        });
       }
 
-      // Create the entity using CRUD utility
       const result = await CrudOperations.performCrud({
         operation: 'create',
         tableName: this.tableName,
-        data: data,
+        data,
         connection: this.db.pool,
       });
 
@@ -415,29 +484,15 @@ export default class DataModelUtils {
   /**
    * Gets an entity by ID
    * @param {number|string} id - The ID of the entity to retrieve
-   * @param {Object} [options] - Optional options for base64 content
-   * @param {boolean} [options.includeBase64=false] - Whether to include base64 content
-   * @param {boolean} [options.compress=false] - Whether to compress images
-   * @param {number} [options.maxWidth=800] - Maximum width for compressed images
-   * @param {number} [options.maxHeight=800] - Maximum height for compressed images
-   * @param {number} [options.quality=0.7] - JPEG quality (0-1) for compressed images
+   * @param {Object} options - Options for Base64 content
    * @returns {Promise<Object>} Promise that resolves with the entity data
    */
   async getById(id, options = {}) {
-    const {
-      includeBase64 = false,
-      compress = false,
-      maxWidth = 800,
-      maxHeight = 800,
-      quality = 0.7,
-    } = options;
-
     try {
-      // Get the entity using CRUD utility
       const result = await CrudOperations.performCrud({
         operation: 'read',
         tableName: this.tableName,
-        id: id,
+        id,
         connection: this.db.pool,
       });
 
@@ -449,99 +504,8 @@ export default class DataModelUtils {
       }
 
       const entity = result.record;
-
-      // If base64 content is not requested or file handling is not configured, return the entity as is
-      if (!includeBase64 || !this.hasFileHandling) {
-        return entity;
-      }
-
-      // Import necessary modules
-      const fs = await import('fs/promises');
-      const path = await import('path');
-
-      // Import Sharp for image processing if compression is requested
-      let sharp;
-      if (compress) {
-        try {
-          sharp = (await import('sharp')).default;
-        } catch (error) {
-          console.warn('Sharp module not available. Compression disabled.');
-        }
-      }
-
-      try {
-        // Get file path from URL
-        const filePath = entity[this.fileUrlField]?.replace(/^\//, ''); // Remove leading slash if present
-
-        // Check if file exists
-        if (!filePath) {
-          throw new AppError('File URL is not available for this entity', 400);
-        }
-
-        try {
-          await fs.access(filePath);
-        } catch (error) {
-          throw new AppError(`File not found: ${filePath}`, 404);
-        }
-
-        // Get file extension and MIME type
-        const ext = path.extname(filePath).toLowerCase();
-        let mimeType = 'application/octet-stream'; // Default MIME type
-
-        // Determine MIME type based on extension
-        if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
-        else if (ext === '.png') mimeType = 'image/png';
-        else if (ext === '.gif') mimeType = 'image/gif';
-        else if (ext === '.pdf') mimeType = 'application/pdf';
-        else if (['.doc', '.docx'].includes(ext))
-          mimeType = 'application/msword';
-        else if (['.xls', '.xlsx'].includes(ext))
-          mimeType = 'application/vnd.ms-excel';
-        else if (ext === '.txt') mimeType = 'text/plain';
-
-        // Check if this is an image and compression is requested
-        const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(
-          ext
-        );
-
-        if (isImage && compress && sharp) {
-          // Compress image using Sharp
-          const imageBuffer = await fs.readFile(filePath);
-
-          // Process the image with Sharp
-          const compressedBuffer = await sharp(imageBuffer)
-            .resize({
-              width: maxWidth,
-              height: maxHeight,
-              fit: 'inside',
-              withoutEnlargement: true,
-            })
-            .jpeg({ quality: quality * 100 }) // Convert quality to 0-100 scale
-            .toBuffer();
-
-          // Convert compressed buffer to base64
-          const base64Content = compressedBuffer.toString('base64');
-
-          // Add compressed base64 data to the entity
-          entity[
-            this.imagesOnly ? 'base64_image' : 'base64_file'
-          ] = `data:image/jpeg;base64,${base64Content}`;
-          entity.is_compressed = true;
-        } else {
-          // For non-images or when compression is not requested, use standard approach
-          const fileBuffer = await fs.readFile(filePath);
-          const base64Content = fileBuffer.toString('base64');
-
-          // Add base64 data to the entity
-          entity[
-            this.imagesOnly ? 'base64_image' : 'base64_file'
-          ] = `data:${mimeType};base64,${base64Content}`;
-          entity.is_compressed = false;
-        }
-      } catch (error) {
-        console.error(`Error processing file for entity ${id}:`, error);
-        entity[this.imagesOnly ? 'base64_image' : 'base64_file'] = null;
-        entity.error = error.message;
+      if (this.hasFileHandling && options.includeBase64) {
+        return this._processBase64Content(entity, options);
       }
 
       return entity;
@@ -556,251 +520,27 @@ export default class DataModelUtils {
   /**
    * Gets all entities for a parent entity
    * @param {string|number} parentId - The parent entity ID
+   * @param {boolean} includeBase64 - Whether to include Base64 content
+   * @param {Object} options - Options for compression and Base64
    * @returns {Promise<Array>} Promise that resolves with the entities
    */
   async getAllByParentId(parentId, includeBase64 = false, options = {}) {
-    let sql;
     try {
-      // If join configuration is provided, use it
-      if (this.joinConfig) {
-        // Build the SQL query with joins
-        sql = `SELECT ${this.tableName}.*`;
+      const sql = `
+        SELECT * FROM ${this.tableName}
+        WHERE ${this.entityIdField} = ?
+        ORDER BY id
+      `;
 
-        // Handle multiple joins
-        if (Array.isArray(this.joinConfig)) {
-          // Multiple joins case
-          for (const joinCfg of this.joinConfig) {
-            if (joinCfg.selectFields) {
-              sql += `, ${joinCfg.selectFields}`;
-            }
-          }
+      const results = await this.db.executeQuery(sql, [parentId]);
+      if (!includeBase64 || !this.hasFileHandling) return results;
 
-          sql += ` FROM ${this.tableName}`;
-
-          for (const joinCfg of this.joinConfig) {
-            if (joinCfg.joinTable && joinCfg.joinField) {
-              sql += ` LEFT JOIN ${joinCfg.joinTable} ON ${this.tableName}.${
-                joinCfg.joinField
-              } = ${joinCfg.joinTable}.${joinCfg.targetField || 'id'}`;
-            }
-          }
-
-          sql += ` WHERE ${this.tableName}.${this.entityIdField} = ?`;
-
-          // Handle ordering
-          const orderByClauses = this.joinConfig
-            .filter((joinCfg) => joinCfg.orderBy)
-            .map((joinCfg) => joinCfg.orderBy);
-
-          if (orderByClauses.length > 0) {
-            sql += ` ORDER BY ${orderByClauses.join(', ')}`;
-          } else {
-            sql += ` ORDER BY ${this.tableName}.id`;
-          }
-        } else {
-          // Single join case
-          const { joinTable, joinField, selectFields, orderBy } =
-            this.joinConfig;
-
-          if (selectFields) {
-            sql += `, ${selectFields}`;
-          }
-
-          sql += ` FROM ${this.tableName}`;
-
-          if (joinTable && joinField) {
-            sql += ` LEFT JOIN ${joinTable} ON ${this.tableName}.${joinField} = ${joinTable}.id`;
-          }
-
-          sql += ` WHERE ${this.tableName}.${this.entityIdField} = ?`;
-
-          if (orderBy) {
-            sql += ` ORDER BY ${orderBy}`;
-          } else {
-            sql += ` ORDER BY ${this.tableName}.id`;
-          }
-        }
-
-        return await this.db.executeQuery(sql, [parentId]);
-      } else {
-        // Simple query without joins
-        // First, check if display_order column exists when file handling is enabled
-        if (this.hasFileHandling) {
-          try {
-            // Check if display_order column exists in the table schema
-            const checkColumnSql = `
-            SELECT COUNT(*) as column_exists 
-            FROM information_schema.COLUMNS 
-            WHERE TABLE_SCHEMA = ? 
-            AND TABLE_NAME = ? 
-            AND COLUMN_NAME = 'display_order'
-          `;
-
-            const columnCheckResult = await this.db.executeQuery(
-              checkColumnSql,
-              [this.database, this.tableName]
-            );
-
-            const hasDisplayOrderColumn =
-              columnCheckResult[0].column_exists > 0;
-
-            sql = `
-            SELECT *
-            FROM ${this.tableName}
-            WHERE ${this.entityIdField} = ?
-            ORDER BY ${hasDisplayOrderColumn ? 'display_order' : 'id'}
-          `;
-          } catch (error) {
-            // If there's an error checking the schema, default to ordering by id
-            console.warn(
-              `Error checking for display_order column: ${error.message}. Defaulting to id for ordering.`
-            );
-            sql = `
-            SELECT *
-            FROM ${this.tableName}
-            WHERE ${this.entityIdField} = ?
-            ORDER BY id
-          `;
-          }
-        } else {
-          // If not file handling, just use id for ordering
-          sql = `
-          SELECT *
-          FROM ${this.tableName}
-          WHERE ${this.entityIdField} = ?
-          ORDER BY id
-        `;
-        }
-
-        const results = await this.db.executeQuery(sql, [parentId]);
-
-        // If base64 content is not requested, return the results as is
-        if (!includeBase64 || !this.hasFileHandling) {
-          return results;
-        }
-
-        // Process base64 content
-        const compressionOptions = {
-          compress: options.compress || false,
-          maxWidth: options.maxWidth || 800,
-          maxHeight: options.maxHeight || 800,
-          quality: options.quality || 0.7,
-        };
-
-        // Import necessary modules
-        const fs = await import('fs/promises');
-        const path = await import('path');
-
-        // Import Sharp for image processing if compression is requested
-        let sharp;
-        if (compressionOptions.compress) {
-          try {
-            sharp = (await import('sharp')).default;
-          } catch (error) {
-            console.warn('Sharp module not available. Compression disabled.');
-            compressionOptions.compress = false;
-          }
-        }
-
-        const filesWithBase64 = await Promise.all(
-          results.map(async (file) => {
-            try {
-              // Get file path from URL
-              const filePath = file[this.fileUrlField].replace(/^\//, ''); // Remove leading slash if present
-
-              // Check if file exists
-              try {
-                await fs.access(filePath);
-              } catch (error) {
-                // File doesn't exist, return record without base64
-                console.warn(`File not found: ${filePath}`);
-                return {
-                  ...file,
-                  base64_content: null,
-                  error: 'File not found',
-                };
-              }
-
-              // Get file extension and MIME type
-              const ext = path.extname(filePath).toLowerCase();
-              let mimeType = 'application/octet-stream'; // Default MIME type
-
-              // Determine MIME type based on extension
-              if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
-              else if (ext === '.png') mimeType = 'image/png';
-              else if (ext === '.gif') mimeType = 'image/gif';
-              else if (ext === '.pdf') mimeType = 'application/pdf';
-              else if (['.doc', '.docx'].includes(ext))
-                mimeType = 'application/msword';
-              else if (['.xls', '.xlsx'].includes(ext))
-                mimeType = 'application/vnd.ms-excel';
-              else if (ext === '.txt') mimeType = 'text/plain';
-
-              // Check if this is an image and compression is requested
-              const isImage = [
-                '.jpg',
-                '.jpeg',
-                '.png',
-                '.gif',
-                '.webp',
-              ].includes(ext);
-
-              if (isImage && compressionOptions.compress && sharp) {
-                // Compress image using Sharp
-                const imageBuffer = await fs.readFile(filePath);
-
-                // Process the image with Sharp
-                const compressedBuffer = await sharp(imageBuffer)
-                  .resize({
-                    width: compressionOptions.maxWidth,
-                    height: compressionOptions.maxHeight,
-                    fit: 'inside',
-                    withoutEnlargement: true,
-                  })
-                  .jpeg({ quality: compressionOptions.quality * 100 }) // Convert quality to 0-100 scale
-                  .toBuffer();
-
-                // Convert compressed buffer to base64
-                const base64Content = compressedBuffer.toString('base64');
-
-                // Return file record with compressed base64 data
-                return {
-                  ...file,
-                  [this.imagesOnly
-                    ? 'base64_image'
-                    : 'base64_file']: `data:image/jpeg;base64,${base64Content}`,
-                  is_compressed: true,
-                };
-              } else {
-                // For non-images or when compression is not requested, use standard approach
-                const fileBuffer = await fs.readFile(filePath);
-                const base64Content = fileBuffer.toString('base64');
-
-                // Return file record with base64 data
-                return {
-                  ...file,
-                  [this.imagesOnly
-                    ? 'base64_image'
-                    : 'base64_file']: `data:${mimeType};base64,${base64Content}`,
-                  is_compressed: false,
-                };
-              }
-            } catch (error) {
-              console.error(`Error processing file ${file.id}:`, error);
-              return {
-                ...file,
-                [this.imagesOnly ? 'base64_image' : 'base64_file']: null,
-                error: error.message,
-              };
-            }
-          })
-        );
-
-        return filesWithBase64;
-      }
+      return Promise.all(
+        results.map((file) => this._processBase64Content(file, options))
+      );
     } catch (error) {
       throw new AppError(
-        `Failed to get ${this.entityName}s: ${error.message} \nsql: ${sql}`,
+        `Failed to get ${this.entityName}s: ${error.message}`,
         error.statusCode || 500
       );
     }
@@ -814,89 +554,31 @@ export default class DataModelUtils {
    */
   async update(id, data) {
     try {
-      // Validate data for update
       this.validateData(data, true);
 
-      // Update the entity using CRUD utility
+      const existing = await this.getById(id);
+      if (this.hasFileHandling) {
+        const fileType =
+          data[this.fileTypeField] || existing[this.fileTypeField];
+        data[this.fileUrlField] = await this._validateAndSaveFile(data, {
+          entityId: id,
+          fileType,
+        });
+
+        if (data[this.fileUrlField] && existing[this.fileUrlField]) {
+          this.imagesOnly
+            ? await deleteImage(existing[this.fileUrlField])
+            : await deleteFile(existing[this.fileUrlField]);
+        }
+      }
+
       const result = await CrudOperations.performCrud({
         operation: 'update',
         tableName: this.tableName,
-        id: id,
-        data: data,
+        id,
+        data,
         connection: this.db.pool,
       });
-
-      if (!result.record) {
-        throw new AppError(
-          `${this._capitalize(this.entityName)} not found`,
-          404
-        );
-      }
-
-      // Handle file updates if base64 data is provided
-      if (this.hasFileHandling) {
-        const base64FieldName = this.imagesOnly
-          ? 'base64_image'
-          : 'base64_file';
-        const existingFile = result.record;
-        const entityId = existingFile[this.entityIdField];
-        const oldFileUrl = existingFile[this.fileUrlField];
-
-        // Get file type if applicable
-        let fileType = null;
-        if (this.fileTypeField) {
-          fileType =
-            data[this.fileTypeField] || existingFile[this.fileTypeField];
-        }
-
-        if (data[base64FieldName]) {
-          // Determine allowed file types if needed
-          let allowedTypes = ['IMAGE'];
-          if (!this.imagesOnly && fileType) {
-            if (fileType === 'document') {
-              allowedTypes = ['DOCUMENT'];
-            } else if (fileType === 'pdf') {
-              allowedTypes = ['PDF'];
-            } else if (fileType === 'spreadsheet') {
-              allowedTypes = ['SPREADSHEET'];
-            } else if (fileType === 'presentation') {
-              allowedTypes = ['PRESENTATION'];
-            } else if (fileType === 'archive') {
-              allowedTypes = ['ARCHIVE'];
-            }
-          }
-
-          // Save the new file
-          const uploadDir = this.getUploadDir(entityId, fileType);
-          let newFileUrl;
-
-          if (this.imagesOnly) {
-            newFileUrl = await saveBase64Image(data.base64_image, uploadDir);
-          } else {
-            newFileUrl = await saveBase64File(data.base64_file, uploadDir, {
-              allowedTypes,
-            });
-          }
-
-          // Update the file URL in the database
-          await CrudOperations.performCrud({
-            operation: 'update',
-            tableName: this.tableName,
-            id: id,
-            data: { [this.fileUrlField]: newFileUrl },
-            connection: this.db.pool,
-          });
-
-          // Delete old file if we uploaded a new one
-          if (oldFileUrl) {
-            if (this.imagesOnly) {
-              await deleteImage(oldFileUrl);
-            } else {
-              await deleteFile(oldFileUrl);
-            }
-          }
-        }
-      }
 
       return {
         message: `${this._capitalize(this.entityName)} updated successfully`,
