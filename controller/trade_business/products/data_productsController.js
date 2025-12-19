@@ -2,12 +2,19 @@ import * as Products from '../../../models/trade_business/products/data_products
 import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import defaultProducts from '../../../datas/products.js';
+import { productModel } from '../../../models/trade_business/products/data_products.js';
 
 /**
  * Create a new product
  * @route POST /api/products
  */
 export const createProduct = catchAsync(async (req, res, next) => {
+  const refactoredData = await productModel.refactoringData(
+    req.body.data,
+    'create'
+  );
+  console.log('refactoredData--++: ', JSON.stringify(refactoredData));
+
   const result = await Products.createProduct(req.body);
 
   res.status(201).json({
@@ -118,22 +125,6 @@ export const deleteProduct = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Generate a product ID
- * @route GET /api/products/generate-id
- */
-export const generateProductId = catchAsync(async (req, res, next) => {
-  const format = req.query.format || 'prefix';
-  const productId = await Products.generateProductId(format);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      productId,
-    },
-  });
-});
-
-/**
  * Check if a product exists by ID
  * @route GET /api/products/exists/:id
  */
@@ -207,20 +198,6 @@ export const getSampleProductsData = catchAsync(async (req, res, next) => {
     },
   });
 });
-
-/**
- * Validate product data before creation
- * @middleware
- */
-export const validateProductData = (req, res, next) => {
-  // Basic validation for required fields
-  if (!req.body.names || !req.body.names.length) {
-    return next(new AppError('At least one product name is required', 400));
-  }
-
-  // Proceed to next middleware
-  next();
-};
 
 /**
  * Validate product ID format

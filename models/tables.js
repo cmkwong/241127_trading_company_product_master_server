@@ -10,12 +10,6 @@ export const TABLE_MASTER = {
         primaryKey: true,
         description: 'UUID primary key',
       },
-      product_id: {
-        type: 'VARCHAR(12)',
-        notNull: true,
-        unique: true,
-        description: 'Product code identifier',
-      },
       icon_url: {
         type: 'VARCHAR(255)',
         description: 'URL to product icon image',

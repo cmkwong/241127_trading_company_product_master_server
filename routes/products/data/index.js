@@ -15,7 +15,6 @@ router
   .get(productsController.getProducts)
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.validateProductData,
     productsController.createProduct,
     endController
   );
@@ -35,9 +34,6 @@ router
     productsController.importDefaultProducts,
     endController
   );
-
-// Generate product ID
-router.get('/generate-id', productsController.generateProductId, endController);
 
 // Product statistics
 router.get(

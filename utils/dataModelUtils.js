@@ -237,6 +237,7 @@ export default class DataModelUtils {
 
       // Generate schema configuration
       const schemaConfig = this._gettingSchemaConfig({});
+      // console.log('schemaConfig: ----\n', schemaConfig);
       if (!schemaConfig || typeof schemaConfig !== 'object') {
         throw new AppError('Failed to generate schema configuration', 500);
       }
@@ -249,8 +250,9 @@ export default class DataModelUtils {
       const processTableData = async (
         tableName,
         tableData,
-        parentId = null,
-        parentTableName = null
+        parentData = null,
+        parentTableName = null,
+        currentModel = this
       ) => {
         const tableSchema = schemaConfig[tableName];
         if (!tableSchema) {
@@ -258,30 +260,41 @@ export default class DataModelUtils {
         }
 
         for (const entry of tableData) {
-          // Validate the fields against the schema
-          const validEntry = {};
+          let validEntry = {};
           for (const field in entry) {
-            if (tableSchema[field]) {
+            if (
+              tableSchema[field] ||
+              field === 'base64_image' ||
+              field === 'base64_file'
+            ) {
               validEntry[field] = entry[field];
             }
           }
 
           // Add parent reference if applicable
-          if (parentId && parentTableName) {
+          if (parentData && parentTableName) {
             for (const [field, fieldConfig] of Object.entries(tableSchema)) {
               if (
                 fieldConfig.references &&
                 fieldConfig.references.table === parentTableName &&
-                fieldConfig.references.field === 'id'
+                parentData[fieldConfig.references.field] // if there is value
               ) {
-                validEntry[field] = parentId;
+                const parentId = parentData[fieldConfig.references.field];
+                // Check if the field is explicitly defined in the model's defaults
+                const isFieldInDefaults =
+                  currentModel.defaults && field in currentModel.defaults;
+
+                if (!isFieldInDefaults) {
+                  validEntry[field] = parentId;
+                }
               }
             }
           }
+          // apply default value if neccessary
+          validEntry = await currentModel.applyDefaults(validEntry);
 
-          // Separate data for create or update based on actionType
           if (actionType === 'create') {
-            validEntry.id = uuidv4(); // Generate a new ID for create entries
+            validEntry.id = uuidv4();
             createData[tableName] = createData[tableName] || [];
             createData[tableName].push(validEntry);
           } else if (actionType === 'update') {
@@ -295,23 +308,26 @@ export default class DataModelUtils {
             updateData[tableName].push(validEntry);
           }
 
-          // Process child tables if any
           const childTables = Object.keys(schemaConfig).filter((childTable) =>
             Object.values(schemaConfig[childTable]).some(
               (field) =>
-                field.references &&
-                field.references.table === tableName &&
-                field.references.field === 'id'
+                field.references && field.references.table === tableName
             )
           );
 
           for (const childTable of childTables) {
             if (entry[childTable]) {
+              const childModelConfig = this.childTableConfig.find(
+                (config) => config.model.tableName === childTable
+              );
+              const childModel = childModelConfig?.model;
+
               await processTableData(
                 childTable,
                 entry[childTable],
-                validEntry.id, // Pass the parent ID to the child table
-                tableName // Pass the parent table name
+                validEntry,
+                tableName,
+                childModel
               );
             }
           }
@@ -434,21 +450,30 @@ export default class DataModelUtils {
   /**
    * Applies default values to data
    * @param {Object} data - Data to apply defaults to
-   * @returns {Object} Data with defaults applied
+   * @returns {Promise<Object>} Data with defaults applied
    */
-  applyDefaults(data) {
+  async applyDefaults(data) {
     const result = { ...data };
+    console.log('applyDefaults: ', this.tableName, this.defaults);
+    console.log('applyDefaults - data: ', data);
 
     for (const [field, defaultValue] of Object.entries(this.defaults)) {
       if (result[field] === undefined) {
-        result[field] =
-          typeof defaultValue === 'function' ? defaultValue() : defaultValue;
+        if (typeof defaultValue === 'function') {
+          // Check if the function is async
+          if (defaultValue.constructor.name === 'AsyncFunction') {
+            result[field] = await defaultValue(); // Await async function
+          } else {
+            result[field] = defaultValue(); // Call synchronous function
+          }
+        } else {
+          result[field] = defaultValue; // Assign value directly
+        }
       }
     }
-
+    console.log('applyDefaults - result: ', result);
     return result;
   }
-
   /**
    * Creates a new entity
    * @param {Object} data - The entity data to create

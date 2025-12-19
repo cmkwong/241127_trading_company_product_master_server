@@ -28,6 +28,7 @@ export const productModel = new DataModelUtils({
   },
   defaults: {
     id: uuidv4,
+    product_id: 'abcdefg',
   },
   // Add relationship with child table (customization images)
   // TODO - add complete tables config and add logic into dataModelUtils.js
@@ -75,65 +76,65 @@ export const productModel = new DataModelUtils({
   ],
 });
 
-/**
- * Generates a unique product ID
- * @param {string} [format] - Optional format to use ('prefix' for P{YY}{MM}{NNNN} format, defaults to timestamp format)
- * @returns {Promise<string>} Promise that resolves with the generated product ID
- */
-export const generateProductId = async (format) => {
-  try {
-    // If format is 'prefix', use the P{YY}{MM}{NNNN} format
-    if (format === 'prefix') {
-      // Get the current date
-      const date = new Date();
-      const year = date.getFullYear().toString().slice(-2);
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+// /**
+//  * Generates a unique product ID
+//  * @param {string} [format] - Optional format to use ('prefix' for P{YY}{MM}{NNNN} format, defaults to timestamp format)
+//  * @returns {Promise<string>} Promise that resolves with the generated product ID
+//  */
+// export const generateProductId = async (format) => {
+//   try {
+//     // If format is 'prefix', use the P{YY}{MM}{NNNN} format
+//     if (format === 'prefix') {
+//       // Get the current date
+//       const date = new Date();
+//       const year = date.getFullYear().toString().slice(-2);
+//       const month = (date.getMonth() + 1).toString().padStart(2, '0');
 
-      // Generate prefix based on year and month
-      const prefix = `P${year}${month}`;
+//       // Generate prefix based on year and month
+//       const prefix = `P${year}${month}`;
 
-      // Find the highest product_id with this prefix
-      const sql = `
-        SELECT MAX(product_id) as max_id
-        FROM ${productModel.tableName}
-        WHERE product_id LIKE ?
-      `;
+//       // Find the highest product_id with this prefix
+//       const sql = `
+//         SELECT MAX(product_id) as max_id
+//         FROM ${productModel.tableName}
+//         WHERE product_id LIKE ?
+//       `;
 
-      const result = await productModel.executeQuery(sql, [`${prefix}%`]);
-      const maxId = result[0].max_id;
+//       const result = await productModel.executeQuery(sql, [`${prefix}%`]);
+//       const maxId = result[0].max_id;
 
-      let sequenceNumber = 1;
+//       let sequenceNumber = 1;
 
-      if (maxId) {
-        // Extract the sequence number from the max ID
-        const currentSequence = parseInt(maxId.slice(-4), 10);
-        sequenceNumber = currentSequence + 1;
-      }
+//       if (maxId) {
+//         // Extract the sequence number from the max ID
+//         const currentSequence = parseInt(maxId.slice(-4), 10);
+//         sequenceNumber = currentSequence + 1;
+//       }
 
-      // Format the sequence number with leading zeros
-      const formattedSequence = sequenceNumber.toString().padStart(4, '0');
+//       // Format the sequence number with leading zeros
+//       const formattedSequence = sequenceNumber.toString().padStart(4, '0');
 
-      // Combine to create the new product ID
-      return `${prefix}${formattedSequence}`;
-    } else {
-      // Default: Use timestamp format yyyymmddhhmmss
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const day = now.getDate().toString().padStart(2, '0');
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const seconds = now.getSeconds().toString().padStart(2, '0');
+//       // Combine to create the new product ID
+//       return `${prefix}${formattedSequence}`;
+//     } else {
+//       // Default: Use timestamp format yyyymmddhhmmss
+//       const now = new Date();
+//       const year = now.getFullYear();
+//       const month = (now.getMonth() + 1).toString().padStart(2, '0');
+//       const day = now.getDate().toString().padStart(2, '0');
+//       const hours = now.getHours().toString().padStart(2, '0');
+//       const minutes = now.getMinutes().toString().padStart(2, '0');
+//       const seconds = now.getSeconds().toString().padStart(2, '0');
 
-      return `${year}${month}${day}${hours}${minutes}${seconds}`;
-    }
-  } catch (error) {
-    throw new AppError(
-      `Failed to generate product ID: ${error.message}`,
-      error.statusCode || 500
-    );
-  }
-};
+//       return `${year}${month}${day}${hours}${minutes}${seconds}`;
+//     }
+//   } catch (error) {
+//     throw new AppError(
+//       `Failed to generate product ID: ${error.message}`,
+//       error.statusCode || 500
+//     );
+//   }
+// };
 
 /**
  * Creates a new product
@@ -166,11 +167,6 @@ export const createProduct = async (data) => {
         certificates, // relation table - files
         ...productData
       } = { ...data };
-
-      // Generate product ID if not provided
-      if (!productData.product_id) {
-        productData.product_id = await generateProductId();
-      }
 
       // Create the product using the model
       const result = await productModel.create(productData);
