@@ -50,7 +50,7 @@ export const productModel = new DataModelUtils({
     },
     {
       tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
-      connectedKeys: { id: 'productId' }, // parent table -> child table
+      // connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCustomizations.customizationModel,
     },
     {

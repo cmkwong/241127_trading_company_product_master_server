@@ -214,32 +214,39 @@ export default class DataModelUtils {
     return 'id'; // Fallback default if not explicitly defined
   }
 
-  async _determineRowAction(row, globalActionType, currentModel, tableSchema) {
-    // 1. Force create if global action dictates it
+  /**
+   * Decides if a row should be Created or Updated.
+   */
+  async _determineRowAction(
+    row,
+    globalActionType,
+    currentModel,
+    tableSchema,
+    parentAction
+  ) {
+    // 1. 🚨 CASCADING CREATE RULE 🚨
+    // If the parent is being created, the child MUST be created (new ID),
+    // regardless of whether the child has an ID or exists in DB.
+    if (parentAction === 'create') {
+      return 'create';
+    }
+
+    // 2. Global Override
     if (globalActionType === 'create') {
       return 'create';
     }
 
-    // 2. Identify the Primary Key field
     const pkField = this._getPrimaryKey(tableSchema);
     const pkValue = row[pkField];
 
-    // 3. If no PK value in JSON, it MUST be a create
+    // 3. Missing ID = Create
     if (!pkValue) {
       return 'create';
     }
 
-    // 4. Check the Database
-    // We use currentModel because that instance knows its own tableName and has the DB pool
+    // 4. Check DB
     const exists = await currentModel.checkExists(pkValue, pkField);
-
-    if (exists) {
-      return 'update';
-    } else {
-      // If ID is provided but not found in DB, we treat it as a 'create'
-      // (inserting a record with a specific pre-defined ID)
-      return 'create';
-    }
+    return exists ? 'update' : 'create';
   }
 
   /**
@@ -253,20 +260,22 @@ export default class DataModelUtils {
     currentModel,
     result,
     schemaConfig,
-    globalActionType
+    globalActionType,
+    parentAction = null // 🆕 Added parameter, defaults to null for root
   ) {
     const tableSchema = schemaConfig[tableName];
 
     for (const rawRow of rows) {
-      // 1. Determine Action for THIS specific row
+      // 1. Determine Action (Pass parentAction)
       const rowAction = await this._determineRowAction(
         rawRow,
         globalActionType,
         currentModel,
-        tableSchema
+        tableSchema,
+        parentAction // 👈 Pass it here
       );
 
-      // 2. Prepare the DB Row
+      // 2. Prepare Row
       const validEntry = await this._prepareDbRow(
         rawRow,
         tableSchema,
@@ -276,7 +285,7 @@ export default class DataModelUtils {
         rowAction
       );
 
-      // 3. Add to result buckets using 'rowAction'
+      // 3. Add to Bucket
       if (rowAction === 'create') {
         result.createData[tableName] = result.createData[tableName] || [];
         result.createData[tableName].push(validEntry);
@@ -285,7 +294,7 @@ export default class DataModelUtils {
         result.updateData[tableName].push(validEntry);
       }
 
-      // 4. Process Children (Drill down)
+      // 4. Process Children
       await this._processChildren(
         rawRow,
         validEntry,
@@ -293,7 +302,8 @@ export default class DataModelUtils {
         currentModel,
         result,
         schemaConfig,
-        globalActionType // 🟢 Pass the global preference down
+        globalActionType,
+        rowAction // 👈 The current row's action becomes the child's "parentAction"
       );
     }
   }
@@ -308,28 +318,27 @@ export default class DataModelUtils {
     currentModel,
     result,
     schemaConfig,
-    actionType
+    globalActionType,
+    parentAction // 🆕 Receive it
   ) {
     for (const [key, value] of Object.entries(rawRow)) {
-      // Skip if not an array (children are always arrays)
       if (!Array.isArray(value)) continue;
 
-      // 🔍 KEY FIX: Look for child config inside the CURRENT model, not 'this'
       const childConfig = currentModel.childTableConfig.find(
         (config) => config.model.tableName === key
       );
 
-      // If this key corresponds to a known child model, recurse
       if (childConfig && childConfig.model) {
         await this._processRecursive(
-          key, // Child table name
-          value, // Child rows array
-          validEntry, // Parent Data (the row we just created)
-          currentTableName, // Parent Table Name
-          childConfig.model, // 🟢 Pass the Child Model for the next iteration
+          key,
+          value,
+          validEntry,
+          currentTableName,
+          childConfig.model,
           result,
           schemaConfig,
-          actionType
+          globalActionType,
+          parentAction // 🆕 Forward it
         );
       }
     }
@@ -349,7 +358,7 @@ export default class DataModelUtils {
     let validEntry = {};
     const pkField = this._getPrimaryKey(tableSchema);
 
-    // 1. Copy Fields (Clean data)
+    // 1. Copy Fields
     for (const field in rawRow) {
       if (
         tableSchema[field] ||
@@ -360,25 +369,14 @@ export default class DataModelUtils {
       }
     }
 
-    // 2. Link Foreign Key (Parent ID)
+    // 2. Link Parent
     if (parentData && parentTableName) {
       for (const [field, fieldConfig] of Object.entries(tableSchema)) {
         if (
           fieldConfig.references &&
           fieldConfig.references.table === parentTableName
         ) {
-          // Find the Parent's Primary Key field name (usually 'id' but let's be safe)
-          // Note: We need the parent's schema to do this perfectly,
-          // but usually parentData already contains the resolved ID.
-          // Assuming parentData has its PK set.
-
-          // We look for the Parent's PK value in parentData.
-          // Since parentData is a processed 'validEntry', it uses the DB field names.
-          // We can try to guess the parent PK or assume standard 'id' for the parent reference
-          // if we don't pass parentSchema.
-          // For now, let's assume parentData has the key that this field references.
-
-          const parentPkField = fieldConfig.references.field; // e.g. 'id'
+          const parentPkField = fieldConfig.references.field || 'id';
           if (parentData[parentPkField]) {
             validEntry[field] = parentData[parentPkField];
           }
@@ -391,22 +389,22 @@ export default class DataModelUtils {
 
     // 4. Handle Primary Key Logic
     if (rowAction === 'create') {
-      // If create, and PK is missing, generate UUID
-      if (!validEntry[pkField]) {
-        // Only generate UUID if the schema type is VARCHAR(36) or similar
-        // If it's AUTO_INCREMENT int, we should NOT generate it.
-        const pkConfig = tableSchema[pkField];
-        if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
-          validEntry[pkField] = uuidv4();
-        }
+      // 🚨 CRITICAL CHANGE:
+      // If action is 'create', we ALWAYS generate a new UUID.
+      // Even if rawRow had an ID (e.g. from an existing record we are cloning),
+      // we must discard it and create a fresh one for this new record.
+
+      const pkConfig = tableSchema[pkField];
+      if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
+        validEntry[pkField] = uuidv4();
+      } else {
+        // If it's auto-increment, ensure we delete any passed ID so DB generates it
+        delete validEntry[pkField];
       }
     } else {
-      // If update, PK must exist
+      // Update: Must have ID
       if (!validEntry[pkField]) {
-        throw new AppError(
-          `Primary Key "${pkField}" missing for update in ${currentModel.tableName}`,
-          400
-        );
+        throw new AppError(`Primary Key "${pkField}" missing for update`, 400);
       }
     }
 

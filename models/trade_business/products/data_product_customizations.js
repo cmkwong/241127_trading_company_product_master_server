@@ -23,7 +23,7 @@ export const customizationModel = new DataModelUtils({
   childTableConfig: [
     {
       tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
-      connectedKeys: { id: 'customization_id' }, // parent table -> child table
+      // connectedKeys: { id: 'customization_id' }, // parent table -> child table
       model: CustomizationImages.customizationImageModel,
     },
   ],
