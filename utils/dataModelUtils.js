@@ -191,14 +191,162 @@ export default class DataModelUtils {
     return Object.keys(this.tableFields.fields);
   }
 
-  _gettingSchemaConfig(dataTemplate) {
-    dataTemplate = dataTemplate || {};
+  _gettingSchemaConfig(dataTemplate = {}) {
+    // Add current table fields
     dataTemplate[this.tableName] = this.tableFields;
-    // check if there is models
+
+    // Recursively add child table fields
     for (const childConfig of this.childTableConfig) {
       childConfig.model._gettingSchemaConfig(dataTemplate);
     }
     return dataTemplate;
+  }
+
+  /**
+   * Recursively processes a list of rows for a specific table
+   */
+  async _processRecursive(
+    tableName,
+    rows,
+    parentData,
+    parentTableName,
+    currentModel,
+    result,
+    schemaConfig,
+    actionType
+  ) {
+    const tableSchema = schemaConfig[tableName];
+    if (!tableSchema) {
+      throw new AppError(`Schema for table "${tableName}" not found`, 400);
+    }
+
+    for (const rawRow of rows) {
+      // A. Prepare the single DB row (Filter fields, add IDs, defaults)
+      const validEntry = await this._prepareDbRow(
+        rawRow,
+        tableSchema,
+        parentData,
+        parentTableName,
+        currentModel,
+        actionType
+      );
+
+      // B. Add to result buckets
+      if (actionType === 'create') {
+        result.createData[tableName] = result.createData[tableName] || [];
+        result.createData[tableName].push(validEntry);
+      } else {
+        result.updateData[tableName] = result.updateData[tableName] || [];
+        result.updateData[tableName].push(validEntry);
+      }
+
+      // C. Process Children (Drill down)
+      await this._processChildren(
+        rawRow, // Original JSON has the nested arrays
+        validEntry, // The processed entry becomes the new parent
+        tableName, // Current table becomes parent table
+        currentModel, // Pass current model to find its children
+        result,
+        schemaConfig,
+        actionType
+      );
+    }
+  }
+
+  /**
+   * Inspects the raw row for nested arrays and triggers recursion
+   */
+  async _processChildren(
+    rawRow,
+    validEntry,
+    currentTableName,
+    currentModel,
+    result,
+    schemaConfig,
+    actionType
+  ) {
+    for (const [key, value] of Object.entries(rawRow)) {
+      // Skip if not an array (children are always arrays)
+      if (!Array.isArray(value)) continue;
+
+      // 🔍 KEY FIX: Look for child config inside the CURRENT model, not 'this'
+      const childConfig = currentModel.childTableConfig.find(
+        (config) => config.model.tableName === key
+      );
+
+      // If this key corresponds to a known child model, recurse
+      if (childConfig && childConfig.model) {
+        await this._processRecursive(
+          key, // Child table name
+          value, // Child rows array
+          validEntry, // Parent Data (the row we just created)
+          currentTableName, // Parent Table Name
+          childConfig.model, // 🟢 Pass the Child Model for the next iteration
+          result,
+          schemaConfig,
+          actionType
+        );
+      }
+    }
+  }
+
+  /**
+   * Cleans a single row, applies defaults, and handles IDs/Foreign Keys
+   */
+  async _prepareDbRow(
+    rawRow,
+    tableSchema,
+    parentData,
+    parentTableName,
+    currentModel,
+    actionType
+  ) {
+    let validEntry = {};
+
+    // 1. Filter fields based on Schema
+    for (const field in rawRow) {
+      if (
+        tableSchema[field] ||
+        field === 'base64_image' ||
+        field === 'base64_file'
+      ) {
+        validEntry[field] = rawRow[field];
+      }
+    }
+
+    // 2. Inject Parent Foreign Key (if parent exists)
+    if (parentData && parentTableName) {
+      for (const [field, fieldConfig] of Object.entries(tableSchema)) {
+        if (
+          fieldConfig.references &&
+          fieldConfig.references.table === parentTableName &&
+          parentData[fieldConfig.references.field]
+        ) {
+          validEntry[field] = parentData[fieldConfig.references.field];
+        }
+      }
+    }
+
+    // 3. Apply Default Values (Async)
+    validEntry = await currentModel.applyDefaults(validEntry);
+
+    // 4. Handle Primary Key (ID)
+    if (actionType === 'create') {
+      // Generate new UUID if not provided
+      if (!validEntry.id) {
+        validEntry.id = uuidv4();
+      }
+    } else if (actionType === 'update') {
+      // Ensure ID exists for updates
+      if (!validEntry.id) {
+        throw new AppError(
+          `Missing "id" field for update in table "${currentModel.tableName}"`,
+          400
+        );
+      }
+    }
+
+    return validEntry;
   }
 
   // getting the parent id from parent table schema by child schema
@@ -220,129 +368,50 @@ export default class DataModelUtils {
     return;
   };
 
+  /**
+   * Main entry point to refactor nested JSON into flat DB structures
+   * @param {Object} jsonData - The nested input data
+   * @param {string} actionType - 'create' or 'update'
+   */
   async refactoringData(jsonData, actionType) {
-    try {
-      // Validate input JSON data
-      if (!jsonData || typeof jsonData !== 'object') {
-        throw new AppError('Invalid JSON data provided', 400);
-      }
-
-      // Validate actionType
-      if (!['create', 'update'].includes(actionType)) {
-        throw new AppError(
-          'Invalid actionType. Must be "create" or "update".',
-          400
-        );
-      }
-
-      // Generate schema configuration
-      const schemaConfig = this._gettingSchemaConfig({});
-      // console.log('schemaConfig: ----\n', schemaConfig);
-      if (!schemaConfig || typeof schemaConfig !== 'object') {
-        throw new AppError('Failed to generate schema configuration', 500);
-      }
-
-      // Separate JSON data for inspection
-      const createData = {};
-      const updateData = {};
-
-      // Recursive function to process data based on schema and actionType
-      const processTableData = async (
-        tableName,
-        tableData,
-        parentData = null,
-        parentTableName = null,
-        currentModel = this
-      ) => {
-        const tableSchema = schemaConfig[tableName];
-        if (!tableSchema) {
-          throw new AppError(`Schema for table "${tableName}" not found`, 400);
-        }
-
-        for (const entry of tableData) {
-          // Prepare a valid entry for this table
-          let validEntry = {};
-          for (const field in entry) {
-            if (
-              tableSchema[field] || // Field is explicitly defined in the schema
-              field === 'base64_image' || // Special handling for base64 fields
-              field === 'base64_file'
-            ) {
-              validEntry[field] = entry[field];
-            }
-          }
-
-          // Add parent reference if applicable
-          if (parentData && parentTableName) {
-            for (const [field, fieldConfig] of Object.entries(tableSchema)) {
-              if (
-                fieldConfig.references &&
-                fieldConfig.references.table === parentTableName &&
-                parentData[fieldConfig.references.field] // Check if parent data has the referenced field
-              ) {
-                validEntry[field] = parentData[fieldConfig.references.field];
-              }
-            }
-          }
-
-          // Apply default values if necessary
-          validEntry = await currentModel.applyDefaults(validEntry);
-
-          // Add the entry to the appropriate action (create or update)
-          if (actionType === 'create') {
-            validEntry.id = uuidv4();
-            createData[tableName] = createData[tableName] || [];
-            createData[tableName].push(validEntry);
-          } else if (actionType === 'update') {
-            if (!validEntry.id) {
-              throw new AppError(
-                `Missing "id" field for update in table "${tableName}"`,
-                400
-              );
-            }
-            updateData[tableName] = updateData[tableName] || [];
-            updateData[tableName].push(validEntry);
-          }
-
-          // Process nested child data
-          for (const [childKey, childEntries] of Object.entries(entry)) {
-            // Check if the childKey corresponds to a child table
-            const childModelConfig = currentModel.childTableConfig.find(
-              (config) => config.model.tableName === childKey
-            );
-            const childModel = childModelConfig?.model;
-
-            // If the childKey corresponds to a nested child table, process it
-            if (childModel && Array.isArray(childEntries)) {
-              await processTableData(
-                childKey, // Name of the child table
-                childEntries, // Data for the child table
-                validEntry, // Current entry becomes the parent for the child data
-                tableName, // Current table name
-                childModel // The model for the child table
-              );
-            }
-          }
-        }
-      };
-
-      // Process the top-level tables in the JSON data
-      for (const [tableName, tableDatas] of Object.entries(jsonData)) {
-        if (schemaConfig[tableName]) {
-          await processTableData(tableName, tableDatas);
-        } else {
-          throw new AppError(`Table "${tableName}" not found in schema`, 400);
-        }
-      }
-
-      // Return refactored data for inspection
-      return { createData, updateData };
-    } catch (error) {
+    // 1. Validation
+    if (!jsonData || typeof jsonData !== 'object') {
+      throw new AppError('Invalid JSON data provided', 400);
+    }
+    if (!['create', 'update'].includes(actionType)) {
       throw new AppError(
-        `Failed to process data: ${error.message}`,
-        error.statusCode || 500
+        'Invalid actionType. Must be "create" or "update".',
+        400
       );
     }
+
+    // 2. Setup
+    const schemaConfig = this._gettingSchemaConfig({});
+    const result = {
+      createData: {},
+      updateData: {},
+    };
+
+    // 3. Process Top-Level Tables
+    for (const [tableName, tableRows] of Object.entries(jsonData)) {
+      if (!schemaConfig[tableName]) {
+        throw new AppError(`Table "${tableName}" not found in schema`, 400);
+      }
+
+      // Start the recursive engine
+      await this._processRecursive(
+        tableName,
+        tableRows,
+        null, // No parent data yet
+        null, // No parent table name yet
+        this, // Start with current model
+        result, // Accumulator
+        schemaConfig, // Global schema map
+        actionType
+      );
+    }
+
+    return result;
   }
 
   /**
