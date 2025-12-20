@@ -260,11 +260,12 @@ export default class DataModelUtils {
         }
 
         for (const entry of tableData) {
+          // Prepare a valid entry for this table
           let validEntry = {};
           for (const field in entry) {
             if (
-              tableSchema[field] ||
-              field === 'base64_image' ||
+              tableSchema[field] || // Field is explicitly defined in the schema
+              field === 'base64_image' || // Special handling for base64 fields
               field === 'base64_file'
             ) {
               validEntry[field] = entry[field];
@@ -277,22 +278,17 @@ export default class DataModelUtils {
               if (
                 fieldConfig.references &&
                 fieldConfig.references.table === parentTableName &&
-                parentData[fieldConfig.references.field] // if there is value
+                parentData[fieldConfig.references.field] // Check if parent data has the referenced field
               ) {
-                const parentId = parentData[fieldConfig.references.field];
-                // Check if the field is explicitly defined in the model's defaults
-                const isFieldInDefaults =
-                  currentModel.defaults && field in currentModel.defaults;
-
-                if (!isFieldInDefaults) {
-                  validEntry[field] = parentId;
-                }
+                validEntry[field] = parentData[fieldConfig.references.field];
               }
             }
           }
-          // apply default value if neccessary
+
+          // Apply default values if necessary
           validEntry = await currentModel.applyDefaults(validEntry);
 
+          // Add the entry to the appropriate action (create or update)
           if (actionType === 'create') {
             validEntry.id = uuidv4();
             createData[tableName] = createData[tableName] || [];
@@ -308,26 +304,22 @@ export default class DataModelUtils {
             updateData[tableName].push(validEntry);
           }
 
-          const childTables = Object.keys(schemaConfig).filter((childTable) =>
-            Object.values(schemaConfig[childTable]).some(
-              (field) =>
-                field.references && field.references.table === tableName
-            )
-          );
+          // Process nested child data
+          for (const [childKey, childEntries] of Object.entries(entry)) {
+            // Check if the childKey corresponds to a child table
+            const childModelConfig = currentModel.childTableConfig.find(
+              (config) => config.model.tableName === childKey
+            );
+            const childModel = childModelConfig?.model;
 
-          for (const childTable of childTables) {
-            if (entry[childTable]) {
-              const childModelConfig = this.childTableConfig.find(
-                (config) => config.model.tableName === childTable
-              );
-              const childModel = childModelConfig?.model;
-
+            // If the childKey corresponds to a nested child table, process it
+            if (childModel && Array.isArray(childEntries)) {
               await processTableData(
-                childTable,
-                entry[childTable],
-                validEntry,
-                tableName,
-                childModel
+                childKey, // Name of the child table
+                childEntries, // Data for the child table
+                validEntry, // Current entry becomes the parent for the child data
+                tableName, // Current table name
+                childModel // The model for the child table
               );
             }
           }
