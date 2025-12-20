@@ -203,6 +203,46 @@ export default class DataModelUtils {
   }
 
   /**
+   * Finds the field name marked as primaryKey: true in the schema
+   */
+  _getPrimaryKey(tableSchema) {
+    for (const [fieldName, fieldConfig] of Object.entries(tableSchema)) {
+      if (fieldConfig.primaryKey) {
+        return fieldName;
+      }
+    }
+    return 'id'; // Fallback default if not explicitly defined
+  }
+
+  async _determineRowAction(row, globalActionType, currentModel, tableSchema) {
+    // 1. Force create if global action dictates it
+    if (globalActionType === 'create') {
+      return 'create';
+    }
+
+    // 2. Identify the Primary Key field
+    const pkField = this._getPrimaryKey(tableSchema);
+    const pkValue = row[pkField];
+
+    // 3. If no PK value in JSON, it MUST be a create
+    if (!pkValue) {
+      return 'create';
+    }
+
+    // 4. Check the Database
+    // We use currentModel because that instance knows its own tableName and has the DB pool
+    const exists = await currentModel.checkExists(pkValue, pkField);
+
+    if (exists) {
+      return 'update';
+    } else {
+      // If ID is provided but not found in DB, we treat it as a 'create'
+      // (inserting a record with a specific pre-defined ID)
+      return 'create';
+    }
+  }
+
+  /**
    * Recursively processes a list of rows for a specific table
    */
   async _processRecursive(
@@ -213,26 +253,31 @@ export default class DataModelUtils {
     currentModel,
     result,
     schemaConfig,
-    actionType
+    globalActionType
   ) {
     const tableSchema = schemaConfig[tableName];
-    if (!tableSchema) {
-      throw new AppError(`Schema for table "${tableName}" not found`, 400);
-    }
 
     for (const rawRow of rows) {
-      // A. Prepare the single DB row (Filter fields, add IDs, defaults)
+      // 1. Determine Action for THIS specific row
+      const rowAction = await this._determineRowAction(
+        rawRow,
+        globalActionType,
+        currentModel,
+        tableSchema
+      );
+
+      // 2. Prepare the DB Row
       const validEntry = await this._prepareDbRow(
         rawRow,
         tableSchema,
         parentData,
         parentTableName,
         currentModel,
-        actionType
+        rowAction
       );
 
-      // B. Add to result buckets
-      if (actionType === 'create') {
+      // 3. Add to result buckets using 'rowAction'
+      if (rowAction === 'create') {
         result.createData[tableName] = result.createData[tableName] || [];
         result.createData[tableName].push(validEntry);
       } else {
@@ -240,15 +285,15 @@ export default class DataModelUtils {
         result.updateData[tableName].push(validEntry);
       }
 
-      // C. Process Children (Drill down)
+      // 4. Process Children (Drill down)
       await this._processChildren(
-        rawRow, // Original JSON has the nested arrays
-        validEntry, // The processed entry becomes the new parent
-        tableName, // Current table becomes parent table
-        currentModel, // Pass current model to find its children
+        rawRow,
+        validEntry,
+        tableName,
+        currentModel,
         result,
         schemaConfig,
-        actionType
+        globalActionType // 🟢 Pass the global preference down
       );
     }
   }
@@ -299,11 +344,12 @@ export default class DataModelUtils {
     parentData,
     parentTableName,
     currentModel,
-    actionType
+    rowAction
   ) {
     let validEntry = {};
+    const pkField = this._getPrimaryKey(tableSchema);
 
-    // 1. Filter fields based on Schema
+    // 1. Copy Fields (Clean data)
     for (const field in rawRow) {
       if (
         tableSchema[field] ||
@@ -314,33 +360,51 @@ export default class DataModelUtils {
       }
     }
 
-    // 2. Inject Parent Foreign Key (if parent exists)
+    // 2. Link Foreign Key (Parent ID)
     if (parentData && parentTableName) {
       for (const [field, fieldConfig] of Object.entries(tableSchema)) {
         if (
           fieldConfig.references &&
-          fieldConfig.references.table === parentTableName &&
-          parentData[fieldConfig.references.field]
+          fieldConfig.references.table === parentTableName
         ) {
-          validEntry[field] = parentData[fieldConfig.references.field];
+          // Find the Parent's Primary Key field name (usually 'id' but let's be safe)
+          // Note: We need the parent's schema to do this perfectly,
+          // but usually parentData already contains the resolved ID.
+          // Assuming parentData has its PK set.
+
+          // We look for the Parent's PK value in parentData.
+          // Since parentData is a processed 'validEntry', it uses the DB field names.
+          // We can try to guess the parent PK or assume standard 'id' for the parent reference
+          // if we don't pass parentSchema.
+          // For now, let's assume parentData has the key that this field references.
+
+          const parentPkField = fieldConfig.references.field; // e.g. 'id'
+          if (parentData[parentPkField]) {
+            validEntry[field] = parentData[parentPkField];
+          }
         }
       }
     }
 
-    // 3. Apply Default Values (Async)
+    // 3. Apply Defaults
     validEntry = await currentModel.applyDefaults(validEntry);
 
-    // 4. Handle Primary Key (ID)
-    if (actionType === 'create') {
-      // Generate new UUID if not provided
-      if (!validEntry.id) {
-        validEntry.id = uuidv4();
+    // 4. Handle Primary Key Logic
+    if (rowAction === 'create') {
+      // If create, and PK is missing, generate UUID
+      if (!validEntry[pkField]) {
+        // Only generate UUID if the schema type is VARCHAR(36) or similar
+        // If it's AUTO_INCREMENT int, we should NOT generate it.
+        const pkConfig = tableSchema[pkField];
+        if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
+          validEntry[pkField] = uuidv4();
+        }
       }
-    } else if (actionType === 'update') {
-      // Ensure ID exists for updates
-      if (!validEntry.id) {
+    } else {
+      // If update, PK must exist
+      if (!validEntry[pkField]) {
         throw new AppError(
-          `Missing "id" field for update in table "${currentModel.tableName}"`,
+          `Primary Key "${pkField}" missing for update in ${currentModel.tableName}`,
           400
         );
       }
@@ -348,25 +412,6 @@ export default class DataModelUtils {
 
     return validEntry;
   }
-
-  // getting the parent id from parent table schema by child schema
-  _gettingParentId = (parentTableName, parentData, currentTableSchema) => {
-    for (const [k, v] of Object.entries(currentTableSchema)) {
-      if (!v.references) {
-        continue;
-      }
-      const { table, field } = v.references;
-      if (table !== parentTableName) {
-        continue;
-      }
-      for (const [pdk, pdv] of Object.entries(parentData)) {
-        if (pdk === field) {
-          return pdv;
-        }
-      }
-    }
-    return;
-  };
 
   /**
    * Main entry point to refactor nested JSON into flat DB structures
@@ -412,6 +457,29 @@ export default class DataModelUtils {
     }
 
     return result;
+  }
+
+  /**
+   * Checks if a record exists in the database.
+   * @param {string|number} value - The value to search for (e.g., the UUID).
+   * @param {string} fieldName - The column name (e.g., 'id' or 'code').
+   * @returns {Promise<boolean>} - True if exists, False otherwise.
+   */
+  async checkExists(value, fieldName = 'id') {
+    if (!value) return false;
+
+    const sql = `SELECT 1 FROM ${this.tableName} WHERE ${fieldName} = ? LIMIT 1`;
+
+    try {
+      const rows = await this.executeQuery(sql, [value]);
+
+      // Now 'rows' is the full array: [ { '1': 1 } ]
+      // So rows.length will be 1
+      return Array.isArray(rows) && rows.length > 0;
+    } catch (error) {
+      console.error(`Error checking existence in ${this.tableName}:`, error);
+      return false; // Assume not found on error to be safe, or throw
+    }
   }
 
   /**

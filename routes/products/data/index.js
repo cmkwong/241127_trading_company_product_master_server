@@ -61,7 +61,7 @@ router.get(
 
 // Routes that require ID validation
 router
-  .route('/:id')
+  .route('/')
   .get(
     productsController.validateProductId,
     productsController.getProductById,
@@ -69,7 +69,7 @@ router
   )
   .patch(
     authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.validateProductId,
+    // productsController.validateProductId,
     productsController.updateProduct,
     endController
   )

@@ -96,6 +96,11 @@ export const getProducts = catchAsync(async (req, res, next) => {
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
+  const refactoredData = await productModel.refactoringData(
+    req.body.data,
+    'update'
+  );
+  console.log('refactoredData--++: ', JSON.stringify(refactoredData));
   const result = await Products.updateProduct(req.params.id, req.body);
 
   res.status(200).json({
