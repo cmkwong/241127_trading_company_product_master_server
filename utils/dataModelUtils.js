@@ -318,12 +318,37 @@ export default class DataModelUtils {
     }
   }
 
+  /**
+   * Determines the foreign key in the child table that points to the parent.
+   */
+  _resolveForeignKey(parentModel, childConfig) {
+    // 1. FASTEST: Check if explicitly passed in childTableConfig
+    if (childConfig.foreignKey) return childConfig.foreignKey;
+
+    const childModel = childConfig.model;
+    const parentBaseName = this._getBaseTableName(parentModel.tableName);
+
+    // 2. CLEANER SCHEMA LOOKUP: Find field referencing parent table
+    if (childModel.tableFields?.fields) {
+      const foundEntry = Object.entries(childModel.tableFields.fields).find(
+        ([_, def]) =>
+          this._getBaseTableName(def.references?.table) === parentBaseName
+      );
+      if (foundEntry) return foundEntry[0];
+    }
+
+    // 3. FALLBACK: Naming convention (e.g., "product_customization" -> "product_customization_id")
+    return `${parentModel.entityName.replace(/\s+/g, '_')}_id`;
+  }
+
   async _recursiveRead(inputRow, currentModel, options) {
-    // 1. Get Primary Key ID (e.g., 'id')
+    // 1. Get Primary Key ID
     const pkField = currentModel.entityIdField;
     const id = inputRow[pkField];
 
-    if (!id) return null;
+    if (!id) {
+      return null;
+    }
 
     // 2. Hydrate if needed
     let dbRow = inputRow;
@@ -331,9 +356,9 @@ export default class DataModelUtils {
 
     if (!isHydrated) {
       try {
+        // We explicitly pass includeBase64: false here to keep it light initially
         dbRow = await currentModel.getById(id, { includeBase64: false });
       } catch (error) {
-        console.warn(`Record ${currentModel.tableName} ID ${id} not found.`);
         return null;
       }
     }
@@ -353,54 +378,38 @@ export default class DataModelUtils {
         const childTableName = childModel.tableName;
 
         // --- Auto-Detect Foreign Key ---
-        let foreignKeyField = null;
-        const parentBaseName = this._getBaseTableName(currentModel.tableName);
-
-        if (childModel.tableFields && childModel.tableFields.fields) {
-          for (const [fieldName, fieldDef] of Object.entries(
-            childModel.tableFields.fields
-          )) {
-            if (fieldDef.references && fieldDef.references.table) {
-              const refBaseName = this._getBaseTableName(
-                fieldDef.references.table
-              );
-              if (refBaseName === parentBaseName) {
-                foreignKeyField = fieldName;
-                break;
-              }
-            }
-          }
-        }
-
-        // Fallback if schema doesn't have explicit reference
-        if (!foreignKeyField) {
-          foreignKeyField = `${currentModel.entityName.replace(/ /g, '_')}_id`;
-        }
-        // -------------------------------
-
-        // A. Fetch children using the detected Foreign Key
-        const childRows = await childModel.getAllByParentId(
-          id,
-          false,
-          {},
-          foreignKeyField
+        const foreignKeyField = this._resolveForeignKey(
+          currentModel,
+          childConfig
         );
 
-        // B. Recursively process each child
-        const processedChildren = [];
-        for (const childRow of childRows) {
-          const processedChild = await this._recursiveRead(
-            childRow,
-            childModel,
-            options
+        // A. Fetch children
+        try {
+          const childRows = await childModel.getAllByParentId(
+            id,
+            false,
+            {},
+            foreignKeyField
           );
-          if (processedChild) {
-            processedChildren.push(processedChild);
-          }
-        }
 
-        if (processedChildren.length > 0) {
-          dbRow[childTableName] = processedChildren;
+          // B. Recursively process each child
+          const processedChildren = [];
+          for (const childRow of childRows) {
+            const processedChild = await this._recursiveRead(
+              childRow,
+              childModel,
+              options
+            );
+            if (processedChild) {
+              processedChildren.push(processedChild);
+            }
+          }
+
+          if (processedChildren.length > 0) {
+            dbRow[childTableName] = processedChildren;
+          }
+        } catch (err) {
+          console.error(`Error fetching children: ${err.message}`);
         }
       }
     }
@@ -503,7 +512,6 @@ export default class DataModelUtils {
   // ============================================================
   // 🚀 PUBLIC METHODS (CRUD & UTILS)
   // ============================================================
-
   async refactoringData(jsonData, actionType, options = {}) {
     if (!jsonData || typeof jsonData !== 'object') {
       throw new AppError('Invalid JSON data provided', 400);
@@ -518,22 +526,52 @@ export default class DataModelUtils {
 
     const schemaConfig = this._gettingSchemaConfig({});
 
-    // --- READ OPERATION ---
+    // ============================================================
+    // 🔵 READ / GET OPERATION
+    // ============================================================
     if (actionType === 'read') {
       const resultData = {};
+
       for (const [tableName, rows] of Object.entries(jsonData)) {
         if (!schemaConfig[tableName]) continue;
+
+        // 🔍 FIND THE CORRECT MODEL FOR THIS TABLE
+        let targetModel = this;
+
+        // 1. Is it the current model?
+        if (this.tableName !== tableName) {
+          // 2. No? Check if it's one of our children
+          const childConfig = this.childTableConfig.find(
+            (c) => c.model.tableName === tableName
+          );
+          if (childConfig) {
+            targetModel = childConfig.model;
+          } else {
+            // 3. Warning: We don't have access to this model from here
+            console.warn(
+              `[DataModelUtils] Cannot process table '${tableName}' from model '${this.tableName}'. It is not the main table nor a configured child.`
+            );
+            continue;
+          }
+        }
+
         const builtRows = [];
         for (const row of rows) {
-          const builtRow = await this._recursiveRead(row, this, options);
-          if (builtRow) builtRows.push(builtRow);
+          // ✅ Use targetModel instead of 'this'
+          const builtRow = await this._recursiveRead(row, targetModel, options);
+          if (builtRow) {
+            builtRows.push(builtRow);
+          }
         }
         resultData[tableName] = builtRows;
       }
+
       return { data: resultData };
     }
 
-    // --- WRITE OPERATION ---
+    // ============================================================
+    // 🟠 WRITE OPERATION (Create/Update/Delete)
+    // ============================================================
     const result = {
       createData: {},
       readData: {},
@@ -545,17 +583,28 @@ export default class DataModelUtils {
       if (!schemaConfig[tableName]) {
         throw new AppError(`Table "${tableName}" not found in schema`, 400);
       }
+
+      // 🔍 FIND THE CORRECT MODEL (Same logic as above)
+      let targetModel = this;
+      if (this.tableName !== tableName) {
+        const childConfig = this.childTableConfig.find(
+          (c) => c.model.tableName === tableName
+        );
+        if (childConfig) targetModel = childConfig.model;
+      }
+
       await this._processRecursive(
         tableName,
         tableRows,
         null,
         null,
-        this,
+        targetModel, // ✅ Pass the correct model here too
         result,
         schemaConfig,
         actionType
       );
     }
+
     return result;
   }
 
