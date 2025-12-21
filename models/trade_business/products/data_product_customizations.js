@@ -9,7 +9,6 @@ export const customizationModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
   tableFields: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].fields,
   entityName: 'customization',
-  entityIdField: 'product_id',
   requiredFields: ['product_id', 'name'],
   validations: {
     name: { required: true },

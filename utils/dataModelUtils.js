@@ -16,32 +16,18 @@ export default class DataModelUtils {
   /**
    * Creates a new DataModelUtils instance
    * @param {Object} config - Configuration object
-   * @param {string} config.tableName - Database table name
-   * @param {string} config.entityName - Human-readable entity name (e.g., 'product packing')
-   * @param {string} config.entityIdField - Primary entity ID field (e.g., 'product_id')
-   * @param {Object} [config.validations] - Validation rules for fields
-   * @param {Object} [config.defaults] - Default values for fields
-   * @param {Array<string>} [config.requiredFields] - Required fields for creation
-   * @param {Object|Array<Object>} [config.joinConfig] - Configuration for joined queries
-   * @param {Object} [config.fileConfig] - Configuration for file handling
-   * @param {string} [config.fileConfig.fileUrlField] - Name of the file URL field (e.g., 'image_url')
-   * @param {string} [config.fileConfig.uploadDir] - Base upload directory pattern (e.g., 'public/uploads/customizations/{id}')
-   * @param {string} [config.fileConfig.fileTypeField] - Optional name of the file type field (e.g., 'file_type')
-   * @param {string} [config.fileConfig.descriptionField] - Optional name of the description field
-   * @param {boolean} [config.fileConfig.imagesOnly=false] - Whether this handler is for images only
-   * @param {string} [config.database='trade_business'] - Database to use ('trade_business' or 'auth')
    */
   constructor(config) {
     this.tableName = config.tableName;
     this.entityName = config.entityName;
-    this.entityIdField = config.entityIdField;
+    this.tableFields = config.tableFields || {};
+    this.entityIdField = this._determinePrimaryKey(config);
     this.validations = config.validations || {};
     this.defaults = config.defaults || {};
     this.requiredFields = config.requiredFields || [];
     this.joinConfig = config.joinConfig;
     this.database = config.database || 'trade_business';
     this.childTableConfig = config.childTableConfig || [];
-    this.tableFields = config.tableFields || {};
 
     // Create database connection
     this.db = dbConn.createDbConnection(this.database);
@@ -54,18 +40,86 @@ export default class DataModelUtils {
       this.fileTypeField = config.fileConfig.fileTypeField;
       this.descriptionField = config.fileConfig.descriptionField;
       this.imagesOnly = config.fileConfig.imagesOnly || false;
-
-      // File type name for messages (derived from fileUrlField)
       this.fileTypeName = this.fileUrlField.replace('_url', '');
     }
   }
 
+  // ============================================================
+  // 🛠️ INTERNAL HELPERS
+  // ============================================================
+
   /**
-   * Common helper function to validate and save Base64 file or image
-   * @param {Object} data - Data containing Base64 file
-   * @param {Object} options - Options such as entityId and fileType
-   * @returns {Promise<string>} - Returns the file URL
+   * Determines the Primary Key field name based on config or schema.
+   * Priority:
+   * 1. Manual config override (config.entityIdField)
+   * 2. Schema definition (primaryKey: true)
+   * 3. Default 'id'
+   * @param {Object} config - The constructor config object
+   * @returns {string} The primary key field name
    */
+  _determinePrimaryKey(config) {
+    // 1. Manual Override (Highest Priority)
+    if (config.entityIdField) {
+      return config.entityIdField;
+    }
+
+    // 2. Auto-detect from Schema
+    if (this.tableFields && this.tableFields.fields) {
+      for (const [fieldName, fieldDef] of Object.entries(
+        this.tableFields.fields
+      )) {
+        if (fieldDef.primaryKey) {
+          return fieldName;
+        }
+      }
+    }
+
+    // 3. Default Fallback
+    return 'id';
+  }
+
+  /**
+   * Helper to strip database prefixes from table names
+   * e.g., "trade_business.products" -> "products"
+   */
+  _getBaseTableName(name) {
+    if (!name) return '';
+    const parts = name.split('.');
+    return parts[parts.length - 1];
+  }
+
+  /**
+   * Tries to identify the Foreign Key column that links to a parent.
+   * Used when no specific FK is provided.
+   */
+  _inferForeignKeyField(explicitField = null) {
+    if (explicitField) return explicitField;
+
+    // 1. Try to find the ONLY defined foreign key in the schema
+    if (this.tableFields && this.tableFields.fields) {
+      const fkFields = Object.entries(this.tableFields.fields).filter(
+        ([_, def]) => def.references
+      );
+
+      if (fkFields.length === 1) {
+        return fkFields[0][0]; // Return the field name
+      }
+    }
+
+    // 2. Fallback: Look for a required field ending in '_id' that isn't the PK
+    const heuristicMatch = this.requiredFields.find(
+      (f) => f.endsWith('_id') && f !== this.entityIdField
+    );
+
+    if (heuristicMatch) return heuristicMatch;
+
+    return null;
+  }
+
+  // ============================================================
+  // 📂 FILE HANDLING
+  // ============================================================
+
   async _validateAndSaveFile(data, options = {}) {
     const { entityId, fileType } = options;
     const base64FieldName = this.imagesOnly ? 'base64_image' : 'base64_file';
@@ -76,7 +130,6 @@ export default class DataModelUtils {
       throw new AppError('File type is required', 400);
     }
 
-    // Determine allowed file types if needed
     let allowedTypes = ['IMAGE'];
     if (!this.imagesOnly && fileType) {
       if (fileType === 'document') allowedTypes = ['DOCUMENT'];
@@ -86,7 +139,6 @@ export default class DataModelUtils {
       else if (fileType === 'archive') allowedTypes = ['ARCHIVE'];
     }
 
-    // Save the file to the filesystem
     const uploadDir = this.getUploadDir(entityId, fileType);
     let fileUrl;
 
@@ -101,12 +153,6 @@ export default class DataModelUtils {
     return fileUrl;
   }
 
-  /**
-   * Common helper function to process Base64 content for a file
-   * @param {Object} file - File entity containing file URL
-   * @param {Object} options - Options for compression and Base64 generation
-   * @returns {Promise<Object>} - Returns the file entity with Base64 content
-   */
   async _processBase64Content(file, options = {}) {
     const {
       compress = false,
@@ -128,7 +174,7 @@ export default class DataModelUtils {
     }
 
     try {
-      const filePath = file[this.fileUrlField]?.replace(/^\//, ''); // Remove leading slash if present
+      const filePath = file[this.fileUrlField]?.replace(/^\//, '');
       if (!filePath) throw new AppError('File URL is not available', 400);
 
       await fs.access(filePath);
@@ -136,7 +182,6 @@ export default class DataModelUtils {
       const ext = path.extname(filePath).toLowerCase();
       let mimeType = 'application/octet-stream';
 
-      // Determine MIME type
       if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
       else if (ext === '.png') mimeType = 'image/png';
       else if (ext === '.gif') mimeType = 'image/gif';
@@ -178,45 +223,30 @@ export default class DataModelUtils {
     return file;
   }
 
-  /**
-   * Retrieves all field names from `this.tableFields`.
-   * @returns {Array<string>} Array of field names.
-   */
-  _fieldNames() {
-    if (!this.tableFields || typeof this.tableFields !== 'object') {
-      throw new Error('Invalid or undefined tableFields.');
+  getUploadDir(entityId, fileType = null) {
+    if (!this.hasFileHandling) {
+      throw new AppError('File handling is not configured for this model', 500);
     }
 
-    // Extract and return the field names from this.tableFields
-    return Object.keys(this.tableFields.fields);
+    let dir = this.uploadDirPattern.replace('{id}', entityId);
+    if (fileType && !this.imagesOnly) {
+      dir += `/${fileType}`;
+    }
+    return dir;
   }
 
-  _gettingSchemaConfig(dataTemplate = {}) {
-    // Add current table fields
-    dataTemplate[this.tableName] = this.tableFields;
+  // ============================================================
+  // 🔄 RECURSIVE DATA PROCESSING
+  // ============================================================
 
-    // Recursively add child table fields
+  _gettingSchemaConfig(dataTemplate = {}) {
+    dataTemplate[this.tableName] = this.tableFields;
     for (const childConfig of this.childTableConfig) {
       childConfig.model._gettingSchemaConfig(dataTemplate);
     }
     return dataTemplate;
   }
 
-  /**
-   * Finds the field name marked as primaryKey: true in the schema
-   */
-  _getPrimaryKey(tableSchema) {
-    for (const [fieldName, fieldConfig] of Object.entries(tableSchema)) {
-      if (fieldConfig.primaryKey) {
-        return fieldName;
-      }
-    }
-    return 'id'; // Fallback default if not explicitly defined
-  }
-
-  /**
-   * Decides if a row should be Created or Updated.
-   */
   async _determineRowAction(
     row,
     globalActionType,
@@ -224,34 +254,18 @@ export default class DataModelUtils {
     tableSchema,
     parentAction
   ) {
-    // 1. 🚨 CASCADING CREATE RULE 🚨
-    // If the parent is being created, the child MUST be created (new ID),
-    // regardless of whether the child has an ID or exists in DB.
-    if (parentAction === 'create') {
-      return 'create';
-    }
+    if (parentAction === 'create') return 'create';
+    if (globalActionType === 'create') return 'create';
 
-    // 2. Global Override
-    if (globalActionType === 'create') {
-      return 'create';
-    }
-
-    const pkField = this._getPrimaryKey(tableSchema);
+    const pkField = currentModel.entityIdField; // Use the auto-detected PK
     const pkValue = row[pkField];
 
-    // 3. Missing ID = Create
-    if (!pkValue) {
-      return 'create';
-    }
+    if (!pkValue) return 'create';
 
-    // 4. Check DB
     const exists = await currentModel.checkExists(pkValue, pkField);
     return exists ? 'update' : 'create';
   }
 
-  /**
-   * Recursively processes a list of rows for a specific table
-   */
   async _processRecursive(
     tableName,
     rows,
@@ -261,21 +275,19 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction = null // 🆕 Added parameter, defaults to null for root
+    parentAction = null
   ) {
     const tableSchema = schemaConfig[tableName];
 
     for (const rawRow of rows) {
-      // 1. Determine Action (Pass parentAction)
       const rowAction = await this._determineRowAction(
         rawRow,
         globalActionType,
         currentModel,
         tableSchema,
-        parentAction // 👈 Pass it here
+        parentAction
       );
 
-      // 2. Prepare Row
       const validEntry = await this._prepareDbRow(
         rawRow,
         tableSchema,
@@ -285,7 +297,6 @@ export default class DataModelUtils {
         rowAction
       );
 
-      // 3. Add to Bucket
       if (rowAction === 'create') {
         result.createData[tableName] = result.createData[tableName] || [];
         result.createData[tableName].push(validEntry);
@@ -294,7 +305,6 @@ export default class DataModelUtils {
         result.updateData[tableName].push(validEntry);
       }
 
-      // 4. Process Children
       await this._processChildren(
         rawRow,
         validEntry,
@@ -303,14 +313,101 @@ export default class DataModelUtils {
         result,
         schemaConfig,
         globalActionType,
-        rowAction // 👈 The current row's action becomes the child's "parentAction"
+        rowAction
       );
     }
   }
 
-  /**
-   * Inspects the raw row for nested arrays and triggers recursion
-   */
+  async _recursiveRead(inputRow, currentModel, options) {
+    // 1. Get Primary Key ID (e.g., 'id')
+    const pkField = currentModel.entityIdField;
+    const id = inputRow[pkField];
+
+    if (!id) return null;
+
+    // 2. Hydrate if needed
+    let dbRow = inputRow;
+    const isHydrated = Object.keys(inputRow).length > 1;
+
+    if (!isHydrated) {
+      try {
+        dbRow = await currentModel.getById(id, { includeBase64: false });
+      } catch (error) {
+        console.warn(`Record ${currentModel.tableName} ID ${id} not found.`);
+        return null;
+      }
+    }
+
+    // 3. Process Base64
+    if (currentModel.hasFileHandling && options.includeBase64) {
+      dbRow = await currentModel._processBase64Content(dbRow, options);
+    }
+
+    // 4. Process Children
+    if (
+      currentModel.childTableConfig &&
+      currentModel.childTableConfig.length > 0
+    ) {
+      for (const childConfig of currentModel.childTableConfig) {
+        const childModel = childConfig.model;
+        const childTableName = childModel.tableName;
+
+        // --- Auto-Detect Foreign Key ---
+        let foreignKeyField = null;
+        const parentBaseName = this._getBaseTableName(currentModel.tableName);
+
+        if (childModel.tableFields && childModel.tableFields.fields) {
+          for (const [fieldName, fieldDef] of Object.entries(
+            childModel.tableFields.fields
+          )) {
+            if (fieldDef.references && fieldDef.references.table) {
+              const refBaseName = this._getBaseTableName(
+                fieldDef.references.table
+              );
+              if (refBaseName === parentBaseName) {
+                foreignKeyField = fieldName;
+                break;
+              }
+            }
+          }
+        }
+
+        // Fallback if schema doesn't have explicit reference
+        if (!foreignKeyField) {
+          foreignKeyField = `${currentModel.entityName.replace(/ /g, '_')}_id`;
+        }
+        // -------------------------------
+
+        // A. Fetch children using the detected Foreign Key
+        const childRows = await childModel.getAllByParentId(
+          id,
+          false,
+          {},
+          foreignKeyField
+        );
+
+        // B. Recursively process each child
+        const processedChildren = [];
+        for (const childRow of childRows) {
+          const processedChild = await this._recursiveRead(
+            childRow,
+            childModel,
+            options
+          );
+          if (processedChild) {
+            processedChildren.push(processedChild);
+          }
+        }
+
+        if (processedChildren.length > 0) {
+          dbRow[childTableName] = processedChildren;
+        }
+      }
+    }
+
+    return dbRow;
+  }
+
   async _processChildren(
     rawRow,
     validEntry,
@@ -319,7 +416,7 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction // 🆕 Receive it
+    parentAction
   ) {
     for (const [key, value] of Object.entries(rawRow)) {
       if (!Array.isArray(value)) continue;
@@ -338,15 +435,12 @@ export default class DataModelUtils {
           result,
           schemaConfig,
           globalActionType,
-          parentAction // 🆕 Forward it
+          parentAction
         );
       }
     }
   }
 
-  /**
-   * Cleans a single row, applies defaults, and handles IDs/Foreign Keys
-   */
   async _prepareDbRow(
     rawRow,
     tableSchema,
@@ -356,7 +450,7 @@ export default class DataModelUtils {
     rowAction
   ) {
     let validEntry = {};
-    const pkField = this._getPrimaryKey(tableSchema);
+    const pkField = currentModel.entityIdField;
 
     // 1. Copy Fields
     for (const field in rawRow) {
@@ -389,17 +483,12 @@ export default class DataModelUtils {
 
     // 4. Handle Primary Key Logic
     if (rowAction === 'create') {
-      // 🚨 CRITICAL CHANGE:
-      // If action is 'create', we ALWAYS generate a new UUID.
-      // Even if rawRow had an ID (e.g. from an existing record we are cloning),
-      // we must discard it and create a fresh one for this new record.
-
       const pkConfig = tableSchema[pkField];
+      // Always generate UUID for VARCHAR PKs on create
       if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
         validEntry[pkField] = uuidv4();
       } else {
-        // If it's auto-increment, ensure we delete any passed ID so DB generates it
-        delete validEntry[pkField];
+        delete validEntry[pkField]; // Let DB handle auto-increment
       }
     } else {
       // Update: Must have ID
@@ -411,81 +500,79 @@ export default class DataModelUtils {
     return validEntry;
   }
 
-  /**
-   * Main entry point to refactor nested JSON into flat DB structures
-   * @param {Object} jsonData - The nested input data
-   * @param {string} actionType - 'create' or 'update'
-   */
-  async refactoringData(jsonData, actionType) {
-    // 1. Validation
+  // ============================================================
+  // 🚀 PUBLIC METHODS (CRUD & UTILS)
+  // ============================================================
+
+  async refactoringData(jsonData, actionType, options = {}) {
     if (!jsonData || typeof jsonData !== 'object') {
       throw new AppError('Invalid JSON data provided', 400);
     }
-    if (!['create', 'update'].includes(actionType)) {
+
+    if (!['create', 'update', 'read'].includes(actionType)) {
       throw new AppError(
-        'Invalid actionType. Must be "create" or "update".',
+        'Invalid actionType. Must be create, update, or read.',
         400
       );
     }
 
-    // 2. Setup
     const schemaConfig = this._gettingSchemaConfig({});
+
+    // --- READ OPERATION ---
+    if (actionType === 'read') {
+      const resultData = {};
+      for (const [tableName, rows] of Object.entries(jsonData)) {
+        if (!schemaConfig[tableName]) continue;
+        const builtRows = [];
+        for (const row of rows) {
+          const builtRow = await this._recursiveRead(row, this, options);
+          if (builtRow) builtRows.push(builtRow);
+        }
+        resultData[tableName] = builtRows;
+      }
+      return { data: resultData };
+    }
+
+    // --- WRITE OPERATION ---
     const result = {
       createData: {},
+      readData: {},
       updateData: {},
+      deleteData: {},
     };
 
-    // 3. Process Top-Level Tables
     for (const [tableName, tableRows] of Object.entries(jsonData)) {
       if (!schemaConfig[tableName]) {
         throw new AppError(`Table "${tableName}" not found in schema`, 400);
       }
-
-      // Start the recursive engine
       await this._processRecursive(
         tableName,
         tableRows,
-        null, // No parent data yet
-        null, // No parent table name yet
-        this, // Start with current model
-        result, // Accumulator
-        schemaConfig, // Global schema map
+        null,
+        null,
+        this,
+        result,
+        schemaConfig,
         actionType
       );
     }
-
     return result;
   }
 
-  /**
-   * Checks if a record exists in the database.
-   * @param {string|number} value - The value to search for (e.g., the UUID).
-   * @param {string} fieldName - The column name (e.g., 'id' or 'code').
-   * @returns {Promise<boolean>} - True if exists, False otherwise.
-   */
-  async checkExists(value, fieldName = 'id') {
+  async checkExists(value, fieldName) {
     if (!value) return false;
-
-    const sql = `SELECT 1 FROM ${this.tableName} WHERE ${fieldName} = ? LIMIT 1`;
+    const searchField = fieldName || this.entityIdField;
+    const sql = `SELECT 1 FROM ${this.tableName} WHERE ${searchField} = ? LIMIT 1`;
 
     try {
       const rows = await this.executeQuery(sql, [value]);
-
-      // Now 'rows' is the full array: [ { '1': 1 } ]
-      // So rows.length will be 1
       return Array.isArray(rows) && rows.length > 0;
     } catch (error) {
       console.error(`Error checking existence in ${this.tableName}:`, error);
-      return false; // Assume not found on error to be safe, or throw
+      return false;
     }
   }
 
-  /**
-   * Validates data against validation rules
-   * @param {Object} data - Data to validate
-   * @param {boolean} [isUpdate=false] - Whether this is an update operation
-   * @throws {AppError} If validation fails
-   */
   validateData(data, isUpdate = false) {
     // Check required fields (only for creation)
     if (!isUpdate) {
@@ -505,10 +592,8 @@ export default class DataModelUtils {
 
     // Apply field validations
     for (const [field, validations] of Object.entries(this.validations)) {
-      // Skip validation if field is not provided (for updates)
       if (data[field] === undefined) continue;
 
-      // Required validation
       if (
         validations.required &&
         (data[field] === undefined ||
@@ -518,7 +603,6 @@ export default class DataModelUtils {
         throw new AppError(`${this._formatFieldName(field)} is required`, 400);
       }
 
-      // Minimum value validation
       if (validations.min !== undefined && data[field] < validations.min) {
         throw new AppError(
           `${this._formatFieldName(field)} must be at least ${validations.min}`,
@@ -526,7 +610,6 @@ export default class DataModelUtils {
         );
       }
 
-      // Maximum value validation
       if (validations.max !== undefined && data[field] > validations.max) {
         throw new AppError(
           `${this._formatFieldName(field)} cannot exceed ${validations.max}`,
@@ -534,7 +617,6 @@ export default class DataModelUtils {
         );
       }
 
-      // String length validation
       if (
         validations.minLength !== undefined &&
         typeof data[field] === 'string' &&
@@ -548,7 +630,6 @@ export default class DataModelUtils {
         );
       }
 
-      // Custom validation function
       if (validations.validate && typeof validations.validate === 'function') {
         const validationResult = validations.validate(data[field], data);
         if (validationResult !== true) {
@@ -561,12 +642,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Formats a field name for error messages
-   * @param {string} field - The field name
-   * @returns {string} Formatted field name
-   * @private
-   */
   _formatFieldName(field) {
     return field
       .split('_')
@@ -574,38 +649,24 @@ export default class DataModelUtils {
       .join(' ');
   }
 
-  /**
-   * Applies default values to data
-   * @param {Object} data - Data to apply defaults to
-   * @returns {Promise<Object>} Data with defaults applied
-   */
   async applyDefaults(data) {
     const result = { ...data };
-    console.log('applyDefaults: ', this.tableName, this.defaults);
-    console.log('applyDefaults - data: ', data);
-
     for (const [field, defaultValue] of Object.entries(this.defaults)) {
       if (result[field] === undefined) {
         if (typeof defaultValue === 'function') {
-          // Check if the function is async
           if (defaultValue.constructor.name === 'AsyncFunction') {
-            result[field] = await defaultValue(); // Await async function
+            result[field] = await defaultValue();
           } else {
-            result[field] = defaultValue(); // Call synchronous function
+            result[field] = defaultValue();
           }
         } else {
-          result[field] = defaultValue; // Assign value directly
+          result[field] = defaultValue;
         }
       }
     }
-    console.log('applyDefaults - result: ', result);
     return result;
   }
-  /**
-   * Creates a new entity
-   * @param {Object} data - The entity data to create
-   * @returns {Promise<Object>} Promise that resolves with the newly created entity
-   */
+
   async create(data) {
     try {
       this.validateData(data);
@@ -637,12 +698,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Gets an entity by ID
-   * @param {number|string} id - The ID of the entity to retrieve
-   * @param {Object} options - Options for Base64 content
-   * @returns {Promise<Object>} Promise that resolves with the entity data
-   */
   async getById(id, options = {}) {
     try {
       const result = await CrudOperations.performCrud({
@@ -678,14 +733,29 @@ export default class DataModelUtils {
    * @param {string|number} parentId - The parent entity ID
    * @param {boolean} includeBase64 - Whether to include Base64 content
    * @param {Object} options - Options for compression and Base64
-   * @returns {Promise<Array>} Promise that resolves with the entities
+   * @param {string} [foreignKeyField=null] - Optional specific foreign key column
    */
-  async getAllByParentId(parentId, includeBase64 = false, options = {}) {
+  async getAllByParentId(
+    parentId,
+    includeBase64 = false,
+    options = {},
+    foreignKeyField = null
+  ) {
     try {
+      // 1. Determine the Foreign Key column
+      const searchField = this._inferForeignKeyField(foreignKeyField);
+
+      if (!searchField) {
+        throw new AppError(
+          `Cannot determine foreign key for ${this.tableName}. Please provide it explicitly.`,
+          500
+        );
+      }
+
       const sql = `
         SELECT * FROM ${this.tableName}
-        WHERE ${this.entityIdField} = ?
-        ORDER BY id
+        WHERE ${searchField} = ?
+        ORDER BY ${this.entityIdField}
       `;
 
       const results = await this.db.executeQuery(sql, [parentId]);
@@ -702,12 +772,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Updates an entity
-   * @param {number|string} id - The ID of the entity to update
-   * @param {Object} data - The entity data to update
-   * @returns {Promise<Object>} Promise that resolves with the updated entity
-   */
   async update(id, data) {
     try {
       this.validateData(data, true);
@@ -748,17 +812,10 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Deletes an entity
-   * @param {number|string} id - The ID of the entity to delete
-   * @returns {Promise<Object>} Promise that resolves with deletion result
-   */
   async delete(id) {
     try {
-      // Check if entity exists
       const entity = await this.getById(id);
 
-      // For file handling models, delete the associated file
       if (this.hasFileHandling && entity[this.fileUrlField]) {
         if (this.imagesOnly) {
           await deleteImage(entity[this.fileUrlField]);
@@ -767,7 +824,6 @@ export default class DataModelUtils {
         }
       }
 
-      // Delete the entity using CRUD utility
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: this.tableName,
@@ -787,26 +843,34 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Deletes all entities for a parent entity
-   * @param {string|number} parentId - The parent entity ID
-   * @returns {Promise<Object>} Promise that resolves with deletion result
-   */
   async deleteAllByParentId(parentId) {
     try {
+      // 1. Determine the Foreign Key column
+      const searchField = this._inferForeignKeyField();
+
+      if (!searchField) {
+        throw new AppError(
+          `Cannot determine foreign key for ${this.tableName} to perform delete.`,
+          500
+        );
+      }
+
       // Get all entities for this parent
-      const entities = await this.getAllByParentId(parentId);
+      const entities = await this.getAllByParentId(
+        parentId,
+        false,
+        {},
+        searchField
+      );
 
       if (entities.length === 0) {
         return {
-          message: `No ${
-            this.entityName
-          }s found for this ${this.entityIdField.replace('_id', '')}`,
+          message: `No ${this.entityName}s found`,
           count: 0,
         };
       }
 
-      // For file handling models, delete the associated files
+      // Delete associated files
       if (this.hasFileHandling) {
         for (const entity of entities) {
           if (entity[this.fileUrlField]) {
@@ -819,11 +883,11 @@ export default class DataModelUtils {
         }
       }
 
-      // Delete the entities
+      // Delete the entities using the Foreign Key
       await CrudOperations.performCrud({
         operation: 'delete',
         tableName: this.tableName,
-        conditions: { [this.entityIdField]: parentId },
+        conditions: { [searchField]: parentId }, // ✅ Corrected: Use FK, not PK
         connection: this.db.pool,
       });
 
@@ -839,10 +903,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Begins a database transaction
-   * @returns {Promise<Object>} Connection with active transaction
-   */
   async beginTransaction() {
     try {
       return await this.db.beginTransaction();
@@ -854,11 +914,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Commits a database transaction
-   * @param {Object} connection - Connection with active transaction
-   * @returns {Promise<void>}
-   */
   async commitTransaction(connection) {
     try {
       await this.db.commitTransaction(connection);
@@ -870,11 +925,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Rolls back a database transaction
-   * @param {Object} connection - Connection with active transaction
-   * @returns {Promise<void>}
-   */
   async rollbackTransaction(connection) {
     try {
       await this.db.rollbackTransaction(connection);
@@ -886,12 +936,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Execute a custom SQL query
-   * @param {string} sql - SQL query to execute
-   * @param {Array} [params=[]] - Query parameters
-   * @returns {Promise<Array>} Query results
-   */
   async executeQuery(sql, params = []) {
     try {
       return await this.db.executeQuery(sql, params);
@@ -903,11 +947,6 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Executes a function within a transaction
-   * @param {Function} fn - The function to execute within the transaction
-   * @returns {Promise<any>} The result of the function execution
-   */
   async withTransaction(fn) {
     try {
       return await this.db.executeTransaction(fn);
@@ -919,76 +958,13 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Capitalizes the first letter of a string
-   * @param {string} str - The string to capitalize
-   * @returns {string} Capitalized string
-   * @private
-   */
-  _capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  /**
-   * Converts a string to camelCase
-   * @param {string} str - The string to convert
-   * @returns {string} camelCase string
-   * @private
-   */
-  _camelCase(str) {
-    return str
-      .replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, (match, index) => {
-        if (+match === 0) return '';
-        return index === 0 ? match.toLowerCase() : match.toUpperCase();
-      })
-      .replace(/\s+/g, '');
-  }
-
-  /**
-   * Pluralizes a string (simple version)
-   * @param {string} str - The string to pluralize
-   * @returns {string} Pluralized string
-   * @private
-   */
-  _pluralize(str) {
-    return str + 's';
-  }
-
-  // FILE HANDLING METHODS
-
-  /**
-   * Gets the upload directory for a specific entity
-   * @param {string} entityId - The entity ID
-   * @param {string} [fileType] - Optional file type for subdirectory
-   * @returns {string} The upload directory
-   */
-  getUploadDir(entityId, fileType = null) {
-    if (!this.hasFileHandling) {
-      throw new AppError('File handling is not configured for this model', 500);
-    }
-
-    let dir = this.uploadDirPattern.replace('{id}', entityId);
-    if (fileType && !this.imagesOnly) {
-      dir += `/${fileType}`;
-    }
-    return dir;
-  }
-
-  /**
-   * Reorders files
-   * @param {string|number} entityId - The entity ID
-   * @param {Array<{id: number, display_order: number}>} orderData - Array of objects with file IDs and new display orders
-   * @returns {Promise<Object>} Promise that resolves with reordering result
-   */
   async reorderFiles(entityId, orderData) {
     if (!this.hasFileHandling) {
       throw new AppError('File handling is not configured for this model', 500);
     }
 
     try {
-      // Use transaction for this operation
       return await this.db.executeTransaction(async (connection) => {
-        // Update display order for each file
         for (const item of orderData) {
           await CrudOperations.performCrud({
             operation: 'update',
@@ -999,7 +975,6 @@ export default class DataModelUtils {
           });
         }
 
-        // Get the updated files
         const files = await this.getAllByParentId(entityId);
 
         return {
@@ -1018,21 +993,11 @@ export default class DataModelUtils {
     }
   }
 
-  /**
-   * Truncates a database table
-   * @returns {Promise<Object>} Promise that resolves with truncation result
-   */
   async truncateTable() {
     try {
-      // Use transaction for this operation
       return await this.withTransaction(async (connection) => {
-        // First disable foreign key checks to allow truncate
         await this.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
-
-        // Truncate the table
         await this.executeQuery(`TRUNCATE TABLE ${this.tableName}`);
-
-        // Re-enable foreign key checks
         await this.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
 
         return {
@@ -1048,5 +1013,22 @@ export default class DataModelUtils {
         500
       );
     }
+  }
+
+  _capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  _camelCase(str) {
+    return str
+      .replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, (match, index) => {
+        if (+match === 0) return '';
+        return index === 0 ? match.toLowerCase() : match.toUpperCase();
+      })
+      .replace(/\s+/g, '');
+  }
+
+  _pluralize(str) {
+    return str + 's';
   }
 }

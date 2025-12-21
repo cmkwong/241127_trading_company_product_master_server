@@ -19,7 +19,6 @@ export const productModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCTS'].name,
   tableFields: TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
-  entityIdField: 'id',
   requiredFields: ['product_id'],
   validations: {
     product_id: { required: true },

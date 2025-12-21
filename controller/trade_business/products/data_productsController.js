@@ -31,6 +31,14 @@ export const createProduct = catchAsync(async (req, res, next) => {
  * @route GET /api/products/:id
  */
 export const getProductById = catchAsync(async (req, res, next) => {
+  const refactoredData = await productModel.refactoringData(
+    req.body.data,
+    'read',
+    req.body.options
+  );
+
+  console.log('read refactoredData--++: ', JSON.stringify(refactoredData));
+
   const includeRelated = req.query.includeRelated === 'true';
   const product = await Products.getProductById(req.params.id, includeRelated);
 

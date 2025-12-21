@@ -61,9 +61,9 @@ router.get(
 
 // Routes that require ID validation
 router
-  .route('/')
+  .route('/ids')
   .get(
-    productsController.validateProductId,
+    // productsController.validateProductId,
     productsController.getProductById,
     endController
   )
