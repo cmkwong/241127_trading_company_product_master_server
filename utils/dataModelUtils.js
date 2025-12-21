@@ -539,10 +539,136 @@ export default class DataModelUtils {
     return validEntry;
   }
 
+  async _handleWriteOperation(jsonData, schemaConfig, actionType) {
+    const result = {
+      createData: {},
+      updateData: {},
+    };
+
+    for (const [tableName, tableRows] of Object.entries(jsonData)) {
+      if (!schemaConfig[tableName]) {
+        throw new AppError(`Table "${tableName}" not found in schema`, 400);
+      }
+
+      const targetModel = this._resolveTargetModel(tableName);
+
+      // Note: We pass targetModel (or 'this' if null/fallback) to _processRecursive
+      // The original logic defaulted to 'this' if not found, though usually strict checking is better.
+      const modelToUse = targetModel || this;
+
+      await this._processRecursive(
+        tableName,
+        tableRows,
+        null, // parentData
+        null, // parentTableName
+        modelToUse,
+        result,
+        schemaConfig,
+        actionType
+      );
+    }
+
+    return result;
+  }
+
+  async _handleReadOperation(jsonData, schemaConfig, options) {
+    const resultData = {};
+
+    for (const [tableName, rows] of Object.entries(jsonData)) {
+      if (!schemaConfig[tableName]) continue;
+
+      const targetModel = this._resolveTargetModel(tableName);
+      if (!targetModel) continue;
+
+      const builtRows = [];
+      for (const row of rows) {
+        const builtRow = await this._recursiveRead(row, targetModel, options);
+        if (builtRow) {
+          builtRows.push(builtRow);
+        }
+      }
+      resultData[tableName] = builtRows;
+    }
+
+    return { data: resultData };
+  }
+
+  async _handleDeleteOperation(jsonData, schemaConfig) {
+    const resultData = {};
+
+    for (const [tableName, rows] of Object.entries(jsonData)) {
+      if (!schemaConfig[tableName]) {
+        throw new AppError(`Table "${tableName}" not found in schema`, 400);
+      }
+
+      const targetModel = this._resolveTargetModel(tableName);
+      if (!targetModel) {
+        console.warn(`Cannot delete from '${tableName}'. Model not found.`);
+        continue;
+      }
+
+      // Process each root ID provided in the JSON
+      for (const row of rows) {
+        // 1. Fetch FULL tree (Parent + Children) to know what to delete
+        const fullData = await this._recursiveRead(row, targetModel, {
+          includeBase64: false,
+        });
+
+        if (!fullData) continue; // Record already gone
+
+        // 2. Generate Delete Queue (Bottom-Up Order: Children -> Parent)
+        const deleteQueue = [];
+        this._collectDeleteQueue(fullData, targetModel, deleteQueue);
+
+        // 3. Execute Deletes One-by-One
+        for (const item of deleteQueue) {
+          try {
+            await item.model.delete(item.id);
+
+            // 4. Format Output
+            if (!resultData[item.tableName]) {
+              resultData[item.tableName] = [];
+            }
+
+            // Prevent duplicates in output
+            const alreadyAdded = resultData[item.tableName].some(
+              (entry) => entry.id === item.id
+            );
+            if (!alreadyAdded) {
+              resultData[item.tableName].push({ id: item.id });
+            }
+          } catch (err) {
+            console.error(
+              `Failed to delete ${item.tableName} ID ${item.id}:`,
+              err
+            );
+          }
+        }
+      }
+    }
+
+    return { deleteData: resultData };
+  }
+
+  _resolveTargetModel(tableName) {
+    // 1. Is it the current model?
+    if (this.tableName === tableName) {
+      return this;
+    }
+
+    // 2. Is it a configured child?
+    const childConfig = this.childTableConfig.find(
+      (c) => c.model.tableName === tableName
+    );
+
+    return childConfig ? childConfig.model : null;
+  }
+
   // ============================================================
   // 🚀 PUBLIC METHODS (CRUD & UTILS)
   // ============================================================
-  async refactoringData(jsonData, actionType, options = {}) {
+  async processOperation(jsonData, actionType, options = {}) {
+    // 1. Input Validation
     if (!jsonData || typeof jsonData !== 'object') {
       throw new AppError('Invalid JSON data provided', 400);
     }
@@ -554,148 +680,24 @@ export default class DataModelUtils {
       );
     }
 
+    // 2. Prepare Schema
     const schemaConfig = this._gettingSchemaConfig({});
 
-    // ============================================================
-    // 🗑️ DELETE OPERATION (Recursive One-by-One)
-    // ============================================================
-    if (actionType === 'delete') {
-      const resultData = {};
+    // 3. Dispatch to Specific Handlers
+    switch (actionType) {
+      case 'delete':
+        return this._handleDeleteOperation(jsonData, schemaConfig);
 
-      for (const [tableName, rows] of Object.entries(jsonData)) {
-        if (!schemaConfig[tableName]) {
-          throw new AppError(`Table "${tableName}" not found in schema`, 400);
-        }
+      case 'read':
+        return this._handleReadOperation(jsonData, schemaConfig, options);
 
-        // 🔍 FIND THE CORRECT MODEL
-        let targetModel = this;
-        if (this.tableName !== tableName) {
-          const childConfig = this.childTableConfig.find(
-            (c) => c.model.tableName === tableName
-          );
-          if (childConfig) {
-            targetModel = childConfig.model;
-          } else {
-            console.warn(`Cannot delete from '${tableName}'. Model not found.`);
-            continue;
-          }
-        }
+      case 'create':
+      case 'update':
+        return this._handleWriteOperation(jsonData, schemaConfig, actionType);
 
-        // 🔄 PROCESS EACH ROOT ID
-        for (const row of rows) {
-          // 1. Fetch the FULL tree (Parent + Children)
-          const fullData = await this._recursiveRead(row, targetModel, {
-            includeBase64: false,
-          });
-
-          if (!fullData) continue; // Record already gone
-
-          // 2. Generate the Delete Queue (Bottom-Up Order)
-          const deleteQueue = [];
-          this._collectDeleteQueue(fullData, targetModel, deleteQueue);
-
-          // 3. Delete One-by-One
-          for (const item of deleteQueue) {
-            try {
-              // Perform the delete
-              await item.model.delete(item.id);
-
-              // 4. Format Output: { "id": "..." }
-              if (!resultData[item.tableName]) {
-                resultData[item.tableName] = [];
-              }
-
-              // Check for duplicates to keep the list clean
-              const alreadyAdded = resultData[item.tableName].some(
-                (entry) => entry.id === item.id
-              );
-
-              if (!alreadyAdded) {
-                resultData[item.tableName].push({ id: item.id });
-              }
-            } catch (err) {
-              console.error(
-                `Failed to delete ${item.tableName} ID ${item.id}:`,
-                err
-              );
-            }
-          }
-        }
-      }
-
-      return { deleteData: resultData };
+      default:
+        throw new AppError(`Action ${actionType} not supported`, 400);
     }
-
-    // ============================================================
-    // 🔵 READ / GET OPERATION
-    // ============================================================
-    if (actionType === 'read') {
-      const resultData = {};
-
-      for (const [tableName, rows] of Object.entries(jsonData)) {
-        if (!schemaConfig[tableName]) continue;
-
-        let targetModel = this;
-        if (this.tableName !== tableName) {
-          const childConfig = this.childTableConfig.find(
-            (c) => c.model.tableName === tableName
-          );
-          if (childConfig) {
-            targetModel = childConfig.model;
-          } else {
-            continue;
-          }
-        }
-
-        const builtRows = [];
-        for (const row of rows) {
-          const builtRow = await this._recursiveRead(row, targetModel, options);
-          if (builtRow) {
-            builtRows.push(builtRow);
-          }
-        }
-        resultData[tableName] = builtRows;
-      }
-
-      return { data: resultData };
-    }
-
-    // ============================================================
-    // 🟠 WRITE OPERATION (Create/Update)
-    // ============================================================
-    const result = {
-      createData: {},
-      readData: {},
-      updateData: {},
-      deleteData: {},
-    };
-
-    for (const [tableName, tableRows] of Object.entries(jsonData)) {
-      if (!schemaConfig[tableName]) {
-        throw new AppError(`Table "${tableName}" not found in schema`, 400);
-      }
-
-      let targetModel = this;
-      if (this.tableName !== tableName) {
-        const childConfig = this.childTableConfig.find(
-          (c) => c.model.tableName === tableName
-        );
-        if (childConfig) targetModel = childConfig.model;
-      }
-
-      await this._processRecursive(
-        tableName,
-        tableRows,
-        null,
-        null,
-        targetModel,
-        result,
-        schemaConfig,
-        actionType
-      );
-    }
-
-    return result;
   }
 
   async checkExists(value, fieldName) {

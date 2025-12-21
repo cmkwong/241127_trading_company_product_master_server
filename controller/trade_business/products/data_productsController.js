@@ -9,7 +9,7 @@ import { productModel } from '../../../models/trade_business/products/data_produ
  * @route POST /api/products
  */
 export const createProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.refactoringData(
+  const refactoredData = await productModel.processOperation(
     req.body.data,
     'create'
   );
@@ -31,7 +31,7 @@ export const createProduct = catchAsync(async (req, res, next) => {
  * @route GET /api/products/:id
  */
 export const getProductById = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.refactoringData(
+  const refactoredData = await productModel.processOperation(
     req.body.data,
     'read',
     req.body.options
@@ -104,7 +104,7 @@ export const getProducts = catchAsync(async (req, res, next) => {
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.refactoringData(
+  const refactoredData = await productModel.processOperation(
     req.body.data,
     'update'
   );
@@ -125,7 +125,7 @@ export const updateProduct = catchAsync(async (req, res, next) => {
  * @route DELETE /api/products/:id
  */
 export const deleteProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.refactoringData(
+  const refactoredData = await productModel.processOperation(
     req.body.data,
     'delete'
   );
