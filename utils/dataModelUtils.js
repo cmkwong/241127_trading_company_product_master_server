@@ -266,6 +266,9 @@ export default class DataModelUtils {
     return exists ? 'update' : 'create';
   }
 
+  // ============================================================
+  // 🔄 RECURSIVE PROCESSOR (With Real DB Writes)
+  // ============================================================
   async _processRecursive(
     tableName,
     rows,
@@ -275,11 +278,14 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction = null
+    parentAction = null,
+    connection // 🟢 ACCEPT CONNECTION
   ) {
     const tableSchema = schemaConfig[tableName];
+    const pkField = currentModel.entityIdField;
 
     for (const rawRow of rows) {
+      // 1. Determine Action (Create vs Update)
       const rowAction = await this._determineRowAction(
         rawRow,
         globalActionType,
@@ -288,6 +294,7 @@ export default class DataModelUtils {
         parentAction
       );
 
+      // 2. Prepare Data (Validation, Defaults, Link Parent)
       const validEntry = await this._prepareDbRow(
         rawRow,
         tableSchema,
@@ -297,6 +304,80 @@ export default class DataModelUtils {
         rowAction
       );
 
+      // 3. 💾 EXECUTE DATABASE WRITE (Real-time)
+      let dbRecord = null;
+
+      try {
+        // --- A. Handle File Uploads (Pre-Write if ID exists) ---
+        let pendingFileUpload = false;
+
+        // If we have an ID (Update or UUID Create), we can upload files now
+        if (currentModel.hasFileHandling && validEntry[pkField]) {
+          const fileType =
+            rawRow[currentModel.fileTypeField] ||
+            validEntry[currentModel.fileTypeField];
+          validEntry[currentModel.fileUrlField] =
+            await this._validateAndSaveFile(rawRow, {
+              entityId: validEntry[pkField],
+              fileType: fileType,
+            });
+        }
+        // If Create + Auto-Increment, we don't have ID yet. Mark for post-write upload.
+        else if (currentModel.hasFileHandling && !validEntry[pkField]) {
+          pendingFileUpload = true;
+        }
+
+        // --- B. Perform CRUD ---
+        // We pass the active 'connection' so CrudOperations uses the transaction
+        const crudResult = await CrudOperations.performCrud({
+          operation: rowAction, // 'create' or 'update'
+          tableName: currentModel.tableName,
+          id: rowAction === 'update' ? validEntry[pkField] : undefined,
+          data: validEntry,
+          connection: connection, // 🟢 PASS CONNECTION
+        });
+
+        // --- C. Capture Result & ID ---
+        dbRecord = crudResult.record || validEntry;
+
+        // IMPORTANT: If Auto-Increment Create, capture the new ID back into validEntry
+        if (
+          rowAction === 'create' &&
+          !validEntry[pkField] &&
+          dbRecord[pkField]
+        ) {
+          validEntry[pkField] = dbRecord[pkField];
+        }
+
+        // --- D. Handle Pending File Upload (Post-Write for Auto-Increment) ---
+        if (pendingFileUpload && validEntry[pkField]) {
+          const fileType = rawRow[currentModel.fileTypeField];
+          const fileUrl = await this._validateAndSaveFile(rawRow, {
+            entityId: validEntry[pkField],
+            fileType: fileType,
+          });
+
+          if (fileUrl) {
+            // Update the record we just inserted with the file URL
+            // Must use the SAME connection to stay in transaction
+            await CrudOperations.performCrud({
+              operation: 'update',
+              tableName: currentModel.tableName,
+              id: validEntry[pkField],
+              data: { [currentModel.fileUrlField]: fileUrl },
+              connection: connection, // 🟢 PASS CONNECTION
+            });
+            validEntry[currentModel.fileUrlField] = fileUrl; // Update local object
+          }
+        }
+      } catch (err) {
+        throw new AppError(
+          `Failed to ${rowAction} ${tableName}: ${err.message}`,
+          500
+        );
+      }
+
+      // 4. Log to Result Object
       if (rowAction === 'create') {
         result.createData[tableName] = result.createData[tableName] || [];
         result.createData[tableName].push(validEntry);
@@ -305,6 +386,8 @@ export default class DataModelUtils {
         result.updateData[tableName].push(validEntry);
       }
 
+      // 5. Process Children (Recursion)
+      // We pass 'validEntry' which now definitely contains the Parent ID
       await this._processChildren(
         rawRow,
         validEntry,
@@ -313,7 +396,8 @@ export default class DataModelUtils {
         result,
         schemaConfig,
         globalActionType,
-        rowAction
+        rowAction,
+        connection // 🟢 PASS CONNECTION
       );
     }
   }
@@ -447,6 +531,9 @@ export default class DataModelUtils {
     }
   }
 
+  // ============================================================
+  // 👶 CHILD PROCESSOR
+  // ============================================================
   async _processChildren(
     rawRow,
     validEntry,
@@ -455,7 +542,8 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction
+    parentAction,
+    connection // 🟢 ACCEPT CONNECTION
   ) {
     for (const [key, value] of Object.entries(rawRow)) {
       if (!Array.isArray(value)) continue;
@@ -468,13 +556,14 @@ export default class DataModelUtils {
         await this._processRecursive(
           key,
           value,
-          validEntry,
+          validEntry, // Pass the parent (now with ID)
           currentTableName,
           childConfig.model,
           result,
           schemaConfig,
           globalActionType,
-          parentAction
+          parentAction,
+          connection // 🟢 PASS CONNECTION
         );
       }
     }
@@ -539,36 +628,42 @@ export default class DataModelUtils {
     return validEntry;
   }
 
+  // ============================================================
+  // 🟠 WRITE OPERATION (Create/Update) - HANDLER
+  // ============================================================
   async _handleWriteOperation(jsonData, schemaConfig, actionType) {
-    const result = {
-      createData: {},
-      updateData: {},
-    };
+    // We use a transaction to ensure that if a child fails, the parent is rolled back.
+    return await this.withTransaction(async (connection) => {
+      const result = {
+        createData: {},
+        updateData: {},
+      };
 
-    for (const [tableName, tableRows] of Object.entries(jsonData)) {
-      if (!schemaConfig[tableName]) {
-        throw new AppError(`Table "${tableName}" not found in schema`, 400);
+      for (const [tableName, tableRows] of Object.entries(jsonData)) {
+        if (!schemaConfig[tableName]) {
+          throw new AppError(`Table "${tableName}" not found in schema`, 400);
+        }
+
+        const targetModel = this._resolveTargetModel(tableName);
+        const modelToUse = targetModel || this;
+
+        // Start the recursive chain (passing the transaction connection)
+        await this._processRecursive(
+          tableName,
+          tableRows,
+          null, // parentData
+          null, // parentTableName
+          modelToUse,
+          result,
+          schemaConfig,
+          actionType,
+          null, // parentAction
+          connection // 🟢 PASS CONNECTION
+        );
       }
 
-      const targetModel = this._resolveTargetModel(tableName);
-
-      // Note: We pass targetModel (or 'this' if null/fallback) to _processRecursive
-      // The original logic defaulted to 'this' if not found, though usually strict checking is better.
-      const modelToUse = targetModel || this;
-
-      await this._processRecursive(
-        tableName,
-        tableRows,
-        null, // parentData
-        null, // parentTableName
-        modelToUse,
-        result,
-        schemaConfig,
-        actionType
-      );
-    }
-
-    return result;
+      return result;
+    });
   }
 
   async _handleReadOperation(jsonData, schemaConfig, options) {

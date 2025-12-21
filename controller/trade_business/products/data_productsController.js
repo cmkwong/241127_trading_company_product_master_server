@@ -15,14 +15,11 @@ export const createProduct = catchAsync(async (req, res, next) => {
   );
   console.log('refactoredData--++: ', JSON.stringify(refactoredData));
 
-  const result = await Products.createProduct(req.body);
+  // const result = await Products.createProduct(req.body);
 
   res.status(201).json({
     status: 'success',
     message: result.message,
-    data: {
-      product: result.product,
-    },
   });
 });
 
