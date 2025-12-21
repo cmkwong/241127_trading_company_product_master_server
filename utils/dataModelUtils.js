@@ -417,6 +417,36 @@ export default class DataModelUtils {
     return dbRow;
   }
 
+  /**
+   * Recursively traverses a hydrated data object and builds a flat list
+   * of items to delete, ensuring children are listed BEFORE parents.
+   */
+  _collectDeleteQueue(dataRow, currentModel, queue) {
+    // 1. Process Children First (Recursive Step)
+    if (currentModel.childTableConfig) {
+      for (const childConfig of currentModel.childTableConfig) {
+        const childTableName = childConfig.model.tableName;
+        const childRows = dataRow[childTableName]; // _recursiveRead attaches children here
+
+        if (childRows && Array.isArray(childRows)) {
+          for (const childRow of childRows) {
+            this._collectDeleteQueue(childRow, childConfig.model, queue);
+          }
+        }
+      }
+    }
+
+    // 2. Add Self to Queue (After children are processed)
+    const pk = currentModel.entityIdField;
+    if (dataRow[pk]) {
+      queue.push({
+        tableName: currentModel.tableName,
+        id: dataRow[pk],
+        model: currentModel,
+      });
+    }
+  }
+
   async _processChildren(
     rawRow,
     validEntry,
@@ -517,9 +547,9 @@ export default class DataModelUtils {
       throw new AppError('Invalid JSON data provided', 400);
     }
 
-    if (!['create', 'update', 'read'].includes(actionType)) {
+    if (!['create', 'update', 'read', 'delete'].includes(actionType)) {
       throw new AppError(
-        'Invalid actionType. Must be create, update, or read.',
+        'Invalid actionType. Must be create, update, read or delete.',
         400
       );
     }
@@ -567,6 +597,74 @@ export default class DataModelUtils {
       }
 
       return { data: resultData };
+    }
+
+    // ============================================================
+    // 🗑️ DELETE OPERATION (Recursive One-by-One)
+    // ============================================================
+    if (actionType === 'delete') {
+      const resultData = {};
+
+      for (const [tableName, rows] of Object.entries(jsonData)) {
+        if (!schemaConfig[tableName]) {
+          throw new AppError(`Table "${tableName}" not found in schema`, 400);
+        }
+
+        // 🔍 FIND THE CORRECT MODEL
+        let targetModel = this;
+        if (this.tableName !== tableName) {
+          const childConfig = this.childTableConfig.find(
+            (c) => c.model.tableName === tableName
+          );
+          if (childConfig) {
+            targetModel = childConfig.model;
+          } else {
+            console.warn(`Cannot delete from '${tableName}'. Model not found.`);
+            continue;
+          }
+        }
+
+        // 🔄 PROCESS EACH ROOT ID
+        for (const row of rows) {
+          // 1. Fetch the FULL tree (Parent + Children)
+          // We use _recursiveRead so we know exactly what children exist
+          const fullData = await this._recursiveRead(row, targetModel, {
+            includeBase64: false,
+          });
+
+          if (!fullData) continue; // Record already gone
+
+          // 2. Generate the Delete Queue (Bottom-Up Order)
+          const deleteQueue = [];
+          this._collectDeleteQueue(fullData, targetModel, deleteQueue);
+
+          // 3. Delete One-by-One
+          for (const item of deleteQueue) {
+            try {
+              // Perform the delete on the specific model
+              // This handles file cleanup for that specific record
+              await item.model.delete(item.id);
+
+              // Log success to result
+              if (!resultData[item.tableName]) {
+                resultData[item.tableName] = [];
+              }
+              // Avoid duplicates in the result log
+              if (!resultData[item.tableName].includes(item.id)) {
+                resultData[item.tableName].push(item.id);
+              }
+            } catch (err) {
+              console.error(
+                `Failed to delete ${item.tableName} ID ${item.id}:`,
+                err
+              );
+              // Optional: throw error to stop process or continue best-effort
+            }
+          }
+        }
+      }
+
+      return { deleteData: resultData };
     }
 
     // ============================================================

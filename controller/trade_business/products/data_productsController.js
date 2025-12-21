@@ -125,6 +125,11 @@ export const updateProduct = catchAsync(async (req, res, next) => {
  * @route DELETE /api/products/:id
  */
 export const deleteProduct = catchAsync(async (req, res, next) => {
+  const refactoredData = await productModel.refactoringData(
+    req.body.data,
+    'delete'
+  );
+  console.log('delete refactoredData--++: ', JSON.stringify(refactoredData));
   const result = await Products.deleteProduct(req.params.id);
 
   res.status(200).json({

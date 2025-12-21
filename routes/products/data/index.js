@@ -75,7 +75,7 @@ router
   )
   .delete(
     authController.restrictTo('admin', 'manager'),
-    productsController.validateProductId,
+    // productsController.validateProductId,
     productsController.deleteProduct,
     endController
   );
