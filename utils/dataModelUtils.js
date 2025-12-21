@@ -549,55 +549,12 @@ export default class DataModelUtils {
 
     if (!['create', 'update', 'read', 'delete'].includes(actionType)) {
       throw new AppError(
-        'Invalid actionType. Must be create, update, read or delete.',
+        'Invalid actionType. Must be create, update, read, or delete.',
         400
       );
     }
 
     const schemaConfig = this._gettingSchemaConfig({});
-
-    // ============================================================
-    // 🔵 READ / GET OPERATION
-    // ============================================================
-    if (actionType === 'read') {
-      const resultData = {};
-
-      for (const [tableName, rows] of Object.entries(jsonData)) {
-        if (!schemaConfig[tableName]) continue;
-
-        // 🔍 FIND THE CORRECT MODEL FOR THIS TABLE
-        let targetModel = this;
-
-        // 1. Is it the current model?
-        if (this.tableName !== tableName) {
-          // 2. No? Check if it's one of our children
-          const childConfig = this.childTableConfig.find(
-            (c) => c.model.tableName === tableName
-          );
-          if (childConfig) {
-            targetModel = childConfig.model;
-          } else {
-            // 3. Warning: We don't have access to this model from here
-            console.warn(
-              `[DataModelUtils] Cannot process table '${tableName}' from model '${this.tableName}'. It is not the main table nor a configured child.`
-            );
-            continue;
-          }
-        }
-
-        const builtRows = [];
-        for (const row of rows) {
-          // ✅ Use targetModel instead of 'this'
-          const builtRow = await this._recursiveRead(row, targetModel, options);
-          if (builtRow) {
-            builtRows.push(builtRow);
-          }
-        }
-        resultData[tableName] = builtRows;
-      }
-
-      return { data: resultData };
-    }
 
     // ============================================================
     // 🗑️ DELETE OPERATION (Recursive One-by-One)
@@ -627,7 +584,6 @@ export default class DataModelUtils {
         // 🔄 PROCESS EACH ROOT ID
         for (const row of rows) {
           // 1. Fetch the FULL tree (Parent + Children)
-          // We use _recursiveRead so we know exactly what children exist
           const fullData = await this._recursiveRead(row, targetModel, {
             includeBase64: false,
           });
@@ -641,24 +597,27 @@ export default class DataModelUtils {
           // 3. Delete One-by-One
           for (const item of deleteQueue) {
             try {
-              // Perform the delete on the specific model
-              // This handles file cleanup for that specific record
+              // Perform the delete
               await item.model.delete(item.id);
 
-              // Log success to result
+              // 4. Format Output: { "id": "..." }
               if (!resultData[item.tableName]) {
                 resultData[item.tableName] = [];
               }
-              // Avoid duplicates in the result log
-              if (!resultData[item.tableName].includes(item.id)) {
-                resultData[item.tableName].push(item.id);
+
+              // Check for duplicates to keep the list clean
+              const alreadyAdded = resultData[item.tableName].some(
+                (entry) => entry.id === item.id
+              );
+
+              if (!alreadyAdded) {
+                resultData[item.tableName].push({ id: item.id });
               }
             } catch (err) {
               console.error(
                 `Failed to delete ${item.tableName} ID ${item.id}:`,
                 err
               );
-              // Optional: throw error to stop process or continue best-effort
             }
           }
         }
@@ -668,7 +627,41 @@ export default class DataModelUtils {
     }
 
     // ============================================================
-    // 🟠 WRITE OPERATION (Create/Update/Delete)
+    // 🔵 READ / GET OPERATION
+    // ============================================================
+    if (actionType === 'read') {
+      const resultData = {};
+
+      for (const [tableName, rows] of Object.entries(jsonData)) {
+        if (!schemaConfig[tableName]) continue;
+
+        let targetModel = this;
+        if (this.tableName !== tableName) {
+          const childConfig = this.childTableConfig.find(
+            (c) => c.model.tableName === tableName
+          );
+          if (childConfig) {
+            targetModel = childConfig.model;
+          } else {
+            continue;
+          }
+        }
+
+        const builtRows = [];
+        for (const row of rows) {
+          const builtRow = await this._recursiveRead(row, targetModel, options);
+          if (builtRow) {
+            builtRows.push(builtRow);
+          }
+        }
+        resultData[tableName] = builtRows;
+      }
+
+      return { data: resultData };
+    }
+
+    // ============================================================
+    // 🟠 WRITE OPERATION (Create/Update)
     // ============================================================
     const result = {
       createData: {},
@@ -682,7 +675,6 @@ export default class DataModelUtils {
         throw new AppError(`Table "${tableName}" not found in schema`, 400);
       }
 
-      // 🔍 FIND THE CORRECT MODEL (Same logic as above)
       let targetModel = this;
       if (this.tableName !== tableName) {
         const childConfig = this.childTableConfig.find(
@@ -696,7 +688,7 @@ export default class DataModelUtils {
         tableRows,
         null,
         null,
-        targetModel, // ✅ Pass the correct model here too
+        targetModel,
         result,
         schemaConfig,
         actionType
