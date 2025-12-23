@@ -2,9 +2,11 @@ import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product categories with multiple joins
 export const productCategoryModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
   tableFields: TABLE_MASTER['PRODUCT_CATEGORIES'].fields,
   entityName: 'product category',
@@ -25,20 +27,6 @@ export const productCategoryModel = new DataModelUtils({
     },
   ],
 });
-
-// Export the standard CRUD operations using the model
-export const createProductCategory = (data) =>
-  productCategoryModel.create(data);
-export const getProductCategoryById = (id) => productCategoryModel.getById(id);
-export const getProductCategoriesByProductId = (productId) =>
-  productCategoryModel.getAllByParentId(productId);
-export const updateProductCategory = (id, data) =>
-  productCategoryModel.update(id, data);
-export const deleteProductCategory = (id) => productCategoryModel.delete(id);
-export const deleteProductCategoriesByProductId = (productId) =>
-  productCategoryModel.deleteAllByParentId(productId);
-export const upsertProductCategories = (productId, categories) =>
-  productCategoryModel.upsertAll(productId, categories);
 
 /**
  * Gets categories with hierarchical structure

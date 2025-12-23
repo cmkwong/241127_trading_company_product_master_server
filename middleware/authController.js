@@ -1,74 +1,59 @@
 import { promisify } from 'util';
 import jwt from 'jsonwebtoken';
 
-import * as dbConn from '../utils/dbConn.js';
+import { authDbc } from '../models/dbModel.js'; // Use the singleton instance for the auth database
 import * as time from '../utils/time.js';
-import * as auth from '../utils/auth.js';
-import * as dbModel from '../models/dbModel.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
-// sign the token
+// Sign the token
 export const signToken = (payload) => {
   return jwt.sign(
     {
-      // playload
+      // Payload
       payload,
     },
-    // private key
+    // Private key
     process.env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRES_IN, // expired_in
+      expiresIn: process.env.JWT_EXPIRES_IN, // Expiry time
     }
   );
 };
 
-// get the user
-export const getUser = async (pool, username, password) => {
-  let stmt = 'SELECT * FROM users;';
-  let results = await dbModel.executeQuery(pool, stmt);
-  // find the matched user with name and password
-  let matched = results.filter((result) => {
-    return result['username'] === username && result['password'] === password;
-  });
-  if (matched.length === 0) {
-    return matched;
-  } else {
-    return matched;
-  }
+// Get the user
+export const getUser = async (username, password) => {
+  const stmt = 'SELECT * FROM users;';
+  const results = await authDbc.executeQuery(stmt); // Use authDbc instance
+  // Find the matched user with name and password
+  const matched = results.filter(
+    (result) =>
+      result['username'] === username && result['password'] === password
+  );
+  return matched;
 };
 
-export const getUserRole = async (username, pool) => {
-  let stmt = 'SELECT * FROM users;';
-  let results = await dbModel.executeQuery(pool, stmt);
-  // find the matched user with name and password
-  let matched = results.filter((result) => {
-    return result['username'] === username;
-  });
-  if (matched.length === 0) {
-    return null; // Return null if no user is found
-  } else {
-    return matched[0].role; // Return the role of the first matched user
-  }
+export const getUserRole = async (username) => {
+  const stmt = 'SELECT * FROM users;';
+  const results = await authDbc.executeQuery(stmt); // Use authDbc instance
+  // Find the matched user with the username
+  const matched = results.find((result) => result['username'] === username);
+  return matched ? matched.role : null; // Return the role or null if not found
 };
 
-// get the token
+// Get the token
 export const getToken = catchAsync(async (req, res, next) => {
-  // get pool
-  const pool = dbConn.auth_pool;
+  const { username, password, payload } = req.body;
 
-  // get req body
-  let { username, password, payload } = req.body;
-
-  let matched = await getUser(pool, username, password);
+  const matched = await getUser(username, password);
   if (matched.length === 0) {
     res.status(404).json({
       status: 'failed',
       msg: 'Wrong user / wrong password',
     });
   } else {
-    let [currentDate, currentTime] = time.getCurrentTimeStr();
-    let token = signToken(
+    const [currentDate, currentTime] = time.getCurrentTimeStr();
+    const token = signToken(
       `${username};${payload};${currentDate} ${currentTime}`
     );
     res.prints = {
@@ -109,14 +94,14 @@ export const logout = (req, res) => {
 export const protect = catchAsync(async (req, res, next) => {
   try {
     let token;
-    // 1) Getting token and check of its there
+    // 1) Get the token and check if it's there
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')
     ) {
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies && req.cookies.jwt) {
-      // this is for browser
+      // This is for browser
       token = req.cookies.jwt;
     }
 
@@ -124,25 +109,22 @@ export const protect = catchAsync(async (req, res, next) => {
       return next(new AppError('You are not authorized!', 401));
     }
 
-    // 2) Verification token
+    // 2) Verify the token
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    // 3) Check payload still exists and belong to which role
+    // 3) Check the payload and determine the user's role
     const { payload } = decoded;
     if (!payload) {
-      return next(new AppError('The payload is not existed.', 401));
+      return next(new AppError('The payload does not exist.', 401));
     }
 
-    let [currentUser, userPayload, currenttime] = payload.split(';');
+    const [currentUser] = payload.split(';');
+    const role = await getUserRole(currentUser); // Use getUserRole function
 
-    // GRANT ACCESS to PROTECTED ROUTE
-    let role = await getUserRole(currentUser, dbConn.auth_pool); // Use auth_pool
-
-    // Add proper error handling for role
     if (!role) {
       req.user = { name: currentUser, role: 'user' }; // Default to user role if none found
     } else {
-      req.user = { name: currentUser, role: role };
+      req.user = { name: currentUser, role };
     }
 
     next();

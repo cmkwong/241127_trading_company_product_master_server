@@ -1,12 +1,13 @@
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product packings
 export const packingModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
   tableFields: TABLE_MASTER['PRODUCT_PACKINGS'].fields,
   entityName: 'product packing',
-  entityIdField: 'product_id',
   requiredFields: [
     'product_id',
     'packing_type_id',
@@ -35,15 +36,3 @@ export const packingModel = new DataModelUtils({
     },
   ],
 });
-
-// Export the standard CRUD operations using the model
-export const createProductPacking = (data) => packingModel.create(data);
-export const getProductPackingById = (id) => packingModel.getById(id);
-export const getProductPackingsByProductId = (productId) =>
-  packingModel.getAllByParentId(productId);
-export const updateProductPacking = (id, data) => packingModel.update(id, data);
-export const deleteProductPacking = (id) => packingModel.delete(id);
-export const deleteProductPackingsByProductId = (productId) =>
-  packingModel.deleteAllByParentId(productId);
-export const upsertProductPackings = (productId, packings) =>
-  packingModel.upsertAll(productId, packings);

@@ -1,4 +1,3 @@
-import * as dbModel from '../models/dbModel.js';
 import AppError from './appError.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,18 +14,16 @@ import { v4 as uuidv4 } from 'uuid';
  *    and part of a larger transaction (using an Active Connection).
  * 3. Schema Validation: Checks against DB schema to prevent SQL injection or invalid column errors.
  */
-class CrudOperations {
-  /**
-   * 🚀 MAIN DISPATCHER
-   *
-   * This is the entry point for all operations. It handles the critical logic
-   * of determining whether to open a new connection or use an existing one.
-   */
-  static async performCrud(options) {
-    let dbConn;
-    let releaseConnection = false;
-    let manageTransaction = false; // Determines if internal methods should START/COMMIT
 
+class CrudOperations {
+  constructor(config) {
+    this.dbc = config.dbc; // DatabaseConnection instance (e.g., authDbc or tradeBusinessDbc)
+    this.page = config.page || 1;
+    this.limit = config.limit || 20;
+    this.orderDirection = config.orderDirection || 'ASC';
+  }
+
+  async performCrud(options) {
     try {
       const {
         operation,
@@ -35,46 +32,23 @@ class CrudOperations {
         id,
         conditions,
         fields,
-        connection,
-        page = 1,
-        limit = 20,
         orderBy,
-        orderDirection = 'ASC',
         returnSchema = false,
         softDelete = false,
       } = options;
 
-      // =========================================================
-      // 🔌 CONNECTION RESOLUTION LOGIC (CRITICAL FIX)
-      // =========================================================
-      // We need to know if 'connection' is a Connection Pool (standard)
-      // or an Active Connection (inside a transaction).
-
-      if (connection && typeof connection.getConnection === 'function') {
-        // CASE A: It is a POOL.
-        // We must request a specific connection from the pool.
-        // We are responsible for releasing it back to the pool later.
-        dbConn = await connection.getConnection();
-        releaseConnection = true;
-        manageTransaction = true; // We own this scope, so we can start transactions if needed.
-      } else if (connection && typeof connection.query === 'function') {
-        // CASE B: It is an ACTIVE CONNECTION (Transaction).
-        // The parent function (DataModelUtils) passed us a connection that is
-        // already inside a transaction. We use it directly.
-        // We MUST NOT release it (the parent will do that).
-        // We MUST NOT start a new transaction (MySQL doesn't support nested transactions).
-        dbConn = connection;
-        releaseConnection = false;
-        manageTransaction = false;
-      } else {
-        throw new AppError('Invalid or missing database connection', 500);
+      if (!this.dbc) {
+        throw new AppError(
+          'A valid DatabaseConnection instance (dbc) is required',
+          500
+        );
       }
 
       // =========================================================
       // 🔍 SCHEMA VALIDATION
       // =========================================================
       // Fetch table metadata to ensure we only try to write to columns that exist.
-      const schema = await this.getTableSchema(dbConn, tableName);
+      const schema = await this.dbc.getTableSchema(tableName);
 
       if (schema.length === 0) {
         throw new AppError(
@@ -86,7 +60,6 @@ class CrudOperations {
       const primaryKeys = schema
         .filter((col) => col.COLUMN_KEY === 'PRI')
         .map((col) => col.COLUMN_NAME);
-
       if (primaryKeys.length === 0) {
         throw new AppError(`Table ${tableName} has no primary key`, 400);
       }
@@ -110,18 +83,6 @@ class CrudOperations {
       switch (operation.toLowerCase()) {
         case 'create':
           result = await this.createRecord(
-            dbConn,
-            tableName,
-            schema,
-            data,
-            hasCreatedAt,
-            hasUpdatedAt
-          );
-          break;
-
-        case 'bulkcreate':
-          result = await this.bulkCreateRecords(
-            dbConn,
             tableName,
             schema,
             data,
@@ -132,23 +93,18 @@ class CrudOperations {
 
         case 'read':
           result = await this.readRecords(
-            dbConn,
             tableName,
             schema,
             id,
             conditions,
             fields,
-            page,
-            limit,
             orderBy,
-            orderDirection,
             hasDeletedAt
           );
           break;
 
         case 'update':
           result = await this.updateRecord(
-            dbConn,
             tableName,
             schema,
             id,
@@ -157,66 +113,13 @@ class CrudOperations {
           );
           break;
 
-        case 'bulkupdate':
-          // Note: We pass 'manageTransaction' here.
-          // If we are already in a transaction, bulkUpdate won't try to START another one.
-          result = await this.bulkUpdateRecords(
-            dbConn,
-            tableName,
-            schema,
-            data,
-            primaryKeys[0],
-            hasUpdatedAt,
-            manageTransaction
-          );
-          break;
-
         case 'delete':
           result = await this.deleteRecord(
-            dbConn,
             tableName,
             schema,
             id,
             softDelete,
             hasDeletedAt
-          );
-          break;
-
-        case 'bulkdelete':
-          result = await this.bulkDeleteRecords(
-            dbConn,
-            tableName,
-            schema,
-            id,
-            softDelete,
-            hasDeletedAt,
-            manageTransaction
-          );
-          break;
-
-        case 'upsert':
-          result = await this.upsertRecord(
-            dbConn,
-            tableName,
-            schema,
-            data,
-            conditions,
-            hasCreatedAt,
-            hasUpdatedAt,
-            manageTransaction
-          );
-          break;
-
-        case 'bulkupsert':
-          result = await this.bulkUpsertRecords(
-            dbConn,
-            tableName,
-            schema,
-            data,
-            conditions,
-            hasCreatedAt,
-            hasUpdatedAt,
-            manageTransaction
           );
           break;
 
@@ -234,43 +137,14 @@ class CrudOperations {
         `CRUD operation failed: ${error.message}`,
         error.statusCode || 500
       );
-    } finally {
-      // =========================================================
-      // 🧹 RESOURCE CLEANUP
-      // =========================================================
-      // Only release the connection if WE opened it (Pool scenario).
-      // If it was passed in (Transaction scenario), we leave it open for the parent.
-      if (releaseConnection && dbConn) {
-        dbConn.release();
-      }
     }
-  }
-
-  /**
-   * Helper: Gets table metadata (columns, types, keys)
-   */
-  static async getTableSchema(connection, tableName) {
-    const schemaSQL = `
-      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, EXTRA
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
-      ORDER BY ORDINAL_POSITION
-    `;
-    return await dbModel.executeQuery(connection, schemaSQL, [tableName]);
   }
 
   /**
    * 🟢 CREATE (Single)
    * Handles UUID generation for string IDs and auto-timestamps.
    */
-  static async createRecord(
-    connection,
-    tableName,
-    schema,
-    data,
-    hasCreatedAt,
-    hasUpdatedAt
-  ) {
+  async createRecord(tableName, schema, data, hasCreatedAt, hasUpdatedAt) {
     if (!data) {
       throw new AppError('No data provided for create operation', 400);
     }
@@ -318,16 +192,11 @@ class CrudOperations {
       VALUES (${placeholders.join(', ')})
     `;
 
-    const result = await dbModel.executeQuery(connection, sql, values);
+    const result = await this.dbc.executeQuery(sql, values);
 
     // 4. Return the full created object
     const insertId = result.insertId || recordData[idColumn.COLUMN_NAME];
-    const createdRecord = await this.readRecords(
-      connection,
-      tableName,
-      schema,
-      insertId
-    );
+    const createdRecord = await this.readRecords(tableName, schema, insertId);
 
     return {
       message: `Record created successfully in ${tableName}`,
@@ -337,131 +206,15 @@ class CrudOperations {
   }
 
   /**
-   * 🟢 BULK CREATE
-   * Optimized to use a single INSERT statement for multiple rows.
-   */
-  static async bulkCreateRecords(
-    connection,
-    tableName,
-    schema,
-    dataArray,
-    hasCreatedAt,
-    hasUpdatedAt
-  ) {
-    if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new AppError('No data provided for bulk create operation', 400);
-    }
-
-    const idColumn = schema.find((col) => col.COLUMN_KEY === 'PRI');
-    const idColumnName = idColumn.COLUMN_NAME;
-    const now = new Date();
-    const columns = new Set();
-    const allValues = [];
-    const createdIds = [];
-
-    // 1. Scan all objects to find ALL possible columns used across the batch
-    dataArray.forEach((data) => {
-      Object.keys(data).forEach((key) => {
-        if (schema.some((col) => col.COLUMN_NAME === key)) {
-          columns.add(key);
-        }
-      });
-    });
-
-    if (hasCreatedAt) columns.add('created_at');
-    if (hasUpdatedAt) columns.add('updated_at');
-
-    const columnArray = Array.from(columns);
-
-    // 2. Prepare values for each row
-    dataArray.forEach((data) => {
-      const recordValues = [];
-      const recordData = { ...data };
-
-      // Generate UUIDs if needed
-      if (
-        idColumn &&
-        !recordData[idColumnName] &&
-        idColumn.DATA_TYPE.includes('char')
-      ) {
-        recordData[idColumnName] = uuidv4();
-      }
-
-      if (hasCreatedAt) recordData.created_at = now;
-      if (hasUpdatedAt) recordData.updated_at = now;
-
-      if (recordData[idColumnName]) {
-        createdIds.push(recordData[idColumnName]);
-      }
-
-      // Map values to the fixed column order (insert NULL if field missing in this specific row)
-      columnArray.forEach((column) => {
-        recordValues.push(
-          recordData[column] !== undefined ? recordData[column] : null
-        );
-      });
-
-      allValues.push(recordValues);
-    });
-
-    // 3. Construct Bulk Insert SQL: INSERT INTO ... VALUES (...), (...)
-    const placeholderGroups = allValues.map(
-      () => `(${columnArray.map(() => '?').join(', ')})`
-    );
-
-    const sql = `
-      INSERT INTO ${tableName} (${columnArray.join(', ')})
-      VALUES ${placeholderGroups.join(', ')}
-    `;
-
-    const flatValues = allValues.flat();
-    const result = await dbModel.executeQuery(connection, sql, flatValues);
-
-    // 4. Fetch created records to return them
-    let createdRecords;
-    if (createdIds.length > 0) {
-      createdRecords = await this.readRecords(
-        connection,
-        tableName,
-        schema,
-        createdIds
-      );
-    } else if (result.insertId) {
-      // If auto-increment, calculate the range of IDs generated
-      const ids = Array.from(
-        { length: dataArray.length },
-        (_, i) => result.insertId + i
-      );
-      createdRecords = await this.readRecords(
-        connection,
-        tableName,
-        schema,
-        ids
-      );
-    }
-
-    return {
-      message: `${dataArray.length} records created successfully in ${tableName}`,
-      count: dataArray.length,
-      ids: createdIds.length > 0 ? createdIds : undefined,
-      firstInsertId: result.insertId || undefined,
-      records: createdRecords?.records || [],
-    };
-  }
-
-  /**
    * 🔵 READ (Select)
    * Supports ID lookup, Pagination, Sorting, and complex Filters ($gt, $like, etc.)
    */
-  static async readRecords(
-    connection,
+  async readRecords(
     tableName,
     schema,
     id,
     conditions,
     fields,
-    page = 1,
-    limit = 20,
     orderBy,
     orderDirection = 'ASC',
     hasDeletedAt = false
@@ -564,7 +317,7 @@ class CrudOperations {
     let orderClause = '';
     if (orderBy && schema.some((col) => col.COLUMN_NAME === orderBy)) {
       const direction =
-        orderDirection.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+        this.orderDirection.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
       orderClause = `ORDER BY ${orderBy} ${direction}`;
     }
 
@@ -576,19 +329,15 @@ class CrudOperations {
         FROM ${tableName}
         ${whereClause ? `WHERE ${whereClause}` : ''}
       `;
-      const countResult = await dbModel.executeQuery(
-        connection,
-        countSQL,
-        whereParams
-      );
+      const countResult = await this.dbc.executeQuery(countSQL, whereParams);
       total = countResult[0].total;
     }
 
     // Pagination: Limit & Offset
     let limitClause = '';
     if (!id || Array.isArray(id)) {
-      const offset = (page - 1) * limit;
-      limitClause = `LIMIT ${limit} OFFSET ${offset}`;
+      const offset = (this.page - 1) * this.limit;
+      limitClause = `LIMIT ${this.limit} OFFSET ${offset}`;
     }
 
     const sql = `
@@ -597,8 +346,9 @@ class CrudOperations {
       ${orderClause}
       ${limitClause}
     `;
+    console.log('sql: ', sql);
 
-    const results = await dbModel.executeQuery(connection, sql, whereParams);
+    const results = await this.dbc.executeQuery(sql, whereParams);
 
     // Return format depends on whether we asked for a single ID or a list
     if (id && !Array.isArray(id)) {
@@ -608,9 +358,9 @@ class CrudOperations {
         records: results,
         pagination: {
           total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit),
+          page: this.page,
+          limit: this.limit,
+          pages: Math.ceil(total / this.limit),
         },
       };
     }
@@ -619,14 +369,7 @@ class CrudOperations {
   /**
    * 🟠 UPDATE (Single)
    */
-  static async updateRecord(
-    connection,
-    tableName,
-    schema,
-    id,
-    data,
-    hasUpdatedAt
-  ) {
+  async updateRecord(tableName, schema, id, data, hasUpdatedAt) {
     if (!id) throw new AppError('No ID provided for update operation', 400);
     if (!data || Object.keys(data).length === 0) {
       throw new AppError('No data provided for update operation', 400);
@@ -666,14 +409,9 @@ class CrudOperations {
       WHERE ${primaryKeyColumn} = ?
     `;
 
-    await dbModel.executeQuery(connection, sql, values);
+    await this.dbc.executeQuery(sql, values);
 
-    const updatedRecord = await this.readRecords(
-      connection,
-      tableName,
-      schema,
-      id
-    );
+    const updatedRecord = await this.readRecords(tableName, schema, id);
 
     return {
       message: `Record updated successfully in ${tableName}`,
@@ -683,110 +421,10 @@ class CrudOperations {
   }
 
   /**
-   * 🟠 BULK UPDATE
-   * Iterates through an array and updates rows one by one inside a transaction.
-   */
-  static async bulkUpdateRecords(
-    connection,
-    tableName,
-    schema,
-    dataArray,
-    idField,
-    hasUpdatedAt,
-    manageTransaction = true
-  ) {
-    if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new AppError('No data provided for bulk update operation', 400);
-    }
-
-    const missingIds = dataArray.filter((item) => !item[idField]);
-    if (missingIds.length > 0) {
-      throw new AppError(
-        `${missingIds.length} records are missing the ID field (${idField})`,
-        400
-      );
-    }
-
-    const updatedIds = [];
-    const now = new Date();
-
-    // Only START TRANSACTION if we are not already inside one
-    if (manageTransaction) {
-      await dbModel.executeQuery(connection, 'START TRANSACTION');
-    }
-
-    try {
-      for (const data of dataArray) {
-        const updateData = { ...data };
-        if (hasUpdatedAt) updateData.updated_at = now;
-
-        const id = updateData[idField];
-        updatedIds.push(id);
-        delete updateData[idField];
-
-        const updateParts = [];
-        const values = [];
-
-        schema.forEach((column) => {
-          const columnName = column.COLUMN_NAME;
-          if (columnName !== idField && updateData[columnName] !== undefined) {
-            updateParts.push(`${columnName} = ?`);
-            values.push(updateData[columnName]);
-          }
-        });
-
-        if (updateParts.length === 0) continue;
-
-        values.push(id);
-
-        const sql = `
-          UPDATE ${tableName}
-          SET ${updateParts.join(', ')}
-          WHERE ${idField} = ?
-        `;
-
-        await dbModel.executeQuery(connection, sql, values);
-      }
-
-      // Only COMMIT if we started it
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'COMMIT');
-      }
-
-      const updatedRecords = await this.readRecords(
-        connection,
-        tableName,
-        schema,
-        updatedIds
-      );
-
-      return {
-        message: `${updatedIds.length} records updated successfully in ${tableName}`,
-        count: updatedIds.length,
-        ids: updatedIds,
-        records: updatedRecords.records,
-      };
-    } catch (error) {
-      // Only ROLLBACK if we started it
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'ROLLBACK');
-      }
-      throw error;
-    }
-  }
-
-  /**
    * 🔴 DELETE (Single)
    * Supports both Soft Delete (flagging) and Hard Delete (removal).
    */
-  static async deleteRecord(
-    connection,
-    tableName,
-    schema,
-    id,
-    softDelete,
-    hasDeletedAt
-  ) {
+  async deleteRecord(tableName, schema, id, softDelete, hasDeletedAt) {
     if (!id) throw new AppError('No ID provided for delete operation', 400);
 
     const primaryKeyColumns = schema
@@ -798,12 +436,7 @@ class CrudOperations {
     }
 
     // Verify existence before delete
-    const recordToDelete = await this.readRecords(
-      connection,
-      tableName,
-      schema,
-      id
-    );
+    const recordToDelete = await this.readRecords(tableName, schema, id);
 
     if (!recordToDelete.record) {
       throw new AppError(
@@ -841,7 +474,7 @@ class CrudOperations {
       SET deleted_at = ?
       WHERE ${whereClause}
     `;
-      await dbModel.executeQuery(connection, sql, [new Date(), ...whereParams]);
+      await this.dbc.executeQuery(sql, [new Date(), ...whereParams]);
       return {
         message: `Record soft deleted successfully from ${tableName}`,
         id,
@@ -853,409 +486,12 @@ class CrudOperations {
       DELETE FROM ${tableName}
       WHERE ${whereClause}
     `;
-      await dbModel.executeQuery(connection, sql, whereParams);
+      await this.dbc.executeQuery(sql, whereParams);
       return {
         message: `Record deleted successfully from ${tableName}`,
         id,
         deletedRecord: recordToDelete.record,
       };
-    }
-  }
-
-  /**
-   * 🔴 BULK DELETE
-   */
-  static async bulkDeleteRecords(
-    connection,
-    tableName,
-    schema,
-    ids,
-    softDelete,
-    hasDeletedAt,
-    manageTransaction = true
-  ) {
-    if (!Array.isArray(ids) || ids.length === 0) {
-      throw new AppError('No IDs provided for bulk delete operation', 400);
-    }
-
-    const primaryKeyColumns = schema
-      .filter((col) => col.COLUMN_KEY === 'PRI')
-      .map((col) => col.COLUMN_NAME);
-
-    if (primaryKeyColumns.length === 0) {
-      throw new AppError(`Table ${tableName} has no primary key`, 400);
-    }
-
-    const recordsToDelete = await this.readRecords(
-      connection,
-      tableName,
-      schema,
-      ids
-    );
-
-    if (recordsToDelete.records.length === 0) {
-      throw new AppError(
-        `No records found with the provided IDs in ${tableName}`,
-        404
-      );
-    }
-
-    if (manageTransaction) {
-      await dbModel.executeQuery(connection, 'START TRANSACTION');
-    }
-
-    try {
-      if (primaryKeyColumns.length > 1) {
-        // Composite keys must be deleted one by one
-        for (const id of ids) {
-          await this.deleteRecord(
-            connection,
-            tableName,
-            schema,
-            id,
-            softDelete,
-            hasDeletedAt
-          );
-        }
-      } else {
-        // Single PK can be done in one query: WHERE id IN (...)
-        const primaryKeyColumn = primaryKeyColumns[0];
-        const simpleIds = ids.map((id) =>
-          typeof id === 'object' ? id[primaryKeyColumn] : id
-        );
-        const placeholders = simpleIds.map(() => '?').join(', ');
-
-        if (softDelete && hasDeletedAt) {
-          const sql = `
-          UPDATE ${tableName}
-          SET deleted_at = ?
-          WHERE ${primaryKeyColumn} IN (${placeholders})
-        `;
-          await dbModel.executeQuery(connection, sql, [
-            new Date(),
-            ...simpleIds,
-          ]);
-        } else {
-          const sql = `
-          DELETE FROM ${tableName}
-          WHERE ${primaryKeyColumn} IN (${placeholders})
-        `;
-          await dbModel.executeQuery(connection, sql, simpleIds);
-        }
-      }
-
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'COMMIT');
-      }
-
-      return {
-        message: `${ids.length} records ${
-          softDelete && hasDeletedAt ? 'soft ' : ''
-        }deleted successfully from ${tableName}`,
-        count: ids.length,
-        ids,
-        deletedRecords: recordsToDelete.records,
-      };
-    } catch (error) {
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'ROLLBACK');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 🔄 UPSERT (Update or Insert)
-   * Strategy: Delete existing records matching conditions, then Insert new ones.
-   */
-  static async upsertRecord(
-    connection,
-    tableName,
-    schema,
-    data,
-    conditions,
-    hasCreatedAt,
-    hasUpdatedAt,
-    manageTransaction = true
-  ) {
-    if (!data) throw new AppError('No data provided for upsert operation', 400);
-    if (!conditions || Object.keys(conditions).length === 0) {
-      throw new AppError('No conditions provided for upsert operation', 400);
-    }
-
-    if (manageTransaction) {
-      await dbModel.executeQuery(connection, 'START TRANSACTION');
-    }
-
-    try {
-      // 1. Delete existing
-      const whereConditions = [];
-      const whereParams = [];
-
-      Object.entries(conditions).forEach(([column, value]) => {
-        if (schema.some((col) => col.COLUMN_NAME === column)) {
-          whereConditions.push(`${column} = ?`);
-          whereParams.push(value);
-        }
-      });
-
-      if (whereConditions.length === 0) {
-        throw new AppError(
-          'No valid conditions found for upsert operation',
-          400
-        );
-      }
-
-      const deleteSQL = `DELETE FROM ${tableName} WHERE ${whereConditions.join(
-        ' AND '
-      )}`;
-      await dbModel.executeQuery(connection, deleteSQL, whereParams);
-
-      // 2. Insert New
-      const recordData = { ...data };
-      const idColumn = schema.find(
-        (col) =>
-          col.COLUMN_KEY === 'PRI' &&
-          col.COLUMN_NAME.toLowerCase().includes('id')
-      );
-      if (
-        idColumn &&
-        !recordData[idColumn.COLUMN_NAME] &&
-        idColumn.DATA_TYPE.includes('char')
-      ) {
-        recordData[idColumn.COLUMN_NAME] = uuidv4();
-      }
-
-      const now = new Date();
-      if (hasCreatedAt) recordData.created_at = now;
-      if (hasUpdatedAt) recordData.updated_at = now;
-
-      const columns = [];
-      const placeholders = [];
-      const values = [];
-
-      schema.forEach((column) => {
-        const columnName = column.COLUMN_NAME;
-        if (recordData[columnName] !== undefined) {
-          columns.push(columnName);
-          placeholders.push('?');
-          values.push(recordData[columnName]);
-        }
-      });
-
-      const insertSQL = `
-      INSERT INTO ${tableName} (${columns.join(', ')})
-      VALUES (${placeholders.join(', ')})
-    `;
-
-      const result = await dbModel.executeQuery(connection, insertSQL, values);
-
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'COMMIT');
-      }
-
-      const insertId = result.insertId || recordData[idColumn.COLUMN_NAME];
-      const upsertedRecord = await this.readRecords(
-        connection,
-        tableName,
-        schema,
-        insertId
-      );
-
-      return {
-        message: `Record upserted successfully in ${tableName}`,
-        id: insertId,
-        record: upsertedRecord.records || upsertedRecord.record,
-      };
-    } catch (error) {
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'ROLLBACK');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 🔄 BULK UPSERT
-   */
-  static async bulkUpsertRecords(
-    connection,
-    tableName,
-    schema,
-    dataArray,
-    conditions,
-    hasCreatedAt,
-    hasUpdatedAt,
-    manageTransaction = true
-  ) {
-    if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new AppError('No data provided for bulk upsert operation', 400);
-    }
-    if (!conditions || Object.keys(conditions).length === 0) {
-      throw new AppError(
-        'No conditions provided for bulk upsert operation',
-        400
-      );
-    }
-
-    if (manageTransaction) {
-      await dbModel.executeQuery(connection, 'START TRANSACTION');
-    }
-
-    try {
-      // 1. Delete Existing
-      const whereConditions = [];
-      const whereParams = [];
-
-      Object.entries(conditions).forEach(([column, value]) => {
-        if (schema.some((col) => col.COLUMN_NAME === column)) {
-          whereConditions.push(`${column} = ?`);
-          whereParams.push(value);
-        }
-      });
-
-      if (whereConditions.length === 0) {
-        throw new AppError(
-          'No valid conditions found for bulk upsert operation',
-          400
-        );
-      }
-
-      const deleteSQL = `DELETE FROM ${tableName} WHERE ${whereConditions.join(
-        ' AND '
-      )}`;
-      await dbModel.executeQuery(connection, deleteSQL, whereParams);
-
-      // 2. Bulk Insert New
-      const idColumn = schema.find((col) => col.COLUMN_KEY === 'PRI');
-      const idColumnName = idColumn.COLUMN_NAME;
-      const now = new Date();
-      const columns = new Set();
-      const allValues = [];
-      const createdIds = [];
-
-      dataArray.forEach((data) => {
-        Object.keys(data).forEach((key) => {
-          if (schema.some((col) => col.COLUMN_NAME === key)) {
-            columns.add(key);
-          }
-        });
-      });
-
-      if (hasCreatedAt) columns.add('created_at');
-      if (hasUpdatedAt) columns.add('updated_at');
-
-      const columnArray = Array.from(columns);
-
-      dataArray.forEach((data) => {
-        const recordValues = [];
-        const recordData = { ...data };
-
-        if (
-          idColumn &&
-          !recordData[idColumnName] &&
-          idColumn.DATA_TYPE.includes('char')
-        ) {
-          recordData[idColumnName] = uuidv4();
-        }
-
-        if (hasCreatedAt) recordData.created_at = now;
-        if (hasUpdatedAt) recordData.updated_at = now;
-
-        if (recordData[idColumnName]) {
-          createdIds.push(recordData[idColumnName]);
-        }
-
-        columnArray.forEach((column) => {
-          recordValues.push(
-            recordData[column] !== undefined ? recordData[column] : null
-          );
-        });
-
-        allValues.push(recordValues);
-      });
-
-      const placeholderGroups = allValues.map(
-        () => `(${columnArray.map(() => '?').join(', ')})`
-      );
-
-      const sql = `
-      INSERT INTO ${tableName} (${columnArray.join(', ')})
-      VALUES ${placeholderGroups.join(', ')}
-    `;
-
-      const flatValues = allValues.flat();
-      const result = await dbModel.executeQuery(connection, sql, flatValues);
-
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'COMMIT');
-      }
-
-      let upsertedRecords;
-      if (createdIds.length > 0) {
-        upsertedRecords = await this.readRecords(
-          connection,
-          tableName,
-          schema,
-          createdIds
-        );
-      } else if (result.insertId) {
-        const ids = Array.from(
-          { length: dataArray.length },
-          (_, i) => result.insertId + i
-        );
-        upsertedRecords = await this.readRecords(
-          connection,
-          tableName,
-          schema,
-          ids
-        );
-      }
-
-      return {
-        message: `${dataArray.length} records upserted successfully in ${tableName}`,
-        count: dataArray.length,
-        ids: createdIds.length > 0 ? createdIds : undefined,
-        firstInsertId: result.insertId || undefined,
-        records: upsertedRecords?.records || [],
-      };
-    } catch (error) {
-      if (manageTransaction) {
-        await dbModel.executeQuery(connection, 'ROLLBACK');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 📦 TRANSACTION WRAPPER
-   * Allows executing multiple CRUD operations as a single atomic unit.
-   */
-  static async performTransaction(connection, operations) {
-    if (!Array.isArray(operations) || operations.length === 0) {
-      throw new AppError('No operations provided for transaction', 400);
-    }
-
-    // This method assumes it is starting a NEW transaction
-    await dbModel.executeQuery(connection, 'START TRANSACTION');
-
-    try {
-      const results = [];
-      for (const operation of operations) {
-        const result = await this.performCrud({
-          ...operation,
-          connection,
-        });
-        results.push(result);
-      }
-      await dbModel.executeQuery(connection, 'COMMIT');
-      return {
-        message: 'Transaction completed successfully',
-        results,
-      };
-    } catch (error) {
-      await dbModel.executeQuery(connection, 'ROLLBACK');
-      throw error;
     }
   }
 }

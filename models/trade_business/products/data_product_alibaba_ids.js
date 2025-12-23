@@ -1,8 +1,10 @@
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product Alibaba IDs
 export const alibabaIdModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
   tableFields: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].fields,
   entityName: 'product Alibaba ID',

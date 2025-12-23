@@ -3,9 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import * as CustomizationImages from './data_product_customization_images.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product customizations
 export const customizationModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
   tableFields: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].fields,
   entityName: 'customization',
@@ -22,7 +24,6 @@ export const customizationModel = new DataModelUtils({
   childTableConfig: [
     {
       tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
-      // connectedKeys: { id: 'customization_id' }, // parent table -> child table
       model: CustomizationImages.customizationImageModel,
     },
   ],

@@ -19,7 +19,6 @@ export const createProduct = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     status: 'success',
-    message: result.message,
   });
 });
 
@@ -36,13 +35,10 @@ export const getProductById = catchAsync(async (req, res, next) => {
 
   console.log('read refactoredData--++: ', JSON.stringify(refactoredData));
 
-  const includeRelated = req.query.includeRelated === 'true';
-  const product = await Products.getProductById(req.params.id, includeRelated);
-
   res.status(200).json({
     status: 'success',
     data: {
-      product,
+      refactoredData,
     },
   });
 });

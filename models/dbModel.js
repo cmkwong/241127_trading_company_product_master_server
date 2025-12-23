@@ -1,169 +1,147 @@
-import * as dbConn from '../utils/dbConn.js';
-import logger from '../utils/logger.js';
+import { tb_pool, auth_pool } from '../utils/dbConn.js';
 
-// execute array of query
-export const executeQueries = (pool, stmts) => {
-  // stmts = array[]
-  return new Promise((resolve, reject) => {
-    if (stmts.length === 0) resolve(true);
-    // getting connection
-    pool.getConnection((err, connection) => {
-      if (err) reject(err);
-      // create transcation, run query one-by-one
-      connection.beginTransaction((err) => {
-        let queryResults = [];
-        if (err) reject(err);
-        for (const stmt of stmts) {
-          connection.query(stmt, (err, result, field) => {
-            if (err) {
-              logger.error(stmt);
-              logger.error(err.errno);
-              logger.error(err.code);
-              logger.error(err.sqlMessage);
-              reject(err);
-            }
-            queryResults.push(result);
-          });
-        }
-        connection.commit((err) => {
-          if (err) {
-            connection.rollback();
-            reject(err);
-          }
-          connection.release();
-          resolve(queryResults);
-        });
-      });
-    });
-  });
-};
+/**
+ * Database connection manager class
+ */
+class DatabaseConnection {
+  constructor(pool) {
+    this.pool = pool;
+    this.promisePool = this.pool.promise();
+  }
 
-// execute just one query
-export const executeQuery = (pool, stmt, params = []) => {
-  return new Promise((resolve, reject) => {
-    if (!stmt) resolve(true);
-    // getting connection
-    pool.getConnection((err, connection) => {
-      if (err) reject(err);
-      // execute the stmt with parameters if provided
-      connection.query(stmt, params, (err, result, field) => {
-        if (err) {
-          logger.error(stmt);
-          logger.error(err.errno);
-          logger.error(err.code);
-          logger.error(err.sqlMessage);
-          reject(err);
-        }
-        connection.release();
-        resolve(result);
-      });
-    });
-  });
-};
+  /**
+   * Get a list of table names in the current database
+   * @returns {Promise<Array<string>>} Array of table names
+   */
+  async getTableNames() {
+    try {
+      const sql = `
+        SELECT TABLE_NAME 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        ORDER BY TABLE_NAME;
+      `;
+      const results = await this.executeQuery(sql);
+      return results.map((row) => row.TABLE_NAME);
+    } catch (error) {
+      console.error('Error fetching table names:', error);
+      throw new Error(`Failed to fetch table names: ${error.message}`);
+    }
+  }
 
-// forming the INSERT/REPLACE statments by data (json data) [Faster]
-export const getInsertStmts = (tableName, data, command = 'i') => {
-  let insertCommand = command === 'i' ? 'INSERT IGNORE' : 'REPLACE';
-  if (!data || data.length === 0) return '';
-  let stmts = [];
-  // build the column names
-  let colsStr = Object.keys(data[0]).join(', ');
-  // build the values
-  let row_values_list = [];
-  for (let i in data) {
-    // loop for each row
-    let row_values = [];
-    for (let [key, value] of Object.entries(data[i])) {
-      if (typeof value === 'string') {
-        // if (!value) continue;
-        value = value.replace(/'/g, "\\'");
+  /**
+   * Helper: Gets table metadata (columns, types, keys)
+   */
+  async getTableSchema(tableName) {
+    const schemaSQL = `
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, EXTRA
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+      ORDER BY ORDINAL_POSITION
+    `;
+    return await this.executeQuery(schemaSQL, [tableName]);
+  }
+
+  /**
+   * Execute a SQL query
+   * @param {string} sql - SQL query to execute
+   * @param {Array} [params=[]] - Query parameters
+   * @param {Object} [connection=null] - Database connection
+   * @returns {Promise<Array>} Query results
+   */
+  async executeQuery(sql, params = [], connection = null) {
+    try {
+      if (connection) {
+        const [rows] = await connection.query(sql, params);
+        return rows;
+      } else {
+        const [rows] = await this.promisePool.query(sql, params);
+        return rows;
       }
-      row_values.push(value); // [v1, v2, v3, ...]
-    }
-    row_values_list.push(`('${row_values.join("', '")}')`); // ["('v1', 'v2', 'v3', ...)", "('v1', 'v2', 'v3', ...)", ... ]
-    // group into group stmt
-    if (i > 0 && i % 10000 === 0) {
-      stmts.push(
-        `${insertCommand} ${tableName} (${colsStr}) VALUES ${row_values_list.join(
-          ', '
-        )};`
-      );
-      row_values_list = [];
+    } catch (error) {
+      console.error('Query execution error:', error);
+      throw new Error(`Query execution failed: ${error.message}`);
     }
   }
-  // tailed data
-  if (row_values_list.length > 0) {
-    stmts.push(
-      `${insertCommand} ${tableName} (${colsStr}) VALUES ${row_values_list.join(
-        ', '
-      )};`
-    );
-  }
-  return stmts;
-};
 
-// clear the table
-export const clearTable = (pool, tableName) => {
-  return new Promise((resolve, reject) => {
-    let stmt = `TRUNCATE TABLE ${tableName};`;
-    // clear table
-    executeQueries(pool, [stmt])
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((err) => {
-        reject(err);
-      });
-  });
-};
-
-// create table if not exist
-export const createTable = (pool, tableName, schemaObj) => {
-  return new Promise((resolve, reject) => {
-    let schemaArr = [];
-    for (const fieldName in schemaObj) {
-      schemaArr.push(`${fieldName} ${schemaObj[fieldName]}`);
+  /**
+   * Execute a transaction with multiple queries
+   * @param {Function} callback - Callback function that receives a connection and executes queries
+   * @returns {Promise<any>} Result from the callback function
+   */
+  async executeTransaction(callback) {
+    const connection = await this.getConnection();
+    try {
+      await connection.beginTransaction();
+      const result = await callback(connection);
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback();
+      console.error('Transaction execution error:', error);
+      throw new Error(`Transaction failed: ${error.message}`);
+    } finally {
+      connection.release();
     }
-    let schemaStr = schemaArr.join(', ');
-    // stmt create
-    let stmt = `CREATE TABLE IF NOT EXISTS ${tableName} (${schemaStr});`;
-    executeQuery(pool, stmt)
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((err) => {
-        reject(err);
-      });
-  });
-};
+  }
 
-// upload data from JSON format
-export const uploadData = (pool, tableName, data, command = 'i') => {
-  // data is object(JSON) format
-  // command = i: INSERT; command = r: REPLACE
-  return new Promise((resolve, reject) => {
-    let stmts = getInsertStmts(tableName, data, command);
-    // insert the data
-    executeQueries(pool, stmts)
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((err) => {
-        reject(err);
-      });
-  });
-};
+  /**
+   * Get a connection from the pool
+   * @returns {Promise<Object>} Database connection
+   */
+  async getConnection() {
+    try {
+      return await this.promisePool.getConnection();
+    } catch (error) {
+      console.error('Error getting connection:', error);
+      throw new Error(`Getting connection error: ${error.message}`);
+    }
+  }
 
-// getting the table row count
-export const rowTotal = (pool, tableName) => {
-  return new Promise((resolve, reject) => {
-    let stmt = `SELECT COUNT(1) as count FROM ${tableName};`; // COUNT(1) for first column (saving time)
-    executeQuery(pool, stmt)
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((err) => {
-        reject(err);
-      });
-  });
-};
+  /**
+   * Begin a transaction
+   * @returns {Promise<Object>} Connection with active transaction
+   */
+  async beginTransaction() {
+    const connection = await this.getConnection();
+    try {
+      await connection.beginTransaction();
+      return connection;
+    } catch (error) {
+      connection.release();
+      throw new Error(`Failed to begin transaction: ${error.message}`);
+    }
+  }
+
+  /**
+   * Commit a transaction
+   * @param {Object} connection - Connection with active transaction
+   * @returns {Promise<void>}
+   */
+  async commitTransaction(connection) {
+    try {
+      await connection.commit();
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Rollback a transaction
+   * @param {Object} connection - Connection with active transaction
+   * @returns {Promise<void>}
+   */
+  async rollbackTransaction(connection) {
+    try {
+      await connection.rollback();
+    } finally {
+      connection.release();
+    }
+  }
+}
+
+// Create singleton instances for trade_business and auth databases
+export const tradeBusinessDbc = new DatabaseConnection(tb_pool);
+export const authDbc = new DatabaseConnection(auth_pool);
+
+export default DatabaseConnection;

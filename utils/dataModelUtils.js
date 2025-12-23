@@ -1,4 +1,3 @@
-import * as dbConn from './dbConn.js';
 import AppError from './appError.js';
 import CrudOperations from './crud.js';
 import {
@@ -26,11 +25,20 @@ export default class DataModelUtils {
     this.defaults = config.defaults || {};
     this.requiredFields = config.requiredFields || [];
     this.joinConfig = config.joinConfig;
-    this.database = config.database || 'trade_business';
     this.childTableConfig = config.childTableConfig || [];
+    this.dbc = config.dbc;
+    this.page = config.page || 1;
+    this.limit = config.limit || 20;
+    this.orderDirection = config.orderDirection || 'ASC';
 
     // Create database connection
-    this.db = dbConn.createDbConnection(this.database);
+    this.crudO = new CrudOperations({
+      dbc: this.dbc,
+      page: this.page,
+      limit: this.limit,
+      orderDirection: this.orderDirection,
+    });
+    // this.db = dbConn.createDbConnection(this.database);
 
     // File handling configuration
     this.hasFileHandling = !!config.fileConfig;
@@ -123,6 +131,10 @@ export default class DataModelUtils {
   async _validateAndSaveFile(data, options = {}) {
     const { entityId, fileType } = options;
     const base64FieldName = this.imagesOnly ? 'base64_image' : 'base64_file';
+
+    if (!data[base64FieldName]) {
+      throw new AppError(`${base64FieldName} is required for file upload`, 400);
+    }
 
     if (!data[base64FieldName]) return null;
 
@@ -278,8 +290,7 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction = null,
-    connection // 🟢 ACCEPT CONNECTION
+    parentAction = null
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
@@ -312,13 +323,13 @@ export default class DataModelUtils {
         let pendingFileUpload = false;
 
         // If we have an ID (Update or UUID Create), we can upload files now
-        if (currentModel.hasFileHandling && validEntry[pkField]) {
+        if (currentModel.hasFileHandling) {
           const fileType =
             rawRow[currentModel.fileTypeField] ||
             validEntry[currentModel.fileTypeField];
           validEntry[currentModel.fileUrlField] =
-            await this._validateAndSaveFile(rawRow, {
-              entityId: validEntry[pkField],
+            await currentModel._validateAndSaveFile(rawRow, {
+              entityId: validEntry[pkField] || uuidv4(),
               fileType: fileType,
             });
         }
@@ -328,13 +339,11 @@ export default class DataModelUtils {
         }
 
         // --- B. Perform CRUD ---
-        // We pass the active 'connection' so CrudOperations uses the transaction
-        const crudResult = await CrudOperations.performCrud({
+        const crudResult = await this.crudO.performCrud({
           operation: rowAction, // 'create' or 'update'
           tableName: currentModel.tableName,
           id: rowAction === 'update' ? validEntry[pkField] : undefined,
           data: validEntry,
-          connection: connection, // 🟢 PASS CONNECTION
         });
 
         // --- C. Capture Result & ID ---
@@ -352,20 +361,18 @@ export default class DataModelUtils {
         // --- D. Handle Pending File Upload (Post-Write for Auto-Increment) ---
         if (pendingFileUpload && validEntry[pkField]) {
           const fileType = rawRow[currentModel.fileTypeField];
-          const fileUrl = await this._validateAndSaveFile(rawRow, {
+          const fileUrl = await currentModel._validateAndSaveFile(rawRow, {
             entityId: validEntry[pkField],
             fileType: fileType,
           });
 
           if (fileUrl) {
             // Update the record we just inserted with the file URL
-            // Must use the SAME connection to stay in transaction
-            await CrudOperations.performCrud({
+            await this.crudO.performCrud({
               operation: 'update',
               tableName: currentModel.tableName,
               id: validEntry[pkField],
               data: { [currentModel.fileUrlField]: fileUrl },
-              connection: connection, // 🟢 PASS CONNECTION
             });
             validEntry[currentModel.fileUrlField] = fileUrl; // Update local object
           }
@@ -396,8 +403,7 @@ export default class DataModelUtils {
         result,
         schemaConfig,
         globalActionType,
-        rowAction,
-        connection // 🟢 PASS CONNECTION
+        rowAction
       );
     }
   }
@@ -426,33 +432,45 @@ export default class DataModelUtils {
   }
 
   async _recursiveRead(inputRow, currentModel, options) {
-    // 1. Get Primary Key ID
     const pkField = currentModel.entityIdField;
     const id = inputRow[pkField];
 
     if (!id) {
+      console.error(`Missing primary key (${pkField}) in inputRow:`, inputRow);
       return null;
     }
 
-    // 2. Hydrate if needed
     let dbRow = inputRow;
     const isHydrated = Object.keys(inputRow).length > 1;
 
+    // 1. Hydrate if needed
     if (!isHydrated) {
       try {
-        // We explicitly pass includeBase64: false here to keep it light initially
-        dbRow = await currentModel.getById(id, { includeBase64: false });
+        dbRow = await currentModel.getById(id, {
+          includeBase64: false,
+        });
       } catch (error) {
+        console.error(
+          `Error fetching ${currentModel.tableName} by ID (${id}):`,
+          error.message
+        );
         return null;
       }
     }
 
-    // 3. Process Base64
+    // 2. Process Base64
     if (currentModel.hasFileHandling && options.includeBase64) {
-      dbRow = await currentModel._processBase64Content(dbRow, options);
+      try {
+        dbRow = await currentModel._processBase64Content(dbRow, options);
+      } catch (error) {
+        console.error(
+          `Error processing Base64 for ${currentModel.tableName} ID (${id}):`,
+          error.message
+        );
+      }
     }
 
-    // 4. Process Children
+    // 3. Process Children
     if (
       currentModel.childTableConfig &&
       currentModel.childTableConfig.length > 0
@@ -493,7 +511,10 @@ export default class DataModelUtils {
             dbRow[childTableName] = processedChildren;
           }
         } catch (err) {
-          console.error(`Error fetching children: ${err.message}`);
+          console.error(
+            `Error fetching children for ${childTableName}:`,
+            err.message
+          );
         }
       }
     }
@@ -542,8 +563,7 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction,
-    connection // 🟢 ACCEPT CONNECTION
+    parentAction
   ) {
     for (const [key, value] of Object.entries(rawRow)) {
       if (!Array.isArray(value)) continue;
@@ -562,8 +582,7 @@ export default class DataModelUtils {
           result,
           schemaConfig,
           globalActionType,
-          parentAction,
-          connection // 🟢 PASS CONNECTION
+          parentAction
         );
       }
     }
@@ -657,8 +676,7 @@ export default class DataModelUtils {
           result,
           schemaConfig,
           actionType,
-          null, // parentAction
-          connection // 🟢 PASS CONNECTION
+          null // parentAction
         );
       }
 
@@ -677,9 +695,16 @@ export default class DataModelUtils {
 
       const builtRows = [];
       for (const row of rows) {
-        const builtRow = await this._recursiveRead(row, targetModel, options);
-        if (builtRow) {
-          builtRows.push(builtRow);
+        try {
+          const builtRow = await this._recursiveRead(row, targetModel, options);
+          if (builtRow) {
+            builtRows.push(builtRow);
+          }
+        } catch (error) {
+          console.error(
+            `Error processing row in table ${tableName}:`,
+            error.message
+          );
         }
       }
       resultData[tableName] = builtRows;
@@ -801,7 +826,7 @@ export default class DataModelUtils {
     const sql = `SELECT 1 FROM ${this.tableName} WHERE ${searchField} = ? LIMIT 1`;
 
     try {
-      const rows = await this.executeQuery(sql, [value]);
+      const rows = await this.dbc.executeQuery(sql, [value]);
       return Array.isArray(rows) && rows.length > 0;
     } catch (error) {
       console.error(`Error checking existence in ${this.tableName}:`, error);
@@ -915,11 +940,10 @@ export default class DataModelUtils {
         });
       }
 
-      const result = await CrudOperations.performCrud({
+      const result = await this.crudO.performCrud({
         operation: 'create',
         tableName: this.tableName,
         data,
-        connection: this.db.pool,
       });
 
       return {
@@ -936,11 +960,10 @@ export default class DataModelUtils {
 
   async getById(id, options = {}) {
     try {
-      const result = await CrudOperations.performCrud({
+      const result = await this.crudO.performCrud({
         operation: 'read',
         tableName: this.tableName,
         id,
-        connection: this.db.pool,
       });
 
       if (!result.record) {
@@ -957,10 +980,11 @@ export default class DataModelUtils {
 
       return entity;
     } catch (error) {
-      throw new AppError(
-        `Failed to get ${this.entityName}: ${error.message}`,
-        error.statusCode || 500
+      console.error(
+        `Error in getById for ${this.entityName} (${id}):`,
+        error.message
       );
+      throw error;
     }
   }
 
@@ -978,7 +1002,6 @@ export default class DataModelUtils {
     foreignKeyField = null
   ) {
     try {
-      // 1. Determine the Foreign Key column
       const searchField = this._inferForeignKeyField(foreignKeyField);
 
       if (!searchField) {
@@ -989,12 +1012,13 @@ export default class DataModelUtils {
       }
 
       const sql = `
-        SELECT * FROM ${this.tableName}
-        WHERE ${searchField} = ?
-        ORDER BY ${this.entityIdField}
-      `;
+      SELECT * FROM ${this.tableName}
+      WHERE ${searchField} = ?
+      ORDER BY ${this.entityIdField}
+    `;
 
-      const results = await this.db.executeQuery(sql, [parentId]);
+      const results = await this.dbc.executeQuery(sql, [parentId]);
+
       if (!includeBase64 || !this.hasFileHandling) return results;
 
       return Promise.all(
@@ -1028,12 +1052,11 @@ export default class DataModelUtils {
         }
       }
 
-      const result = await CrudOperations.performCrud({
+      const result = await this.crudO.performCrud({
         operation: 'update',
         tableName: this.tableName,
         id,
         data,
-        connection: this.db.pool,
       });
 
       return {
@@ -1060,11 +1083,10 @@ export default class DataModelUtils {
         }
       }
 
-      await CrudOperations.performCrud({
+      await this.crudO.performCrud({
         operation: 'delete',
         tableName: this.tableName,
         id: id,
-        connection: this.db.pool,
       });
 
       return {
@@ -1120,11 +1142,10 @@ export default class DataModelUtils {
       }
 
       // Delete the entities using the Foreign Key
-      await CrudOperations.performCrud({
+      await this.crudO.performCrud({
         operation: 'delete',
         tableName: this.tableName,
         conditions: { [searchField]: parentId }, // ✅ Corrected: Use FK, not PK
-        connection: this.db.pool,
       });
 
       return {
@@ -1139,53 +1160,9 @@ export default class DataModelUtils {
     }
   }
 
-  async beginTransaction() {
-    try {
-      return await this.db.beginTransaction();
-    } catch (error) {
-      throw new AppError(
-        `Failed to start transaction: ${error.message}`,
-        error.statusCode || 500
-      );
-    }
-  }
-
-  async commitTransaction(connection) {
-    try {
-      await this.db.commitTransaction(connection);
-    } catch (error) {
-      throw new AppError(
-        `Failed to commit transaction: ${error.message}`,
-        error.statusCode || 500
-      );
-    }
-  }
-
-  async rollbackTransaction(connection) {
-    try {
-      await this.db.rollbackTransaction(connection);
-    } catch (error) {
-      throw new AppError(
-        `Failed to rollback transaction: ${error.message}`,
-        error.statusCode || 500
-      );
-    }
-  }
-
-  async executeQuery(sql, params = []) {
-    try {
-      return await this.db.executeQuery(sql, params);
-    } catch (error) {
-      throw new AppError(
-        `Query execution failed: ${error.message}`,
-        error.statusCode || 500
-      );
-    }
-  }
-
   async withTransaction(fn) {
     try {
-      return await this.db.executeTransaction(fn);
+      return await this.dbc.executeTransaction(fn);
     } catch (error) {
       throw new AppError(
         `Transaction failed: ${error.message}`,
@@ -1200,14 +1177,13 @@ export default class DataModelUtils {
     }
 
     try {
-      return await this.db.executeTransaction(async (connection) => {
+      return await this.dbc.executeTransaction(async (connection) => {
         for (const item of orderData) {
-          await CrudOperations.performCrud({
+          await this.crudO.performCrud({
             operation: 'update',
             tableName: this.tableName,
             id: item.id,
             data: { display_order: item.display_order },
-            connection: this.db.pool,
           });
         }
 
@@ -1232,9 +1208,9 @@ export default class DataModelUtils {
   async truncateTable() {
     try {
       return await this.withTransaction(async (connection) => {
-        await this.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
-        await this.executeQuery(`TRUNCATE TABLE ${this.tableName}`);
-        await this.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+        await this.dbc.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+        await this.dbc.executeQuery(`TRUNCATE TABLE ${this.tableName}`);
+        await this.dbc.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
 
         return {
           success: true,

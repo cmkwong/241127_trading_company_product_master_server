@@ -2,6 +2,7 @@ import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Import related data models
 import * as ProductImages from './data_product_images.js';
@@ -15,7 +16,7 @@ import * as ProductCertificates from './data_product_certificates.js';
 
 // Create a data model utility for products
 export const productModel = new DataModelUtils({
-  database: 'trade_business', // Explicitly specify the database
+  dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCTS'].name,
   tableFields: TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
@@ -27,7 +28,6 @@ export const productModel = new DataModelUtils({
   },
   defaults: {
     id: uuidv4,
-    product_id: 'abcdefg',
   },
   // Add relationship with child table (customization images)
   // TODO - add complete tables config and add logic into dataModelUtils.js
@@ -672,9 +672,9 @@ export const truncateAllProductTables = async () => {
       try {
         // Create a temporary model for this table
         const tempModel = new DataModelUtils({
+          dbc: tradeBusinessDbc,
           tableName: tableName,
           entityName: tableName.replace(/_/g, ' ').toLowerCase(),
-          database: 'trade_business',
         });
 
         // Use the truncateTable method which handles foreign key checks internally
