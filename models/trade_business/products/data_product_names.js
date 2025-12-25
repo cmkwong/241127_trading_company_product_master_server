@@ -1,4 +1,3 @@
-import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
@@ -10,7 +9,6 @@ export const productNameModel = new DataModelUtils({
   tableName: TABLE_MASTER['PRODUCT_NAMES'].name,
   tableFields: TABLE_MASTER['PRODUCT_NAMES'].fields,
   entityName: 'product name',
-  entityIdField: 'product_id',
   requiredFields: ['product_id', 'name', 'name_type_id'],
   validations: {
     product_id: { required: true },

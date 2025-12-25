@@ -633,7 +633,7 @@ export default class DataModelUtils {
       const pkConfig = tableSchema[pkField];
       // Always generate UUID for VARCHAR PKs on create
       if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
-        validEntry[pkField] = uuidv4();
+        validEntry[pkField] = validEntry[pkField] || uuidv4();
       } else {
         delete validEntry[pkField]; // Let DB handle auto-increment
       }
@@ -666,7 +666,7 @@ export default class DataModelUtils {
         const targetModel = this._resolveTargetModel(tableName);
         const modelToUse = targetModel || this;
 
-        // Start the recursive chain (passing the transaction connection)
+        // Start the recursive chain
         await this._processRecursive(
           tableName,
           tableRows,
@@ -926,6 +926,22 @@ export default class DataModelUtils {
       }
     }
     return result;
+  }
+
+  async creates(datas) {
+    try {
+      for (const data of datas) {
+        await this.create(data);
+      }
+      return {
+        message: `${this._capitalize(this.entityName)} created successfully`,
+      };
+    } catch (error) {
+      throw new AppError(
+        `Failed to create ${this.entityName}: ${error.message}`,
+        error.statusCode || 500
+      );
+    }
   }
 
   async create(data) {

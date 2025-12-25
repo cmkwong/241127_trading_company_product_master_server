@@ -1,7 +1,6 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
-import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
-import defaultProducts from '../../../datas/products.js';
+import { defaultProducts } from '../../../datas/products.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
 
 /**
@@ -39,25 +38,6 @@ export const getProductById = catchAsync(async (req, res, next) => {
     status: 'success',
     data: {
       refactoredData,
-    },
-  });
-});
-
-/**
- * Get a product by product code
- * @route GET /api/products/code/:code
- */
-export const getProductByCode = catchAsync(async (req, res, next) => {
-  const includeRelated = req.query.includeRelated === 'true';
-  const product = await Products.getProductByCode(
-    req.params.code,
-    includeRelated
-  );
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      product,
     },
   });
 });
@@ -166,35 +146,19 @@ export const checkProductExistsByCode = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Get product statistics
- * @route GET /api/products/stats
- */
-export const getProductStats = catchAsync(async (req, res, next) => {
-  const stats = await Products.getProductStats();
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      stats,
-    },
-  });
-});
-
-/**
  * Import sample products data
  * @route POST /api/products/samples
  */
 export const importDefaultProducts = catchAsync(async (req, res, next) => {
-  const results = await Products.importDefaultProducts(defaultProducts);
+  console.log('defaultProducts: \n', JSON.stringify(defaultProducts));
+  const refactoredData = await productModel.processOperation(
+    defaultProducts,
+    'create'
+  );
 
-  // Store the results in res.prints for endController to use
-  res.prints = {
-    message: `Imported ${results.successful} out of ${results.total} sample products`,
-    data: results,
-  };
-
-  // Call next() to proceed to endController
-  next();
+  res.status(200).json({
+    status: 'success',
+  });
 });
 
 /**
@@ -209,44 +173,6 @@ export const getSampleProductsData = catchAsync(async (req, res, next) => {
     },
   });
 });
-
-/**
- * Validate product ID format
- * @middleware
- */
-export const validateProductId = (req, res, next) => {
-  const id = req.params.id;
-
-  // Check if ID is a valid UUID
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-  if (!uuidRegex.test(id)) {
-    return next(new AppError('Invalid product ID format', 400));
-  }
-
-  // Proceed to next middleware
-  next();
-};
-
-/**
- * Validate product code format
- * @middleware
- */
-export const validateProductCode = (req, res, next) => {
-  const code = req.params.code;
-
-  // Check if code is in a valid format (prefix format or timestamp format)
-  const prefixRegex = /^P\d{6}\d{4}$/; // P{YY}{MM}{NNNN}
-  const timestampRegex = /^\d{14}$/; // yyyymmddhhmmss
-
-  if (!prefixRegex.test(code) && !timestampRegex.test(code)) {
-    return next(new AppError('Invalid product code format', 400));
-  }
-
-  // Proceed to next middleware
-  next();
-};
 
 /**
  * Truncate all product-related tables

@@ -4,6 +4,7 @@ import * as master_certificateTypesModel from '../../../models/trade_business/pr
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
+import { product_master_data } from '../../../datas/products.js';
 
 /**
  * Generic controller to handle master data operations
@@ -415,10 +416,7 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
   next();
 });
 
-/**
- * Truncate all master data tables
- */
-export const truncateAllTables = catchAsync(async (req, res, next) => {
+const _clearProductMasterData = async () => {
   const results = {
     categories: null,
     packingTypes: null,
@@ -452,13 +450,19 @@ export const truncateAllTables = catchAsync(async (req, res, next) => {
   } catch (error) {
     results.certificateTypes = { error: error.message };
   }
+  return results;
+};
 
+/**
+ * Truncate all master data tables
+ */
+export const truncateAllTables = catchAsync(async (req, res, next) => {
+  const results = await _clearProductMasterData();
   res.prints = {
     status: 'success',
     message: 'All master data tables have been truncated',
     results,
   };
-
   next();
 });
 
@@ -482,67 +486,36 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
   };
 
   // First truncate all tables
-  try {
-    results.truncate.categories =
-      await master_categoriesModel.truncateCategories();
-  } catch (error) {
-    results.truncate.categories = { error: error.message };
-  }
+  await _clearProductMasterData();
 
-  try {
-    results.truncate.packingTypes =
-      await master_packingTypesModel.truncatePackingTypes();
-  } catch (error) {
-    results.truncate.packingTypes = { error: error.message };
+  // insert the data
+  await master_productNameTypesModel.productNameTypeModel.processOperation(
+    {
+      master_product_name_types: product_master_data.master_product_name_types,
+    },
+    'create'
+  );
+  // must to upload the row one-by-one
+  for (const row of product_master_data.master_categories) {
+    await master_categoriesModel.categoryMasterModel.create(row);
   }
+  // await master_categoriesModel.categoryMasterModel.processOperation(
+  //   { master_categories: product_master_data.master_categories },
+  //   'create'
+  // );
 
-  try {
-    results.truncate.productNameTypes =
-      await master_productNameTypesModel.truncateProductNameTypes();
-  } catch (error) {
-    results.truncate.productNameTypes = { error: error.message };
-  }
-
-  try {
-    results.truncate.certificateTypes =
-      await master_certificateTypesModel.truncateCertificateTypes();
-  } catch (error) {
-    results.truncate.certificateTypes = { error: error.message };
-  }
-
-  // Then insert default data
-  try {
-    results.defaults.categories =
-      await master_categoriesModel.insertDefaultCategories();
-  } catch (error) {
-    results.defaults.categories = { error: error.message };
-  }
-
-  try {
-    results.defaults.packingTypes =
-      await master_packingTypesModel.insertDefaultPackingTypes();
-  } catch (error) {
-    results.defaults.packingTypes = { error: error.message };
-  }
-
-  try {
-    results.defaults.productNameTypes =
-      await master_productNameTypesModel.insertDefaultProductNameTypes();
-  } catch (error) {
-    results.defaults.productNameTypes = { error: error.message };
-  }
-
-  try {
-    results.defaults.certificateTypes =
-      await master_certificateTypesModel.insertDefaultCertificateTypes();
-  } catch (error) {
-    results.defaults.certificateTypes = { error: error.message };
-  }
+  await master_packingTypesModel.packingTypeModel.processOperation(
+    { master_packing_types: product_master_data.master_packing_types },
+    'create'
+  );
+  await master_certificateTypesModel.certificateTypeModel.processOperation(
+    { master_certificate_types: product_master_data.master_certificate_types },
+    'create'
+  );
 
   res.prints = {
     status: 'success',
     message: 'All master data has been reset successfully',
-    results,
   };
 
   next();

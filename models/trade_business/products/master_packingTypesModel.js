@@ -1,6 +1,7 @@
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import { TABLE_MASTER } from '../../tables.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Table name constants for consistency
 const PACKING_TYPES_TABLE = TABLE_MASTER['MASTER_PACKING_TYPES'].name;
@@ -8,10 +9,10 @@ const PRODUCT_PACKINGS_TABLE = TABLE_MASTER['PRODUCT_PACKINGS'].name;
 
 // Create DataModelUtils instance for packing types
 export const packingTypeModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: PACKING_TYPES_TABLE,
   tableFields: TABLE_MASTER['MASTER_PACKING_TYPES'].fields,
   entityName: 'packing type',
-  entityIdField: 'id',
   requiredFields: ['name'],
   validations: {
     name: { required: true },

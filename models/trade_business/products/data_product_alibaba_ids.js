@@ -14,16 +14,3 @@ export const alibabaIdModel = new DataModelUtils({
     alibaba_id: { required: true },
   },
 });
-
-// Export the standard CRUD operations using the model
-export const createProductAlibabaId = (data) => alibabaIdModel.create(data);
-export const getProductAlibabaIdById = (id) => alibabaIdModel.getById(id);
-export const getProductAlibabaIdsByProductId = (productId) =>
-  alibabaIdModel.getAllByParentId(productId);
-export const updateProductAlibabaId = (id, data) =>
-  alibabaIdModel.update(id, data);
-export const deleteProductAlibabaId = (id) => alibabaIdModel.delete(id);
-export const deleteProductAlibabaIdsByProductId = (productId) =>
-  alibabaIdModel.deleteAllByParentId(productId);
-export const upsertProductAlibabaIds = (productId, alibabaIds) =>
-  alibabaIdModel.upsertAll(productId, alibabaIds);

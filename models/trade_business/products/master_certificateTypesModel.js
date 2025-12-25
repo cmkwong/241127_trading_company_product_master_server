@@ -1,6 +1,7 @@
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import { TABLE_MASTER } from '../../tables.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Table name constants for consistency
 const CERTIFICATE_TYPES_TABLE = TABLE_MASTER['MASTER_CERTIFICATE_TYPES'].name;
@@ -8,10 +9,10 @@ const PRODUCT_CERTIFICATES_TABLE = TABLE_MASTER['PRODUCT_CERTIFICATES'].name;
 
 // Create DataModelUtils instance for certificate types
 export const certificateTypeModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: CERTIFICATE_TYPES_TABLE,
   tableFields: TABLE_MASTER['MASTER_CERTIFICATE_TYPES'].fields,
   entityName: 'certificate type',
-  entityIdField: 'id',
   requiredFields: ['name'],
   validations: {
     name: { required: true },

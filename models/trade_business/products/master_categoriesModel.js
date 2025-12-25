@@ -1,6 +1,7 @@
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import { TABLE_MASTER } from '../../tables.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Table name constants for consistency
 const CATEGORIES_TABLE = TABLE_MASTER['MASTER_CATEGORIES'].name;
@@ -8,10 +9,10 @@ const PRODUCT_CATEGORIES_TABLE = TABLE_MASTER['PRODUCT_CATEGORIES'].name;
 
 // Create DataModelUtils instance for categories
 export const categoryMasterModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
   tableName: CATEGORIES_TABLE,
   tableFields: TABLE_MASTER['MASTER_CATEGORIES'].fields,
   entityName: 'category',
-  entityIdField: 'id',
   requiredFields: ['name'],
   validations: {
     name: { required: true },
