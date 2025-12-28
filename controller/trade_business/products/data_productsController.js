@@ -8,14 +8,10 @@ import { productModel } from '../../../models/trade_business/products/data_produ
  * @route POST /api/products
  */
 export const createProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.processOperation(
+  const refactoredData = await productModel.processStructureDataOperation(
     req.body.data,
     'create'
   );
-  console.log('refactoredData--++: ', JSON.stringify(refactoredData));
-
-  // const result = await Products.createProduct(req.body);
-
   res.status(201).json({
     status: 'success',
   });
@@ -26,13 +22,11 @@ export const createProduct = catchAsync(async (req, res, next) => {
  * @route GET /api/products/:id
  */
 export const getProductById = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.processOperation(
+  const refactoredData = await productModel.processStructureDataOperation(
     req.body.data,
     'read',
     req.body.options
   );
-
-  console.log('read refactoredData--++: ', JSON.stringify(refactoredData));
 
   res.status(200).json({
     status: 'success',
@@ -77,12 +71,10 @@ export const getProducts = catchAsync(async (req, res, next) => {
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.processOperation(
+  const refactoredData = await productModel.processStructureDataOperation(
     req.body.data,
     'update'
   );
-  console.log('refactoredData--++: ', JSON.stringify(refactoredData));
-  const result = await Products.updateProduct(req.params.id, req.body);
 
   res.status(200).json({
     status: 'success',
@@ -98,12 +90,10 @@ export const updateProduct = catchAsync(async (req, res, next) => {
  * @route DELETE /api/products/:id
  */
 export const deleteProduct = catchAsync(async (req, res, next) => {
-  const refactoredData = await productModel.processOperation(
+  const refactoredData = await productModel.processStructureDataOperation(
     req.body.data,
     'delete'
   );
-  console.log('delete refactoredData--++: ', JSON.stringify(refactoredData));
-  const result = await Products.deleteProduct(req.params.id);
 
   res.status(200).json({
     status: 'success',
@@ -131,27 +121,11 @@ export const checkProductExists = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Check if a product exists by code
- * @route GET /api/products/exists-by-code/:code
- */
-export const checkProductExistsByCode = catchAsync(async (req, res, next) => {
-  const exists = await Products.productExistsByCode(req.params.code);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      exists,
-    },
-  });
-});
-
-/**
  * Import sample products data
  * @route POST /api/products/samples
  */
 export const importDefaultProducts = catchAsync(async (req, res, next) => {
-  console.log('defaultProducts: \n', JSON.stringify(defaultProducts));
-  const refactoredData = await productModel.processOperation(
+  const refactoredData = await productModel.processStructureDataOperation(
     defaultProducts,
     'create'
   );
@@ -162,31 +136,21 @@ export const importDefaultProducts = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Get sample products data without importing
- * @route GET /api/products/sample-data
- */
-export const getSampleProductsData = catchAsync(async (req, res, next) => {
-  res.status(200).json({
-    status: 'success',
-    data: {
-      defaultProducts,
-    },
-  });
-});
-
-/**
  * Truncate all product-related tables
  * @route POST /api/products/truncate
  */
 export const truncateProductTables = catchAsync(async (req, res, next) => {
-  const result = await Products.truncateAllProductTables();
+  // getting all of the product id
+  const sql = `SELECT id FROM products;`;
+  const ids = await productModel.dbc.executeQuery(sql);
+  console.log('ids', ids);
+  productModel.processStructureDataOperation({ products: ids }, 'delete');
+
+  // await productModel.truncateTable();
+
+  // const result = await Products.truncateAllProductTables();
 
   res.status(200).json({
     status: 'success',
-    message: result.message,
-    data: {
-      truncatedTables: result.truncatedTables,
-      errors: result.errors,
-    },
   });
 });

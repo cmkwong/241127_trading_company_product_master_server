@@ -409,18 +409,47 @@ export default class DataModelUtils {
   }
 
   /**
+   * Determines the parent model from the schemaConfig by passing the table name.
+   * It searches for a field in the child table that references the parent table.
+   * @param {Object} schemaConfig - The schema configuration object
+   * @param {string} tableName - The name of the child table
+   * @returns {Object|null} - The parent model or null if no parent is found
+   */
+  _getParentTableName(schemaConfig, tableName) {
+    const tableSchema = schemaConfig[tableName];
+    if (!tableSchema) {
+      throw new AppError(`Table "${tableName}" not found in schemaConfig`, 400);
+    }
+
+    // Search for a field with a "references" property in the table schema
+    for (const [fieldName, fieldDef] of Object.entries(tableSchema)) {
+      if (fieldDef.references && fieldDef.references.table) {
+        const parentTableName = fieldDef.references.table;
+        if (schemaConfig[parentTableName]) {
+          // Return the parent model (assumes schemaConfig contains models)
+          return parentTableName;
+        }
+      }
+    }
+
+    // If no parent is found, return null
+    return null;
+  }
+  /**
    * Determines the foreign key in the child table that points to the parent.
    */
   _resolveForeignKey(parentModel, childConfig) {
     // 1. FASTEST: Check if explicitly passed in childTableConfig
-    if (childConfig.foreignKey) return childConfig.foreignKey;
+    if (childConfig.foreignKey) {
+      return childConfig.foreignKey;
+    }
 
     const childModel = childConfig.model;
     const parentBaseName = this._getBaseTableName(parentModel.tableName);
 
     // 2. CLEANER SCHEMA LOOKUP: Find field referencing parent table
-    if (childModel.tableFields?.fields) {
-      const foundEntry = Object.entries(childModel.tableFields.fields).find(
+    if (childModel.tableFields) {
+      const foundEntry = Object.entries(childModel.tableFields).find(
         ([_, def]) =>
           this._getBaseTableName(def.references?.table) === parentBaseName
       );
@@ -428,7 +457,12 @@ export default class DataModelUtils {
     }
 
     // 3. FALLBACK: Naming convention (e.g., "product_customization" -> "product_customization_id")
-    return `${parentModel.entityName.replace(/\s+/g, '_')}_id`;
+    const fallbackForeignKey = `${parentModel.entityName.replace(
+      /\s+/g,
+      '_'
+    )}_id`;
+
+    return fallbackForeignKey;
   }
 
   async _recursiveRead(inputRow, currentModel, options) {
@@ -527,28 +561,31 @@ export default class DataModelUtils {
    * of items to delete, ensuring children are listed BEFORE parents.
    */
   _collectDeleteQueue(dataRow, currentModel, queue) {
-    // 1. Process Children First (Recursive Step)
+    const pk = currentModel.entityIdField;
+    if (dataRow[pk]) {
+      const alreadyInQueue = queue.some(
+        (item) =>
+          item.tableName === currentModel.tableName && item.id === dataRow[pk]
+      );
+      if (!alreadyInQueue) {
+        queue.push({
+          tableName: currentModel.tableName,
+          id: dataRow[pk],
+          model: currentModel,
+        });
+      }
+    }
+
     if (currentModel.childTableConfig) {
       for (const childConfig of currentModel.childTableConfig) {
         const childTableName = childConfig.model.tableName;
-        const childRows = dataRow[childTableName]; // _recursiveRead attaches children here
-
+        const childRows = dataRow[childTableName];
         if (childRows && Array.isArray(childRows)) {
           for (const childRow of childRows) {
             this._collectDeleteQueue(childRow, childConfig.model, queue);
           }
         }
       }
-    }
-
-    // 2. Add Self to Queue (After children are processed)
-    const pk = currentModel.entityIdField;
-    if (dataRow[pk]) {
-      queue.push({
-        tableName: currentModel.tableName,
-        id: dataRow[pk],
-        model: currentModel,
-      });
     }
   }
 
@@ -740,10 +777,36 @@ export default class DataModelUtils {
         const deleteQueue = [];
         this._collectDeleteQueue(fullData, targetModel, deleteQueue);
 
+        console.log('fullData: +++ ', fullData);
+        console.log('deleteQueue: --- ', deleteQueue);
+
         // 3. Execute Deletes One-by-One
         for (const item of deleteQueue) {
           try {
-            await item.model.delete(item.id);
+            // Check if the parent table has `onDelete: 'CASCADE'` set for the child table
+            const currentTableSchema = schemaConfig[item.tableName];
+            const parentTableName = this._getParentTableName(
+              schemaConfig,
+              item.tableName
+            );
+            console.log('parentTableName: ', parentTableName);
+            const foreignKeyField = Object.entries(currentTableSchema).find(
+              ([_, fieldDef]) =>
+                fieldDef.references &&
+                fieldDef.references.table === parentTableName &&
+                fieldDef.references.onDelete === 'CASCADE'
+            );
+
+            // Skip deletion if `onDelete: 'CASCADE'` is set
+            if (foreignKeyField) {
+              console.log(
+                `Skipping delete for ${item.tableName} ID ${item.id} due to ON DELETE CASCADE`
+              );
+              continue;
+            }
+
+            const { message, id } = await item.model.delete(item.id);
+            console.log('message, id: ', message, id);
 
             // 4. Format Output
             if (!resultData[item.tableName]) {
@@ -787,7 +850,7 @@ export default class DataModelUtils {
   // ============================================================
   // 🚀 PUBLIC METHODS (CRUD & UTILS)
   // ============================================================
-  async processOperation(jsonData, actionType, options = {}) {
+  async processStructureDataOperation(jsonData, actionType, options = {}) {
     // 1. Input Validation
     if (!jsonData || typeof jsonData !== 'object') {
       throw new AppError('Invalid JSON data provided', 400);
@@ -1090,7 +1153,6 @@ export default class DataModelUtils {
   async delete(id) {
     try {
       const entity = await this.getById(id);
-
       if (this.hasFileHandling && entity[this.fileUrlField]) {
         if (this.imagesOnly) {
           await deleteImage(entity[this.fileUrlField]);
@@ -1098,7 +1160,6 @@ export default class DataModelUtils {
           await deleteFile(entity[this.fileUrlField]);
         }
       }
-
       await this.crudO.performCrud({
         operation: 'delete',
         tableName: this.tableName,

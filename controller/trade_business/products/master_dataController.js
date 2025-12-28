@@ -489,28 +489,22 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
   await _clearProductMasterData();
 
   // insert the data
-  await master_productNameTypesModel.productNameTypeModel.processOperation(
-    {
-      master_product_name_types: product_master_data.master_product_name_types,
-    },
-    'create'
-  );
   // must to upload the row one-by-one
-  for (const row of product_master_data.master_categories) {
-    await master_categoriesModel.categoryMasterModel.create(row);
-  }
-  // await master_categoriesModel.categoryMasterModel.processOperation(
-  //   { master_categories: product_master_data.master_categories },
-  //   'create'
-  // );
 
-  await master_packingTypesModel.packingTypeModel.processOperation(
-    { master_packing_types: product_master_data.master_packing_types },
-    'create'
+  await master_productNameTypesModel.productNameTypeModel.creates(
+    product_master_data.master_product_name_types
   );
-  await master_certificateTypesModel.certificateTypeModel.processOperation(
-    { master_certificate_types: product_master_data.master_certificate_types },
-    'create'
+
+  await master_categoriesModel.categoryMasterModel.creates(
+    product_master_data.master_categories
+  );
+
+  await master_packingTypesModel.packingTypeModel.creates(
+    product_master_data.master_packing_types
+  );
+
+  await master_certificateTypesModel.certificateTypeModel.creates(
+    product_master_data.master_certificate_types
   );
 
   res.prints = {

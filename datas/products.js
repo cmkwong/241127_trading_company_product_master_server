@@ -31,11 +31,15 @@ export const defaultProducts = {
             {
               image_url:
                 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              base64_image:
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
               image_url:
                 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              base64_image:
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 2,
             },
           ],
@@ -50,11 +54,15 @@ export const defaultProducts = {
             {
               image_url:
                 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              base64_image:
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
               image_url:
                 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              base64_image:
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 2,
             },
           ],
@@ -83,14 +91,16 @@ export const defaultProducts = {
           product_certificate_files: [
             {
               file_url:
-                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
+              base64_file:
+                'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
+              file_type: 'document',
               display_order: 1,
             },
           ],
         },
       ],
     },
-    // Second product structure
     {
       icon_url: 'public/products/202511201324/Alibaba 1688/display/Main_03.jpg',
       remark: 'Eco-friendly material, suitable for outdoor use',
@@ -116,6 +126,8 @@ export const defaultProducts = {
             {
               image_url:
                 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              base64_image:
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
           ],
@@ -145,7 +157,10 @@ export const defaultProducts = {
           product_certificate_files: [
             {
               file_url:
-                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.pdf',
+                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
+              base64_file:
+                'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
+              file_type: 'document',
               display_order: 2,
             },
           ],

@@ -8,7 +8,6 @@ export const leftJoinArray = (leftArr, rightArr, leftKey, rightKey) => {
   for (let i in leftArr) {
     let leftValue = leftArr[i][leftKey];
     let matchedObj = rightArr.filter((row) => {
-      // console.log(row[rightKey], leftValue);
       return row[rightKey] === leftValue;
     })[0];
     if (!matchedObj) {

@@ -346,7 +346,6 @@ class CrudOperations {
       ${orderClause}
       ${limitClause}
     `;
-    console.log('sql: ', sql);
 
     const results = await this.dbc.executeQuery(sql, whereParams);
 

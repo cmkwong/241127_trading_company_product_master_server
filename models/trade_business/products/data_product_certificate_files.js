@@ -19,7 +19,7 @@ export const certificateFileModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'file_url',
-    uploadDir: 'public/uploads/certificates/{id}',
+    uploadDir: 'public/{id}/certificates/',
     fileTypeField: 'file_type',
     descriptionField: 'description',
     imagesOnly: false,
