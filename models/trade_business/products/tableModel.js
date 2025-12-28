@@ -2,25 +2,25 @@ import * as dbConn from '../../../utils/dbConn.js';
 import * as dbModel from '../../dbModel.js';
 import AppError from '../../../utils/appError.js';
 import {
-  TABLE_MASTER,
+  PRODUCT_TABLE_MASTER,
   generateCreateTableSQL,
   getAllTableNames,
   getTableFields,
 } from '../../tables.js';
 
 /**
- * Creates a table based on its definition in TABLE_MASTER
- * @param {string} tableKey - The key of the table in TABLE_MASTER
+ * Creates a table based on its definition in PRODUCT_TABLE_MASTER
+ * @param {string} tableKey - The key of the table in PRODUCT_TABLE_MASTER
  * @returns {Promise} Promise that resolves when the table is created
  */
 const createTable = async (tableKey) => {
   try {
     const pool = dbConn.tb_pool;
-    const tableDefinition = TABLE_MASTER[tableKey];
+    const tableDefinition = PRODUCT_TABLE_MASTER[tableKey];
 
     if (!tableDefinition) {
       throw new Error(
-        `Table definition for ${tableKey} not found in TABLE_MASTER`
+        `Table definition for ${tableKey} not found in PRODUCT_TABLE_MASTER`
       );
     }
 
@@ -31,7 +31,7 @@ const createTable = async (tableKey) => {
       message: `${tableDefinition.name} table created successfully`,
     };
   } catch (error) {
-    const tableName = TABLE_MASTER[tableKey]?.name || tableKey;
+    const tableName = PRODUCT_TABLE_MASTER[tableKey]?.name || tableKey;
     throw new AppError(
       `Failed to create ${tableName} table: ${error.message}`,
       500
@@ -160,12 +160,12 @@ export const createProductCertificateFilesTable = async () => {
 };
 
 /**
- * Get the table creation order from TABLE_MASTER
+ * Get the table creation order from PRODUCT_TABLE_MASTER
  * @returns {string[]} Array of table keys in the correct creation order
  */
 const getTableCreationOrder = () => {
-  // The order of keys in TABLE_MASTER determines the creation order
-  return Object.keys(TABLE_MASTER);
+  // The order of keys in PRODUCT_TABLE_MASTER determines the creation order
+  return Object.keys(PRODUCT_TABLE_MASTER);
 };
 
 /**
@@ -174,7 +174,7 @@ const getTableCreationOrder = () => {
  */
 export const createAllProductTables = async () => {
   try {
-    // Get table keys in the order they appear in TABLE_MASTER
+    // Get table keys in the order they appear in PRODUCT_TABLE_MASTER
     const tableCreationOrder = getTableCreationOrder();
 
     for (const tableKey of tableCreationOrder) {
@@ -198,11 +198,11 @@ export const dropAllProductTables = async () => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Get table keys in reverse order of TABLE_MASTER
+    // Get table keys in reverse order of PRODUCT_TABLE_MASTER
     const tableDropOrder = getTableCreationOrder().reverse();
 
     for (const tableKey of tableDropOrder) {
-      const tableName = TABLE_MASTER[tableKey].name;
+      const tableName = PRODUCT_TABLE_MASTER[tableKey].name;
       await dbModel.executeQuery(pool, `DROP TABLE IF EXISTS ${tableName};`);
     }
 
@@ -219,7 +219,9 @@ export const dropAllProductTables = async () => {
 export const checkProductTablesExist = async () => {
   try {
     const pool = dbConn.tb_pool;
-    const tableNames = Object.values(TABLE_MASTER).map((table) => table.name);
+    const tableNames = Object.values(PRODUCT_TABLE_MASTER).map(
+      (table) => table.name
+    );
 
     const checkTableSQL = `
       SELECT COUNT(*) as count 
@@ -245,7 +247,9 @@ export const checkProductTablesExist = async () => {
 export const getProductTablesSchema = async () => {
   try {
     const pool = dbConn.tb_pool;
-    const tableNames = Object.values(TABLE_MASTER).map((table) => table.name);
+    const tableNames = Object.values(PRODUCT_TABLE_MASTER).map(
+      (table) => table.name
+    );
     const schemas = {};
 
     for (const tableName of tableNames) {

@@ -777,9 +777,6 @@ export default class DataModelUtils {
         const deleteQueue = [];
         this._collectDeleteQueue(fullData, targetModel, deleteQueue);
 
-        console.log('fullData: +++ ', fullData);
-        console.log('deleteQueue: --- ', deleteQueue);
-
         // 3. Execute Deletes One-by-One
         for (const item of deleteQueue) {
           try {
@@ -789,7 +786,6 @@ export default class DataModelUtils {
               schemaConfig,
               item.tableName
             );
-            console.log('parentTableName: ', parentTableName);
             const foreignKeyField = Object.entries(currentTableSchema).find(
               ([_, fieldDef]) =>
                 fieldDef.references &&
@@ -804,9 +800,7 @@ export default class DataModelUtils {
               );
               continue;
             }
-
-            const { message, id } = await item.model.delete(item.id);
-            console.log('message, id: ', message, id);
+            await item.model.delete(item.id);
 
             // 4. Format Output
             if (!resultData[item.tableName]) {

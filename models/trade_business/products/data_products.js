@@ -1,6 +1,6 @@
 import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
@@ -17,8 +17,8 @@ import * as ProductCertificates from './data_product_certificates.js';
 // Create a data model utility for products
 export const productModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCTS'].name,
-  tableFields: TABLE_MASTER['PRODUCTS'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCTS'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
   requiredFields: ['product_id'],
   validations: {
@@ -33,42 +33,42 @@ export const productModel = new DataModelUtils({
   // TODO - add complete tables config and add logic into dataModelUtils.js
   childTableConfig: [
     {
-      tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductNames.productNameModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_NAMES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductImages.productImagesModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCategories.productCategoryModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
       // connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCustomizations.customizationModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductLinks.productLinkModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductAlibabaIds.alibabaIdModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductPackings.packingModel,
     },
     {
-      tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCertificates.certificateModel,
     },
@@ -101,7 +101,7 @@ export const truncateAllProductTables = async () => {
   try {
     // List of product-related tables in the correct order for truncation
     // We need to truncate child tables before parent tables to avoid foreign key constraints
-    const productTables = Object.values(TABLE_MASTER)
+    const productTables = Object.values(PRODUCT_TABLE_MASTER)
       .map((table) => table.table_type === 'data' && table.name)
       .reverse();
 

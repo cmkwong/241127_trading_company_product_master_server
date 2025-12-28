@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for customization images with file handling
 export const customizationImageModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
-  tableFields: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].fields,
   entityName: 'customization image',
   requiredFields: ['customization_id', 'image_url'],
   validations: {

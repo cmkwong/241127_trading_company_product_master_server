@@ -143,7 +143,6 @@ export const truncateProductTables = catchAsync(async (req, res, next) => {
   // getting all of the product id
   const sql = `SELECT id FROM products;`;
   const ids = await productModel.dbc.executeQuery(sql);
-  console.log('ids', ids);
   productModel.processStructureDataOperation({ products: ids }, 'delete');
 
   // await productModel.truncateTable();

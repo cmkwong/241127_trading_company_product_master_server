@@ -1,4 +1,4 @@
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
@@ -7,8 +7,8 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 // Create a data model utility for product categories with multiple joins
 export const productCategoryModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
-  tableFields: TABLE_MASTER['PRODUCT_CATEGORIES'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].fields,
   entityName: 'product category',
   entityIdField: 'product_id',
   requiredFields: ['product_id', 'category_id'],
@@ -87,7 +87,7 @@ export const getProductsByCategoryId = async (categoryId) => {
       `
       SELECT p.* 
       FROM products p
-      JOIN ${TABLE_MASTER['PRODUCT_CATEGORIES'].name} pc ON p.id = pc.product_id
+      JOIN ${PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].name} pc ON p.id = pc.product_id
       WHERE pc.category_id = ?
       ORDER BY p.name
       `,

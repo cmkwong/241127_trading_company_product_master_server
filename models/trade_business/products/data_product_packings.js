@@ -1,12 +1,12 @@
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product packings
 export const packingModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
-  tableFields: TABLE_MASTER['PRODUCT_PACKINGS'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].fields,
   entityName: 'product packing',
   requiredFields: [
     'product_id',

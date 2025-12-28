@@ -1,4 +1,4 @@
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -6,8 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 // Create a data model utility for product link images with file handling
 export const productLinkImageModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
-  tableFields: TABLE_MASTER['PRODUCT_LINK_IMAGES'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_LINK_IMAGES'].fields,
   entityName: 'product link image',
   requiredFields: ['product_link_id'],
   validations: {

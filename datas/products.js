@@ -1,4 +1,4 @@
-// Sample product data based on TABLE_MASTER schema
+// Sample product data based on PRODUCT_TABLE_MASTER schema
 
 export const defaultProducts = {
   products: [

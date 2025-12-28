@@ -1,5 +1,5 @@
 // Centralized table and field definitions
-export const TABLE_MASTER = {
+export const PRODUCT_TABLE_MASTER = {
   // Main tables
   PRODUCTS: {
     name: 'products',
@@ -547,7 +547,7 @@ export const TABLE_MASTER = {
 
 /**
  * Helper function to generate SQL for creating a table based on its definition
- * @param {Object} tableDefinition - Table definition from TABLE_MASTER
+ * @param {Object} tableDefinition - Table definition from PRODUCT_TABLE_MASTER
  * @returns {string} SQL statement for creating the table
  */
 export const generateCreateTableSQL = (tableDefinition) => {
@@ -626,7 +626,7 @@ export const generateCreateTableSQL = (tableDefinition) => {
  * @returns {string[]} Array of table names
  */
 export const getAllTableNames = () => {
-  return Object.values(TABLE_MASTER).map((table) => table.name);
+  return Object.values(PRODUCT_TABLE_MASTER).map((table) => table.name);
 };
 
 /**
@@ -635,7 +635,7 @@ export const getAllTableNames = () => {
  * @returns {Object|null} Field definitions or null if table not found
  */
 export const getTableFields = (tableName) => {
-  for (const table of Object.values(TABLE_MASTER)) {
+  for (const table of Object.values(PRODUCT_TABLE_MASTER)) {
     if (table.name === tableName) {
       return table.fields;
     }

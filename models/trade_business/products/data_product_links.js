@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { TABLE_MASTER } from '../../tables.js';
+import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import * as ProductLinkImages from './data_product_link_images.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
@@ -7,8 +7,8 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 // Create a data model utility for product links
 export const productLinkModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
-  tableFields: TABLE_MASTER['PRODUCT_LINKS'].fields,
+  tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].name,
+  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].fields,
   entityName: 'product link',
   requiredFields: ['product_id', 'link'],
   validations: {
@@ -20,7 +20,7 @@ export const productLinkModel = new DataModelUtils({
   },
   childTableConfig: [
     {
-      tableName: TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINK_IMAGES'].name,
       model: ProductLinkImages.productLinkImageModel,
     },
   ],
