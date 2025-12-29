@@ -82,6 +82,11 @@ export const PRODUCT_TABLE_MASTER = {
         },
         description: 'Reference to master_product_image_types.id',
       },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'image name',
+      },
       image_url: {
         type: 'VARCHAR(255)',
         notNull: true,
@@ -273,6 +278,11 @@ export const PRODUCT_TABLE_MASTER = {
         },
         description: 'Reference to product_customizations.id',
       },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'image name',
+      },
       image_url: {
         type: 'VARCHAR(255)',
         notNull: true,
@@ -329,6 +339,11 @@ export const PRODUCT_TABLE_MASTER = {
           onDelete: 'CASCADE',
         },
         description: 'Reference to product_links.id',
+      },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'image name',
       },
       image_url: {
         type: 'VARCHAR(255)',
@@ -522,6 +537,11 @@ export const PRODUCT_TABLE_MASTER = {
           onDelete: 'CASCADE',
         },
         description: 'Reference to product_certificates.id',
+      },
+      file_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'file name',
       },
       file_url: {
         type: 'VARCHAR(255)',

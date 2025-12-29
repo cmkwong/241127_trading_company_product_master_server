@@ -18,7 +18,7 @@ export const customizationImageModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'image_url',
-    uploadDir: 'public/products/{id}/customizations/',
+    uploadDir: 'public/{id}/customizations/',
     imagesOnly: true,
   },
 });

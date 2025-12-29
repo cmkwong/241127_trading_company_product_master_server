@@ -18,7 +18,7 @@ export const productLinkImageModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'image_url',
-    uploadDir: 'public/uploads/product_links/{id}',
+    uploadDir: 'public/{id}/product_links/',
     imagesOnly: true,
   },
 });

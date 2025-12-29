@@ -1,5 +1,5 @@
 import * as dbConn from '../../../utils/dbConn.js';
-import * as dbModel from '../../dbModel.js';
+import { tradeBusinessDbc } from '../../dbModel.js';
 import AppError from '../../../utils/appError.js';
 import {
   PRODUCT_TABLE_MASTER,
@@ -25,7 +25,7 @@ const createTable = async (tableKey) => {
     }
 
     const createTableSQL = generateCreateTableSQL(tableDefinition);
-    await dbModel.executeQuery(pool, createTableSQL);
+    await tradeBusinessDbc.executeQuery(createTableSQL);
 
     return {
       message: `${tableDefinition.name} table created successfully`,
@@ -163,19 +163,29 @@ export const createProductCertificateFilesTable = async () => {
  * Get the table creation order from PRODUCT_TABLE_MASTER
  * @returns {string[]} Array of table keys in the correct creation order
  */
-const getTableCreationOrder = () => {
+const getRequiredTableByType = (tableType) => {
+  let tableNames = [];
+  for (const [k, o] of Object.entries(PRODUCT_TABLE_MASTER)) {
+    if (tableType) {
+      if (o.table_type === tableType) {
+        tableNames.push(k);
+      }
+    } else {
+      tableNames.push(k);
+    }
+  }
   // The order of keys in PRODUCT_TABLE_MASTER determines the creation order
-  return Object.keys(PRODUCT_TABLE_MASTER);
+  return tableNames;
 };
 
 /**
  * Creates all product-related tables in the correct order to respect foreign key constraints
  * @returns {Promise} Promise that resolves when all tables are created
  */
-export const createAllProductTables = async () => {
+export const createAllProductTables = async (tableType) => {
   try {
     // Get table keys in the order they appear in PRODUCT_TABLE_MASTER
-    const tableCreationOrder = getTableCreationOrder();
+    const tableCreationOrder = getRequiredTableByType(tableType);
 
     for (const tableKey of tableCreationOrder) {
       await createTable(tableKey);
@@ -194,16 +204,16 @@ export const createAllProductTables = async () => {
  * Drops all product-related tables in reverse order to respect foreign key constraints
  * @returns {Promise} Promise that resolves when all tables are dropped
  */
-export const dropAllProductTables = async () => {
+export const dropAllProductTables = async (tableType) => {
   try {
     const pool = dbConn.tb_pool;
 
     // Get table keys in reverse order of PRODUCT_TABLE_MASTER
-    const tableDropOrder = getTableCreationOrder().reverse();
+    const tableDropOrder = getRequiredTableByType(tableType).reverse();
 
     for (const tableKey of tableDropOrder) {
       const tableName = PRODUCT_TABLE_MASTER[tableKey].name;
-      await dbModel.executeQuery(pool, `DROP TABLE IF EXISTS ${tableName};`);
+      await tradeBusinessDbc.executeQuery(`DROP TABLE IF EXISTS ${tableName};`);
     }
 
     return { message: 'All product tables dropped successfully' };
@@ -230,7 +240,10 @@ export const checkProductTablesExist = async () => {
       AND table_name IN (${tableNames.map(() => '?').join(',')});
     `;
 
-    const result = await dbModel.executeQuery(pool, checkTableSQL, tableNames);
+    const result = await tradeBusinessDbc.executeQuery(
+      checkTableSQL,
+      tableNames
+    );
     return result[0].count === tableNames.length;
   } catch (error) {
     throw new AppError(
@@ -255,7 +268,7 @@ export const getProductTablesSchema = async () => {
     for (const tableName of tableNames) {
       const schemaSQL = `DESCRIBE ${tableName};`;
       try {
-        const columns = await dbModel.executeQuery(pool, schemaSQL);
+        const columns = await tradeBusinessDbc.executeQuery(schemaSQL);
         schemas[tableName] = columns;
       } catch (error) {
         schemas[tableName] = {

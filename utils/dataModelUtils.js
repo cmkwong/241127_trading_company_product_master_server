@@ -281,7 +281,7 @@ export default class DataModelUtils {
   // ============================================================
   // 🔄 RECURSIVE PROCESSOR (With Real DB Writes)
   // ============================================================
-  async _processRecursive(
+  async _processWriteRecursive(
     tableName,
     rows,
     parentData,
@@ -395,7 +395,7 @@ export default class DataModelUtils {
 
       // 5. Process Children (Recursion)
       // We pass 'validEntry' which now definitely contains the Parent ID
-      await this._processChildren(
+      await this._processWriteChildren(
         rawRow,
         validEntry,
         tableName,
@@ -592,7 +592,7 @@ export default class DataModelUtils {
   // ============================================================
   // 👶 CHILD PROCESSOR
   // ============================================================
-  async _processChildren(
+  async _processWriteChildren(
     rawRow,
     validEntry,
     currentTableName,
@@ -610,7 +610,7 @@ export default class DataModelUtils {
       );
 
       if (childConfig && childConfig.model) {
-        await this._processRecursive(
+        await this._processWriteRecursive(
           key,
           value,
           validEntry, // Pass the parent (now with ID)
@@ -704,7 +704,7 @@ export default class DataModelUtils {
         const modelToUse = targetModel || this;
 
         // Start the recursive chain
-        await this._processRecursive(
+        await this._processWriteRecursive(
           tableName,
           tableRows,
           null, // parentData

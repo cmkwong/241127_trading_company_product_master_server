@@ -29,15 +29,13 @@ export const defaultProducts = {
           remark: 'Available in blue, green, and red glazes',
           product_customization_images: [
             {
-              image_url:
-                'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
-              image_url:
-                'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              image_name: 'Main_02.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 2,
@@ -52,15 +50,13 @@ export const defaultProducts = {
           link_date: '2025-10-10',
           product_link_images: [
             {
-              image_url:
-                'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
-              image_url:
-                'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 2,
@@ -90,8 +86,8 @@ export const defaultProducts = {
           remark: 'Certified for European market',
           product_certificate_files: [
             {
-              file_url:
-                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
+              file_name:
+                'quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
               base64_file:
                 'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
               file_type: 'document',
@@ -124,8 +120,7 @@ export const defaultProducts = {
           remark: 'Available in small (20x15cm) and large (30x25cm)',
           product_customization_images: [
             {
-              image_url:
-                'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
+              image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
@@ -156,8 +151,8 @@ export const defaultProducts = {
           remark: 'Compliant with RoHS directive',
           product_certificate_files: [
             {
-              file_url:
-                'public/products/202511211658/files/quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
+              file_name:
+                'quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
               base64_file:
                 'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
               file_type: 'document',

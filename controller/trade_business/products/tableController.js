@@ -7,7 +7,8 @@ import AppError from '../../../utils/appError.js';
  * @route POST /api/products/table/create-all
  */
 export const createAllTables = catchAsync(async (req, res, next) => {
-  const result = await TableModel.createAllProductTables();
+  const { tableType } = req.query;
+  const result = await TableModel.createAllProductTables(tableType);
 
   res.status(201).json({
     status: 'success',
@@ -231,6 +232,7 @@ export const createProductCertificateFilesTable = catchAsync(
 export const dropAllTables = catchAsync(async (req, res, next) => {
   // Add confirmation check to prevent accidental deletion
   const { confirm } = req.body;
+  const { tableType } = req.query;
 
   if (!confirm || confirm !== 'DROP_ALL_PRODUCT_TABLES') {
     return next(
@@ -241,7 +243,7 @@ export const dropAllTables = catchAsync(async (req, res, next) => {
     );
   }
 
-  const result = await TableModel.dropAllProductTables();
+  const result = await TableModel.dropAllProductTables(tableType);
 
   res.status(200).json({
     status: 'success',
