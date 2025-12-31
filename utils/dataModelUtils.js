@@ -127,7 +127,6 @@ export default class DataModelUtils {
   // ============================================================
   // 📂 FILE HANDLING
   // ============================================================
-
   async _validateAndSaveFile(data, options = {}) {
     const { entityId, fileType } = options;
     const base64FieldName = this.imagesOnly ? 'base64_image' : 'base64_file';
@@ -275,13 +274,15 @@ export default class DataModelUtils {
     if (!pkValue) return 'create';
 
     const exists = await currentModel.checkExists(pkValue, pkField);
-    return exists ? 'update' : 'create';
+    return exists ? 'update' : 'create'; // TODO: if update, return a root key
   }
 
   // ============================================================
   // 🔄 RECURSIVE PROCESSOR (With Real DB Writes)
   // ============================================================
   async _processWriteRecursive(
+    rootModel, // Accept root model
+    rootModelKeyValue,
     tableName,
     rows,
     parentData,
@@ -314,6 +315,10 @@ export default class DataModelUtils {
         currentModel,
         rowAction
       );
+      // assign the key value of root model
+      if (rootModel.tableName === tableName) {
+        rootModelKeyValue = validEntry[pkField];
+      }
 
       // 3. 💾 EXECUTE DATABASE WRITE (Real-time)
       let dbRecord = null;
@@ -327,9 +332,10 @@ export default class DataModelUtils {
           const fileType =
             rawRow[currentModel.fileTypeField] ||
             validEntry[currentModel.fileTypeField];
+
           validEntry[currentModel.fileUrlField] =
             await currentModel._validateAndSaveFile(rawRow, {
-              entityId: validEntry[pkField] || uuidv4(),
+              entityId: rootModelKeyValue,
               fileType: fileType,
             });
         }
@@ -361,8 +367,9 @@ export default class DataModelUtils {
         // --- D. Handle Pending File Upload (Post-Write for Auto-Increment) ---
         if (pendingFileUpload && validEntry[pkField]) {
           const fileType = rawRow[currentModel.fileTypeField];
+
           const fileUrl = await currentModel._validateAndSaveFile(rawRow, {
-            entityId: validEntry[pkField],
+            entityId: rootModelKeyValue,
             fileType: fileType,
           });
 
@@ -396,6 +403,8 @@ export default class DataModelUtils {
       // 5. Process Children (Recursion)
       // We pass 'validEntry' which now definitely contains the Parent ID
       await this._processWriteChildren(
+        rootModel, // Pass the root model
+        rootModelKeyValue,
         rawRow,
         validEntry,
         tableName,
@@ -409,31 +418,51 @@ export default class DataModelUtils {
   }
 
   /**
-   * Determines the parent model from the schemaConfig by passing the table name.
-   * It searches for a field in the child table that references the parent table.
+   * Determines the parent table name and model from the schemaConfig by passing the table name.
+   * Supports fetching the parent at any dynamic level (e.g., level=1, 2, 3, ...).
+   * Only considers fields where the referenced field in the parent table is a primary key.
+   *
    * @param {Object} schemaConfig - The schema configuration object
    * @param {string} tableName - The name of the child table
-   * @returns {Object|null} - The parent model or null if no parent is found
+   * @param {number} level - Level of parent to retrieve (1 for immediate parent, 2 for grandparent, etc.)
+   * @returns {Array} - An array with the parent table name and its schema, or [null, null] if no parent is found
    */
-  _getParentTableName(schemaConfig, tableName) {
+  _getParentTableConfig(schemaConfig, tableName, level = 1) {
     const tableSchema = schemaConfig[tableName];
     if (!tableSchema) {
       throw new AppError(`Table "${tableName}" not found in schemaConfig`, 400);
     }
 
+    let parentTableName = null;
+    let parentSchema = null;
+
     // Search for a field with a "references" property in the table schema
     for (const [fieldName, fieldDef] of Object.entries(tableSchema)) {
-      if (fieldDef.references && fieldDef.references.table) {
-        const parentTableName = fieldDef.references.table;
-        if (schemaConfig[parentTableName]) {
-          // Return the parent model (assumes schemaConfig contains models)
-          return parentTableName;
-        }
+      if (
+        fieldDef.references && // Field has a "references" property
+        fieldDef.references.table && // References a table
+        schemaConfig[fieldDef.references.table] && // Referenced table exists in schemaConfig
+        schemaConfig[fieldDef.references.table][fieldDef.references.field]
+          ?.primaryKey // Referenced field is a primary key
+      ) {
+        parentTableName = fieldDef.references.table;
+        parentSchema = schemaConfig[parentTableName];
+        break; // Found the immediate parent
       }
     }
 
-    // If no parent is found, return null
-    return null;
+    // If no parent is found, return [null, null]
+    if (!parentTableName || !parentSchema) {
+      return [null, null];
+    }
+
+    // If level = 1, return the immediate parent
+    if (level === 1) {
+      return [parentTableName, parentSchema];
+    }
+
+    // If level > 1, recursively find the parent at the specified level
+    return this._getParentTableConfig(schemaConfig, parentTableName, level - 1);
   }
   /**
    * Determines the foreign key in the child table that points to the parent.
@@ -593,6 +622,8 @@ export default class DataModelUtils {
   // 👶 CHILD PROCESSOR
   // ============================================================
   async _processWriteChildren(
+    rootModel, // Accept root model
+    rootModelKeyValue,
     rawRow,
     validEntry,
     currentTableName,
@@ -602,18 +633,20 @@ export default class DataModelUtils {
     globalActionType,
     parentAction
   ) {
-    for (const [key, value] of Object.entries(rawRow)) {
-      if (!Array.isArray(value)) continue;
+    for (const [tableName, tableRows] of Object.entries(rawRow)) {
+      if (!Array.isArray(tableRows)) continue;
 
       const childConfig = currentModel.childTableConfig.find(
-        (config) => config.model.tableName === key
+        (config) => config.model.tableName === tableName
       );
 
       if (childConfig && childConfig.model) {
         await this._processWriteRecursive(
-          key,
-          value,
-          validEntry, // Pass the parent (now with ID)
+          rootModel, // Pass the root model
+          rootModelKeyValue,
+          tableName,
+          tableRows,
+          validEntry,
           currentTableName,
           childConfig.model,
           result,
@@ -667,13 +700,13 @@ export default class DataModelUtils {
 
     // 4. Handle Primary Key Logic
     if (rowAction === 'create') {
-      const pkConfig = tableSchema[pkField];
       // Always generate UUID for VARCHAR PKs on create
-      if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
-        validEntry[pkField] = validEntry[pkField] || uuidv4();
-      } else {
-        delete validEntry[pkField]; // Let DB handle auto-increment
-      }
+      validEntry[pkField] = validEntry[pkField] || uuidv4();
+      // const pkConfig = tableSchema[pkField];
+      // if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
+      // } else {
+      //   delete validEntry[pkField]; // Let DB handle auto-increment
+      // }
     } else {
       // Update: Must have ID
       if (!validEntry[pkField]) {
@@ -695,6 +728,9 @@ export default class DataModelUtils {
         updateData: {},
       };
 
+      // Set the root model to 'this' unconditionally
+      const rootModel = this;
+
       for (const [tableName, tableRows] of Object.entries(jsonData)) {
         if (!schemaConfig[tableName]) {
           throw new AppError(`Table "${tableName}" not found in schema`, 400);
@@ -705,6 +741,8 @@ export default class DataModelUtils {
 
         // Start the recursive chain
         await this._processWriteRecursive(
+          rootModel, // Pass the root model
+          null,
           tableName,
           tableRows,
           null, // parentData
@@ -782,7 +820,7 @@ export default class DataModelUtils {
           try {
             // Check if the parent table has `onDelete: 'CASCADE'` set for the child table
             const currentTableSchema = schemaConfig[item.tableName];
-            const parentTableName = this._getParentTableName(
+            const [parentTableName, _] = this._getParentTableConfig(
               schemaConfig,
               item.tableName
             );

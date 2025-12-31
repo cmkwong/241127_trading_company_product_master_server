@@ -30,7 +30,6 @@ export const productModel = new DataModelUtils({
     id: uuidv4,
   },
   // Add relationship with child table (customization images)
-  // TODO - add complete tables config and add logic into dataModelUtils.js
   childTableConfig: [
     {
       tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
