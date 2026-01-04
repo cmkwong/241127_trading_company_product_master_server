@@ -466,10 +466,11 @@ export const truncateCategories = () => categoryMasterModel.truncateTable();
 export const insertDefaultCategories = async () => {
   try {
     // Import categories from data file
-    const defaultProducts = await import('../../../datas/products.js');
-    const defaultCategories = defaultProducts.default.master_categories;
+    const { product_master_data } = await import('../../../datas/products.js');
 
-    const results = await batchCreateCategories(defaultCategories);
+    const results = await batchCreateCategories(
+      product_master_data.master_categories
+    );
 
     return {
       message: 'Default categories inserted successfully',

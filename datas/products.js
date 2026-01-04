@@ -170,26 +170,48 @@ export const product_master_data = {
   master_product_name_types: [
     {
       id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p',
-      name: '1688',
-      description: '1688 product name',
+      name: 'Chinese',
+      description: 'Chinese product name',
     },
     {
       id: '9b2c3d4e-5f6g-7h8i-9j0k-1l2m3n4o5p6q',
-      name: 'Alibaba',
-      description: 'Alibaba product name',
-    },
-    {
-      id: '0c3d4e5f-6g7h-8i9j-0k1l-2m3n4o5p6q7r',
-      name: 'Amazon',
-      description: 'Amazon product name',
-    },
-    {
-      id: '0c3d4e5f-6g7h-8i9j-0k1l-124fg45563fg',
-      name: 'Shopify',
-      description: 'Shopify product name',
+      name: 'English',
+      description: 'English product name',
     },
   ],
 
+  master_product_images_type: [
+    {
+      id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
+      name: '1688',
+      description: 'main image type',
+    },
+    {
+      id: 'b2f0d5c3-4e9a-5b6d-0f2c-3a4b5c6d7e8f',
+      name: 'Alibaba',
+      description: 'Alibaba image type',
+    },
+    {
+      id: 'c3a1e6d4-5f0b-6c7e-1a3d-4b5c6d7e8f9a',
+      name: 'Amazon',
+      description: 'Amazon image type',
+    },
+    {
+      id: 'd4b2f7e5-6a1c-7d8f-2b4e-5c6d7e8f9a0b',
+      name: 'IG',
+      description: 'Instagram image type',
+    },
+    {
+      id: 'e5c3a8f6-7b2d-8e9a-3c5f-6d7e8f9a0b1c',
+      name: 'Temu',
+      description: 'Temu image type',
+    },
+    {
+      id: 'f6d4b9a7-8c3e-9f0b-4d6a-7e8f9a0b1c2d',
+      name: 'Video',
+      description: 'Video content type',
+    },
+  ],
   // Updated master_categories based on the image structure
   master_categories: [
     // Main Categories
