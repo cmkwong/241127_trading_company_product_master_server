@@ -11,6 +11,7 @@ export const certificateModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATES'].fields,
   entityName: 'product certificate',
+  entityIdField: 'id',
   requiredFields: ['product_id', 'certificate_type_id'],
   validations: {
     name: { required: true },

@@ -8,6 +8,7 @@ export const packingModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].fields,
   entityName: 'product packing',
+  entityIdField: 'id',
   requiredFields: [
     'product_id',
     'packing_type_id',

@@ -10,6 +10,7 @@ export const productLinkModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].fields,
   entityName: 'product link',
+  entityIdField: 'id',
   requiredFields: ['product_id', 'link'],
   validations: {
     product_id: { required: true },

@@ -9,6 +9,7 @@ export const certificateFileModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATE_FILES'].fields,
   entityName: 'certificate file',
+  entityIdField: 'id',
   requiredFields: ['certificate_id'],
   validations: {
     certificate_id: { required: true },

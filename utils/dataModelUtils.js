@@ -124,6 +124,16 @@ export default class DataModelUtils {
     return null;
   }
 
+  // check if data has base64 data content
+  _hasBase64Content = (data) => {
+    for (const [_field, _value] of Object.entries(data)) {
+      if (_field === 'base64_image' || _field === 'base64_file') {
+        return true;
+      }
+    }
+    return false;
+  };
+
   // ============================================================
   // 📂 FILE HANDLING
   // ============================================================
@@ -320,19 +330,22 @@ export default class DataModelUtils {
         rootModelKeyValue = validEntry[pkField];
       }
 
-      // 3. 💾 EXECUTE DATABASE WRITE (Real-time)
+      // 3. EXECUTE DATABASE WRITE (Real-time)
       let dbRecord = null;
 
       try {
         // --- A. Handle File Uploads (Pre-Write if ID exists) ---
         let pendingFileUpload = false;
 
-        // If we have an ID (Update or UUID Create), we can upload files now
-        if (currentModel.hasFileHandling) {
+        // If hasFileHandling and has base64 content
+        if (
+          currentModel.hasFileHandling &&
+          currentModel._hasBase64Content(validEntry)
+        ) {
           const fileType =
             rawRow[currentModel.fileTypeField] ||
             validEntry[currentModel.fileTypeField];
-
+          // store the file path
           validEntry[currentModel.fileUrlField] =
             await currentModel._validateAndSaveFile(rawRow, {
               entityId: rootModelKeyValue,
@@ -586,34 +599,55 @@ export default class DataModelUtils {
   }
 
   /**
-   * Recursively traverses a hydrated data object and builds a flat list
-   * of items to delete, ensuring children are listed BEFORE parents.
+   * Recursive Helper:
+   * - If a row has children present in the JSON -> It is a PATH (Do not delete).
+   * - If a row has NO children in the JSON -> It is a LEAF (Delete it).
    */
   _collectDeleteQueue(dataRow, currentModel, queue) {
     const pk = currentModel.entityIdField;
-    if (dataRow[pk]) {
-      const alreadyInQueue = queue.some(
-        (item) =>
-          item.tableName === currentModel.tableName && item.id === dataRow[pk]
-      );
-      if (!alreadyInQueue) {
-        queue.push({
-          tableName: currentModel.tableName,
-          id: dataRow[pk],
-          model: currentModel,
-        });
-      }
-    }
 
-    if (currentModel.childTableConfig) {
+    // FIX: Try configured PK first, then fallback to 'id'
+    const id = dataRow[pk] || dataRow['id'];
+
+    if (!id) return; // Still no ID? Then we can't delete.
+
+    let isPathToChild = false;
+
+    // Check if this model has children configured AND if those children exist in the JSON
+    if (
+      currentModel.childTableConfig &&
+      currentModel.childTableConfig.length > 0
+    ) {
       for (const childConfig of currentModel.childTableConfig) {
-        const childTableName = childConfig.model.tableName;
-        const childRows = dataRow[childTableName];
-        if (childRows && Array.isArray(childRows)) {
+        // Use configured jsonKey or fallback to tableName
+        const jsonKey = childConfig.jsonKey || childConfig.model.tableName;
+        const childRows = dataRow[jsonKey];
+
+        // CRITICAL: Only recurse if the JSON actually contains data for this child
+        if (childRows && Array.isArray(childRows) && childRows.length > 0) {
+          isPathToChild = true; // This row is just a container/path
+
           for (const childRow of childRows) {
             this._collectDeleteQueue(childRow, childConfig.model, queue);
           }
         }
+      }
+    }
+
+    // If it is NOT a path (meaning it's the last node provided in this JSON branch),
+    // then it is the target to delete.
+    if (!isPathToChild) {
+      // Avoid duplicates
+      const alreadyInQueue = queue.some(
+        (item) => item.tableName === currentModel.tableName && item.id === id
+      );
+
+      if (!alreadyInQueue) {
+        queue.push({
+          tableName: currentModel.tableName,
+          id: id,
+          model: currentModel,
+        });
       }
     }
   }
@@ -788,76 +822,72 @@ export default class DataModelUtils {
     return { data: resultData };
   }
 
+  // ============================================================
+  // 🗑️ DELETE OPERATIONS (Recursive Leaf-Node Targeting)
+  // ============================================================
+
   async _handleDeleteOperation(jsonData, schemaConfig) {
     const resultData = {};
 
     for (const [tableName, rows] of Object.entries(jsonData)) {
-      if (!schemaConfig[tableName]) {
-        throw new AppError(`Table "${tableName}" not found in schema`, 400);
-      }
-
+      // 1. Resolve Root Model
       const targetModel = this._resolveTargetModel(tableName);
+
       if (!targetModel) {
         console.warn(`Cannot delete from '${tableName}'. Model not found.`);
         continue;
       }
 
-      // Process each root ID provided in the JSON
+      // 2. Build Delete Queue (Identify Leafs)
+      const deleteQueue = [];
       for (const row of rows) {
-        // 1. Fetch FULL tree (Parent + Children) to know what to delete
-        const fullData = await this._recursiveRead(row, targetModel, {
-          includeBase64: false,
-        });
+        this._collectDeleteQueue(row, targetModel, deleteQueue);
+      }
 
-        if (!fullData) continue; // Record already gone
+      // 3. Execute Deletes
+      for (const item of deleteQueue) {
+        try {
+          const { model, id } = item;
 
-        // 2. Generate Delete Queue (Bottom-Up Order: Children -> Parent)
-        const deleteQueue = [];
-        this._collectDeleteQueue(fullData, targetModel, deleteQueue);
-
-        // 3. Execute Deletes One-by-One
-        for (const item of deleteQueue) {
-          try {
-            // Check if the parent table has `onDelete: 'CASCADE'` set for the child table
-            const currentTableSchema = schemaConfig[item.tableName];
-            const [parentTableName, _] = this._getParentTableConfig(
-              schemaConfig,
-              item.tableName
-            );
-            const foreignKeyField = Object.entries(currentTableSchema).find(
-              ([_, fieldDef]) =>
-                fieldDef.references &&
-                fieldDef.references.table === parentTableName &&
-                fieldDef.references.onDelete === 'CASCADE'
-            );
-
-            // Skip deletion if `onDelete: 'CASCADE'` is set
-            if (foreignKeyField) {
-              console.log(
-                `Skipping delete for ${item.tableName} ID ${item.id} due to ON DELETE CASCADE`
-              );
-              continue;
+          // A. File Cleanup
+          if (model.hasFileHandling) {
+            try {
+              const record = await model.getById(model.tableName, id);
+              if (record && record[model.fileUrlField]) {
+                const uploadDir = model.getUploadDir(id);
+                if (model.imagesOnly) {
+                  await deleteImage(record[model.fileUrlField], uploadDir);
+                } else {
+                  await deleteFile(record[model.fileUrlField], uploadDir);
+                }
+              }
+            } catch (fileErr) {
+              console.warn(`File cleanup warning: ${fileErr.message}`);
             }
-            await item.model.delete(item.id);
-
-            // 4. Format Output
-            if (!resultData[item.tableName]) {
-              resultData[item.tableName] = [];
-            }
-
-            // Prevent duplicates in output
-            const alreadyAdded = resultData[item.tableName].some(
-              (entry) => entry.id === item.id
-            );
-            if (!alreadyAdded) {
-              resultData[item.tableName].push({ id: item.id });
-            }
-          } catch (err) {
-            console.error(
-              `Failed to delete ${item.tableName} ID ${item.id}:`,
-              err
-            );
           }
+
+          // B. Database Delete
+          await model.crudO.performCrud({
+            operation: 'delete',
+            tableName: model.tableName,
+            id: id,
+          });
+
+          // C. Output Result
+          if (!resultData[model.tableName]) {
+            resultData[model.tableName] = [];
+          }
+          // Avoid duplicates in response
+          if (!resultData[model.tableName].some((r) => r.id === id)) {
+            resultData[model.tableName].push({ id: id, status: 'deleted' });
+          }
+        } catch (err) {
+          console.error(
+            `Delete failed for ${item.tableName} ID ${item.id}`,
+            err
+          );
+          if (!resultData[item.tableName]) resultData[item.tableName] = [];
+          resultData[item.tableName].push({ id: item.id, error: err.message });
         }
       }
     }
@@ -871,12 +901,25 @@ export default class DataModelUtils {
       return this;
     }
 
-    // 2. Is it a configured child?
+    // 2. Is it a configured child? (Direct Match)
     const childConfig = this.childTableConfig.find(
-      (c) => c.model.tableName === tableName
+      (c) => c.model.tableName === tableName || c.jsonKey === tableName
     );
 
-    return childConfig ? childConfig.model : null;
+    if (childConfig) {
+      return childConfig.model;
+    }
+
+    // 3. Deep Search (Recursive) - Find Grandchildren
+    // If not found in direct children, ask the children to look in THEIR children
+    for (const child of this.childTableConfig) {
+      const deepMatch = child.model._resolveTargetModel(tableName);
+      if (deepMatch) {
+        return deepMatch;
+      }
+    }
+
+    return null;
   }
 
   // ============================================================
@@ -1334,6 +1377,11 @@ export default class DataModelUtils {
         500
       );
     }
+  }
+
+  async executeQuery(stmt, args) {
+    const result = await this.dbc.executeQuery(stmt, args);
+    return result;
   }
 
   _capitalize(str) {

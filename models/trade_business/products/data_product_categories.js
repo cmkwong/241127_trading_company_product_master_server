@@ -10,7 +10,7 @@ export const productCategoryModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].fields,
   entityName: 'product category',
-  entityIdField: 'product_id',
+  entityIdField: 'id',
   requiredFields: ['product_id', 'category_id'],
   validations: {
     category_id: { required: true },

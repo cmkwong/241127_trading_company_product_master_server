@@ -8,7 +8,7 @@ export const alibabaIdModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_ALIBABA_IDS'].fields,
   entityName: 'product Alibaba ID',
-  entityIdField: 'product_id',
+  entityIdField: 'id',
   requiredFields: ['product_id'],
   validations: {
     alibaba_id: { required: true },

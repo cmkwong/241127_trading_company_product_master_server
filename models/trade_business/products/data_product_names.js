@@ -9,6 +9,7 @@ export const productNameModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].fields,
   entityName: 'product name',
+  entityIdField: 'id',
   requiredFields: ['product_id', 'name', 'name_type_id'],
   validations: {
     product_id: { required: true },

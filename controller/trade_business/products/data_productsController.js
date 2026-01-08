@@ -17,6 +17,24 @@ export const createProduct = catchAsync(async (req, res, next) => {
   });
 });
 
+export const getAllProducts = catchAsync(async (req, res, next) => {
+  const productIds = await productModel.executeQuery(
+    'SELECT id FROM products;'
+  );
+  const data = { products: productIds };
+  const refactoredData = await productModel.processStructureDataOperation(
+    data,
+    'read',
+    req.body.options
+  );
+  res.status(200).json({
+    status: 'success',
+    data: {
+      refactoredData,
+    },
+  });
+});
+
 /**
  * Get a product by ID
  * @route GET /api/products/:id
@@ -37,40 +55,11 @@ export const getProductById = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Get all products with pagination and filtering
- * @route GET /api/products
- */
-export const getProducts = catchAsync(async (req, res, next) => {
-  // Parse query parameters
-  const options = {
-    page: req.query.page ? parseInt(req.query.page, 10) : 1,
-    limit: req.query.limit ? parseInt(req.query.limit, 10) : 20,
-    search: req.query.search || undefined,
-    category_id: req.query.category_id || undefined,
-    includeRelated: req.query.includeRelated === 'true',
-    includePackings: req.query.includePackings === 'true',
-    includeAlibabaIds: req.query.includeAlibabaIds === 'true',
-  };
-
-  const result = await Products.getProducts(options);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      pages: result.pages,
-      products: result.products,
-    },
-  });
-});
-
-/**
  * Update a product
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
+  console.log(req.body.data);
   const refactoredData = await productModel.processStructureDataOperation(
     req.body.data,
     'update'
@@ -78,9 +67,8 @@ export const updateProduct = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    message: result.message,
     data: {
-      product: result.product,
+      refactoredData,
     },
   });
 });
@@ -97,10 +85,8 @@ export const deleteProduct = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    message: result.message,
     data: {
-      productId: result.productId,
-      productCode: result.productCode,
+      refactoredData,
     },
   });
 });

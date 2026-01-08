@@ -9,6 +9,7 @@ export const customizationImageModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].fields,
   entityName: 'customization image',
+  entityIdField: 'id',
   requiredFields: ['customization_id', 'image_url'],
   validations: {
     image_url: { required: true },

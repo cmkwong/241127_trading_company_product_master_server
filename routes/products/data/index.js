@@ -12,7 +12,10 @@ router.use(authController.protect);
 // Routes that don't require ID validation
 router
   .route('/')
-  .get(productsController.getProducts)
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    productsController.getAllProducts
+  )
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.createProduct,
@@ -39,16 +42,8 @@ router
 router
   .route('/ids')
   .get(productsController.getProductById, endController)
-  .patch(
-    authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.updateProduct,
-    endController
-  )
-  .delete(
-    authController.restrictTo('admin', 'manager'),
-    productsController.deleteProduct,
-    endController
-  );
+  .patch(productsController.updateProduct, endController)
+  .delete(productsController.deleteProduct, endController);
 
 // Check if product exists by ID
 router.get('/exists/:id', productsController.checkProductExists, endController);

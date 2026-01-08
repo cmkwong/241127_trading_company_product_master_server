@@ -20,6 +20,7 @@ export const productModel = new DataModelUtils({
   tableName: PRODUCT_TABLE_MASTER['PRODUCTS'].name,
   tableFields: PRODUCT_TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
+  entityIdField: 'id',
   requiredFields: ['product_id'],
   validations: {
     product_id: { required: true },
@@ -29,15 +30,20 @@ export const productModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
+  fileConfig: {
+    fileUrlField: 'icon_url',
+    uploadDir: 'public/{id}/icon/',
+    imagesOnly: true,
+  },
   // Add relationship with child table (customization images)
   childTableConfig: [
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductNames.productNameModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductImages.productImagesModel,
     },
