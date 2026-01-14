@@ -3,6 +3,7 @@
 export const defaultProducts = {
   products: [
     {
+      id: '550e8400-e29b-41d4-a716-446655440001',
       icon_name: 'Rounded Bowl',
       icon_url: 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
       remark: 'Premium quality product with multiple customization options',
@@ -10,40 +11,48 @@ export const defaultProducts = {
       updated_at: '2025-11-20T14:45:00Z',
       product_keywords: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440101',
           keyword_id: 1, // Stainless Steel
         },
         {
+          id: '550e8400-e29b-41d4-a716-446655440102',
           keyword_id: 2, // Insulated
         },
       ],
       product_names: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440201',
           name: 'Decorative Ceramic Vase',
           name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p', // English
         },
         {
+          id: '550e8400-e29b-41d4-a716-446655440202',
           name: '装饰陶瓷花瓶',
           name_type_id: '9b2c3d4e-5f6g-7h8i-9j0k-1l2m3n4o5p6q', // Chinese
         },
       ],
       product_categories: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440301',
           category_id: 'c7500000-0000-0000-0000-000000000000', // Pet Water Fountain
         },
       ],
       product_customizations: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440401',
           name: 'Color Variation',
           code: 'CV-001',
           remark: 'Available in blue, green, and red glazes',
           product_customization_images: [
             {
+              id: '550e8400-e29b-41d4-a716-446655440501',
               image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
+              id: '550e8400-e29b-41d4-a716-446655440502',
               image_name: 'Main_02.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -54,17 +63,20 @@ export const defaultProducts = {
       ],
       product_links: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440601',
           link: 'https://example.com/supplier/vase-details',
           remark: 'Supplier product page',
           link_date: '2025-10-10',
           product_link_images: [
             {
+              id: '550e8400-e29b-41d4-a716-446655440701',
               image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
               display_order: 1,
             },
             {
+              id: '550e8400-e29b-41d4-a716-446655440702',
               image_name: 'Main_01.jpg',
               base64_image:
                 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -75,12 +87,14 @@ export const defaultProducts = {
       ],
       product_alibaba_ids: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440801',
           value: '1600189276392',
           link: 'https://www.alibaba.com/product-detail/1600189276392.html',
         },
       ],
       product_packings: [
         {
+          id: '550e8400-e29b-41d4-a716-446655440901',
           packing_type_id: '5h8i9j0k-1l2m-3n4o-5p6q-7r8s9t0u1v2w', // Box
           length: 30.5,
           width: 20.75,
@@ -92,10 +106,12 @@ export const defaultProducts = {
       ],
       product_certificates: [
         {
+          id: '550e8400-e29b-41d4-a716-446655441001',
           certificate_type_id: '8k1l2m3n-4o5p-6q7r-8s9t-0u1v2w3x4y5z', // CE
           remark: 'Certified for European market',
           product_certificate_files: [
             {
+              id: '550e8400-e29b-41d4-a716-446655441101',
               file_name:
                 'quotation-sq202511221513-282-rivolx-limited-arman-sayed.txt',
               base64_file:
