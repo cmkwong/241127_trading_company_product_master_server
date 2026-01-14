@@ -3,9 +3,43 @@ import * as master_productImagesModel from '../../../models/trade_business/produ
 import * as master_productNameTypesModel from '../../../models/trade_business/products/master_productNameTypesModel.js';
 import * as master_certificateTypesModel from '../../../models/trade_business/products/master_certificateTypesModel.js';
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
+import * as master_productKeywordsModel from '../../../models/trade_business/products/master_productKeywordsModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { product_master_data } from '../../../datas/products.js';
+
+/**
+ * Get table mapping with models and data
+ * @returns {Object} Map of table names to their models and data
+ */
+const getTableDataMapping = () => {
+  return {
+    master_product_image_types: {
+      model: master_productImagesModel.productImagesTypeModel,
+      data: product_master_data.master_product_image_types,
+    },
+    master_product_name_types: {
+      model: master_productNameTypesModel.productNameTypeModel,
+      data: product_master_data.master_product_name_types,
+    },
+    master_categories: {
+      model: master_categoriesModel.categoryMasterModel,
+      data: product_master_data.master_categories,
+    },
+    master_packing_types: {
+      model: master_packingTypesModel.packingTypeModel,
+      data: product_master_data.master_packing_types,
+    },
+    master_certificate_types: {
+      model: master_certificateTypesModel.certificateTypeModel,
+      data: product_master_data.master_certificate_types,
+    },
+    master_keywords: {
+      model: master_productKeywordsModel.masterKeywordModel,
+      data: product_master_data.master_keywords,
+    },
+  };
+};
 
 // Add category-specific controller functions
 export const categoryExtensions = {
@@ -91,26 +125,43 @@ export const categoryExtensions = {
   }),
 };
 
-const _insertAllDefaults = async () => {
-  await master_productImagesModel.productImagesTypeModel.creates(
-    product_master_data.master_product_images_type
-  );
+const _insertAllDefaults = async (tableName) => {
+  const results = {};
 
-  await master_productNameTypesModel.productNameTypeModel.creates(
-    product_master_data.master_product_name_types
-  );
+  // Map of table names to their corresponding models and data
+  const tableDataMap = getTableDataMapping();
 
-  await master_categoriesModel.categoryMasterModel.creates(
-    product_master_data.master_categories
-  );
+  // If specific tableName is provided, insert only that table
+  if (tableName) {
+    if (!tableDataMap[tableName]) {
+      throw new AppError(
+        `Unknown table: ${tableName}. Valid tables: ${Object.keys(
+          tableDataMap
+        ).join(', ')}`,
+        400
+      );
+    }
 
-  await master_packingTypesModel.packingTypeModel.creates(
-    product_master_data.master_packing_types
-  );
+    try {
+      const { model, data } = tableDataMap[tableName];
+      results[tableName] = await model.creates(data);
+    } catch (error) {
+      results[tableName] = { error: error.message };
+    }
 
-  await master_certificateTypesModel.certificateTypeModel.creates(
-    product_master_data.master_certificate_types
-  );
+    return results;
+  }
+
+  // If no tableName, insert all master data tables
+  for (const [name, { model, data }] of Object.entries(tableDataMap)) {
+    try {
+      results[name] = await model.creates(data);
+    } catch (error) {
+      results[name] = { error: error.message };
+    }
+  }
+
+  return results;
 };
 
 /**
@@ -129,43 +180,48 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
   next();
 });
 
-const _clearProductMasterData = async () => {
+const _clearProductMasterData = async (tableName) => {
   const results = {};
 
-  try {
-    results.categories =
-      await master_categoriesModel.categoryMasterModel.truncateTable();
-  } catch (error) {
-    results.categories = { error: error.message };
+  // Get table mapping and extract just the models
+  const tableDataMap = getTableDataMapping();
+  const tableModels = Object.entries(tableDataMap).reduce(
+    (acc, [name, { model }]) => {
+      acc[name] = model;
+      return acc;
+    },
+    {}
+  );
+
+  // If specific tableName is provided, truncate only that table
+  if (tableName) {
+    if (!tableModels[tableName]) {
+      throw new AppError(
+        `Unknown table: ${tableName}. Valid tables: ${Object.keys(
+          tableModels
+        ).join(', ')}`,
+        400
+      );
+    }
+
+    try {
+      results[tableName] = await tableModels[tableName].truncateTable();
+    } catch (error) {
+      results[tableName] = { error: error.message };
+    }
+
+    return results;
   }
 
-  try {
-    results.productImageType =
-      await master_productImagesModel.productImagesTypeModel.truncateTable();
-  } catch (error) {
-    results.productImageType = { error: error.message };
+  // If no tableName, truncate all master data tables
+  for (const [name, model] of Object.entries(tableModels)) {
+    try {
+      results[name] = await model.truncateTable();
+    } catch (error) {
+      results[name] = { error: error.message };
+    }
   }
 
-  try {
-    results.packingTypes =
-      await master_packingTypesModel.packingTypeModel.truncateTable();
-  } catch (error) {
-    results.packingTypes = { error: error.message };
-  }
-
-  try {
-    results.productNameTypes =
-      await master_productNameTypesModel.productNameTypeModel.truncateTable();
-  } catch (error) {
-    results.productNameTypes = { error: error.message };
-  }
-
-  try {
-    results.certificateTypes =
-      await master_certificateTypesModel.certificateTypeModel.truncateTable();
-  } catch (error) {
-    results.certificateTypes = { error: error.message };
-  }
   return results;
 };
 
@@ -200,155 +256,34 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
   next();
 });
 
-/**
- * Get statistics for all master data types
- */
-export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
-  const stats = {};
+export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
+  const { tableName } = req.params;
+  // First truncate the specified table
+  await _clearProductMasterData(tableName);
 
-  try {
-    // Get packing types count
-    const packingTypesResult =
-      await master_packingTypesModel.getAllPackingTypes({
-        limit: 1,
-      });
-    stats.packingTypes = {
-      total: packingTypesResult.pagination.total,
-    };
-  } catch (error) {
-    stats.packingTypes = { error: error.message };
-  }
+  // Insert the default data for the specified table
+  const tableDataMap = getTableDataMapping();
 
-  try {
-    // Get product name types count
-    const nameTypesResult =
-      await master_productNameTypesModel.getAllProductNameTypes({
-        limit: 1,
-      });
-    stats.productNameTypes = {
-      total: nameTypesResult.pagination.total,
-    };
-  } catch (error) {
-    stats.productNameTypes = { error: error.message };
-  }
-
-  try {
-    // Get certificate types count
-    const certTypesResult =
-      await master_certificateTypesModel.getAllCertificateTypes({
-        limit: 1,
-      });
-    stats.certificateTypes = {
-      total: certTypesResult.pagination.total,
-    };
-  } catch (error) {
-    stats.certificateTypes = { error: error.message };
-  }
-
-  try {
-    // Get categories count
-    const categoriesResult = await master_categoriesModel.getAllCategories({
-      limit: 1,
-    });
-    stats.categories = {
-      total: categoriesResult.pagination.total,
-    };
-
-    // Get additional category stats
-    const rootCategories = await master_categoriesModel.getChildCategories(
-      null
+  if (!tableDataMap[tableName]) {
+    return next(
+      new AppError(`Unknown table: ${tableName}. Cannot reset data.`, 400)
     );
-    stats.categories.rootCount = rootCategories.length;
-  } catch (error) {
-    stats.categories = { error: error.message };
   }
+
+  const { model, data } = tableDataMap[tableName];
+  await model.creates(data);
 
   res.prints = {
     status: 'success',
-    statistics: stats,
+    message: `Master data for table ${tableName} has been reset successfully`,
   };
 
   next();
 });
 
 /**
- * Check if a master data entity exists by name
+ * Get statistics for all master data types
  */
-export const checkEntityExists = catchAsync(async (req, res, next) => {
-  const { type, name } = req.query;
-
-  if (!type || !name) {
-    return next(new AppError('Entity type and name are required', 400));
-  }
-
-  let exists = false;
-  let entity = null;
-
-  try {
-    const options = {
-      search: name,
-      limit: 1,
-    };
-
-    let result;
-
-    switch (type) {
-      case 'packingType':
-        result = await master_packingTypesModel.getAllPackingTypes(options);
-        if (result.packingTypes.length > 0) {
-          exists =
-            result.packingTypes[0].name.toLowerCase() === name.toLowerCase();
-          entity = exists ? result.packingTypes[0] : null;
-        }
-        break;
-
-      case 'productNameType':
-        result = await master_productNameTypesModel.getAllProductNameTypes(
-          options
-        );
-        if (result.productNameTypes.length > 0) {
-          exists =
-            result.productNameTypes[0].name.toLowerCase() ===
-            name.toLowerCase();
-          entity = exists ? result.productNameTypes[0] : null;
-        }
-        break;
-
-      case 'certificateType':
-        result = await master_certificateTypesModel.getAllCertificateTypes(
-          options
-        );
-        if (result.certificateTypes.length > 0) {
-          exists =
-            result.certificateTypes[0].name.toLowerCase() ===
-            name.toLowerCase();
-          entity = exists ? result.certificateTypes[0] : null;
-        }
-        break;
-
-      case 'category':
-        result = await master_categoriesModel.getAllCategories(options);
-        if (result.categories.length > 0) {
-          exists =
-            result.categories[0].name.toLowerCase() === name.toLowerCase();
-          entity = exists ? result.categories[0] : null;
-        }
-        break;
-
-      default:
-        return next(new AppError(`Unknown entity type: ${type}`, 400));
-    }
-
-    res.prints = {
-      status: 'success',
-      exists,
-      entity,
-    };
-
-    next();
-  } catch (error) {
-    next(
-      new AppError(`Failed to check entity existence: ${error.message}`, 500)
-    );
-  }
+export const getMasterDataStatistics = catchAsync(async (req, res, next) => {
+  next();
 });

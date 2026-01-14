@@ -11,15 +11,15 @@ router.post(
   endController
 );
 
-router.get(
-  '/statistics',
-  masterDataController.getMasterDataStatistics,
+router.post(
+  '/reset/:tableName',
+  masterDataController.resetMasterDataByTable,
   endController
 );
 
 router.get(
-  '/check-exists',
-  masterDataController.checkEntityExists,
+  '/statistics',
+  masterDataController.getMasterDataStatistics,
   endController
 );
 

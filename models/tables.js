@@ -10,6 +10,10 @@ export const PRODUCT_TABLE_MASTER = {
         primaryKey: true,
         description: 'UUID primary key',
       },
+      icon_name: {
+        type: 'VARCHAR(255)',
+        description: 'product icon name',
+      },
       icon_url: {
         type: 'VARCHAR(255)',
         description: 'URL to product icon image',
@@ -34,6 +38,66 @@ export const PRODUCT_TABLE_MASTER = {
       },
     },
   },
+
+  MASTER_KEYWORDS: {
+    name: 'master_keywords',
+    table_type: 'master',
+    fields: {
+      id: {
+        type: 'INT',
+        primaryKey: true,
+        autoIncrement: true,
+        description: 'id for master keywords',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Keyword name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Keyword description',
+      },
+    },
+    constraints: {
+      unique_keyword_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
+  PRODUCT_KEYWORDS: {
+    name: 'product_keywords',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
+      },
+      keyword_id: {
+        type: 'INT',
+        notNull: true,
+        references: {
+          table: 'master_keywords',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_keywords.id',
+      },
+    },
+    constraints: {
+      unique_product_keyword: {
+        type: 'UNIQUE',
+        fields: ['product_id', 'keyword_id'],
+      },
+    },
+  },
+
   MASTER_PRODUCT_IMAGE_TYPES: {
     name: 'master_product_image_types',
     table_type: 'master',
@@ -57,6 +121,7 @@ export const PRODUCT_TABLE_MASTER = {
       unique_product_image_type: { type: 'UNIQUE', fields: ['name'] },
     },
   },
+
   PRODUCT_IMAGES: {
     name: 'product_images',
     table_type: 'data',
@@ -459,6 +524,10 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'DECIMAL(10,2)',
         notNull: true,
         description: 'Weight of the packing',
+      },
+      remark: {
+        type: 'TEXT',
+        description: 'Packing Remark',
       },
     },
   },

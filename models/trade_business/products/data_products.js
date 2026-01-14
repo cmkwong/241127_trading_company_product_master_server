@@ -13,6 +13,7 @@ import * as ProductPackings from './data_product_packings.js';
 import * as ProductCategories from './data_product_categories.js';
 import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
+import * as ProductKeywords from './data_product_keywords.js';
 
 // Create a data model utility for products
 export const productModel = new DataModelUtils({
@@ -37,6 +38,11 @@ export const productModel = new DataModelUtils({
   },
   // Add relationship with child table (customization images)
   childTableConfig: [
+    {
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_KEYWORDS'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductKeywords.productKeywordModel,
+    },
     {
       tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table

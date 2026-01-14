@@ -3,10 +3,19 @@
 export const defaultProducts = {
   products: [
     {
+      icon_name: 'Rounded Bowl',
       icon_url: 'public/products/202511181231/Alibaba 1688/display/Main_01.jpg',
       remark: 'Premium quality product with multiple customization options',
       created_at: '2025-10-15T10:30:00Z',
       updated_at: '2025-11-20T14:45:00Z',
+      product_keywords: [
+        {
+          keyword_id: 1, // Stainless Steel
+        },
+        {
+          keyword_id: 2, // Insulated
+        },
+      ],
       product_names: [
         {
           name: 'Decorative Ceramic Vase',
@@ -78,6 +87,7 @@ export const defaultProducts = {
           height: 40.0,
           quantity: 1,
           weight: 2.5,
+          remark: 'testing',
         },
       ],
       product_certificates: [
@@ -98,10 +108,22 @@ export const defaultProducts = {
       ],
     },
     {
+      icon_name: 'Long Leash',
       icon_url: 'public/products/202511201324/Alibaba 1688/display/Main_03.jpg',
       remark: 'Eco-friendly material, suitable for outdoor use',
       created_at: '2025-09-22T08:15:00Z',
       updated_at: '2025-11-18T09:20:00Z',
+      product_keywords: [
+        {
+          keyword_id: 3, // Dog Water Bottle
+        },
+        {
+          keyword_id: 4, // Pet Feeder
+        },
+        {
+          keyword_id: 5, // Travel
+        },
+      ],
       product_names: [
         {
           name: 'Bamboo Cutting Board',
@@ -143,6 +165,7 @@ export const defaultProducts = {
           height: 5.5,
           quantity: 10,
           weight: 4.75,
+          remark: 'testing',
         },
       ],
       product_certificates: [
@@ -180,7 +203,75 @@ export const product_master_data = {
     },
   ],
 
-  master_product_images_type: [
+  master_keywords: [
+    {
+      id: 1,
+      name: 'Stainless Steel',
+      description: 'Durable stainless steel construction',
+    },
+    {
+      id: 2,
+      name: 'Insulated',
+      description: 'Insulated and vacuum sealed products',
+    },
+    {
+      id: 3,
+      name: 'Dog Water Bottle',
+      description: 'Pet water bottles for dogs',
+    },
+    {
+      id: 4,
+      name: 'Pet Feeder',
+      description: 'Pet feeding and food dispensing products',
+    },
+    {
+      id: 5,
+      name: 'Travel',
+      description: 'Portable and travel-friendly products',
+    },
+    {
+      id: 6,
+      name: 'Outdoor',
+      description: 'Outdoor and hiking accessories',
+    },
+    {
+      id: 7,
+      name: 'Leak Proof',
+      description: 'Leak-proof and secure containers',
+    },
+    {
+      id: 8,
+      name: 'Thermos',
+      description: 'Thermos and thermal flasks',
+    },
+    {
+      id: 9,
+      name: 'BPA Free',
+      description: 'BPA-free and safe materials',
+    },
+    {
+      id: 10,
+      name: 'Multi-function',
+      description: 'Multi-purpose and versatile products',
+    },
+    {
+      id: 11,
+      name: 'Large Capacity',
+      description: 'Large capacity containers and bottles',
+    },
+    {
+      id: 12,
+      name: 'Camping Gear',
+      description: 'Camping and outdoor equipment',
+    },
+    {
+      id: 13,
+      name: 'Eco-friendly',
+      description: 'Eco-friendly and sustainable products',
+    },
+  ],
+
+  master_product_image_types: [
     {
       id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
       name: '1688',

@@ -13,27 +13,3 @@ export const productImagesTypeModel = new DataModelUtils({
     name: { required: true },
   },
 });
-
-/**
- * Inserts default categories
- * @returns {Promise<Object>} Promise that resolves with insertion results
- */
-export const insertDefaultProductImagesType = async () => {
-  try {
-    // Import categories from data file
-    const { product_master_data } = await import('../../../datas/products.js');
-    const results = await batchCreateCategories(
-      product_master_data.master_product_images_type
-    );
-
-    return {
-      message: 'Default product image type inserted successfully',
-      results,
-    };
-  } catch (error) {
-    throw new AppError(
-      `Failed to insert default categories: ${error.message}`,
-      500
-    );
-  }
-};
