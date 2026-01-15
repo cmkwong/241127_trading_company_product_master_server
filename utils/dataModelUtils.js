@@ -24,7 +24,6 @@ export default class DataModelUtils {
     this.validations = config.validations || {};
     this.defaults = config.defaults || {};
     this.requiredFields = config.requiredFields || [];
-    this.joinConfig = config.joinConfig;
     this.childTableConfig = config.childTableConfig || [];
     this.dbc = config.dbc;
     this.page = config.page || 1;

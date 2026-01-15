@@ -19,10 +19,4 @@ export const productKeywordModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
-  joinConfig: {
-    joinTable: 'master_keywords',
-    joinField: 'keyword_id',
-    selectFields: 'master_keywords.name as keyword_name',
-    orderBy: 'master_keywords.id',
-  },
 });

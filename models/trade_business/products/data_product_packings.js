@@ -27,13 +27,4 @@ export const packingModel = new DataModelUtils({
   defaults: {
     quantity: 1,
   },
-  joinConfig: [
-    {
-      joinTable: 'master_packing_types',
-      joinField: 'packing_type_id',
-      selectFields:
-        'master_packing_types.name as packing_type_name, master_packing_types.description as packing_type_description',
-      orderBy: 'packing_type_id',
-    },
-  ],
 });

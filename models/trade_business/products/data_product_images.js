@@ -18,14 +18,25 @@ export const productImagesModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
-  joinConfig: [
-    {
-      joinTable: 'master_product_image_types',
-      joinField: 'image_type_id',
-      targetField: 'id', // Optional, defaults to 'id'
-      selectFields:
-        'master_product_image_types.name as product_image_type_name, master_product_image_types.description as type_description, master_product_image_types.parent_id', // TODO - change into object for easily debug OR just select all fields
-      orderBy: 'master_product_image_types.name',
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/{id}/products/{image_type}/',
+    uploadDir_mapping: {
+      id: {
+        tableName: 'products',
+        field: 'id',
+        linkField: 'product_id', // FK in product_images that links to products.id
+      },
+      image_type: {
+        tableName: 'product_images',
+        field: 'image_type_id',
+        joinConfig: {
+          joinTable: 'master_product_image_types',
+          joinField: 'id',
+          selectFields: 'master_product_image_types.name',
+        },
+      },
     },
-  ],
+    imagesOnly: true,
+  },
 });

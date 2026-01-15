@@ -16,16 +16,6 @@ export const productCategoryModel = new DataModelUtils({
     category_id: { required: true },
     bulk_id: { required: false },
   },
-  joinConfig: [
-    {
-      joinTable: 'master_categories',
-      joinField: 'category_id',
-      targetField: 'id', // Optional, defaults to 'id'
-      selectFields:
-        'master_categories.name as category_name, master_categories.description as category_description, master_categories.parent_id',
-      orderBy: 'master_categories.name',
-    },
-  ],
 });
 
 /**

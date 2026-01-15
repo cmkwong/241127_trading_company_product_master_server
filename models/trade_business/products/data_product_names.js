@@ -19,10 +19,4 @@ export const productNameModel = new DataModelUtils({
   defaults: {
     id: uuidv4,
   },
-  joinConfig: {
-    joinTable: 'master_product_name_types',
-    joinField: 'name_type_id',
-    selectFields: 'master_product_name_types.name as type_name',
-    orderBy: 'product_names.name_type_id',
-  },
 });
