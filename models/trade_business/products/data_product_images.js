@@ -10,33 +10,16 @@ export const productImagesModel = new DataModelUtils({
   tableFields: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].fields,
   entityName: 'product images',
   entityIdField: 'id',
-  requiredFields: ['product_id', 'image_type_id'],
+  requiredFields: ['product_id', 'image_url', 'image_type_id'],
   validations: {
-    category_id: { required: true },
-    bulk_id: { required: false },
+    image_type_id: { required: true },
   },
   defaults: {
     id: uuidv4,
   },
   fileConfig: {
     fileUrlField: 'image_url',
-    uploadDir: 'public/{id}/products/{image_type}/',
-    uploadDir_mapping: {
-      id: {
-        tableName: 'products',
-        field: 'id',
-        linkField: 'product_id', // FK in product_images that links to products.id
-      },
-      image_type: {
-        tableName: 'product_images',
-        field: 'image_type_id',
-        joinConfig: {
-          joinTable: 'master_product_image_types',
-          joinField: 'id',
-          selectFields: 'master_product_image_types.name',
-        },
-      },
-    },
+    uploadDir: 'public/{id}/products/',
     imagesOnly: true,
   },
 });

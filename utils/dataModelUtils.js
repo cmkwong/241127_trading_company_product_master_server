@@ -124,8 +124,8 @@ export default class DataModelUtils {
   }
 
   // check if data has base64 data content
-  _hasBase64Content = (data) => {
-    for (const [_field, _value] of Object.entries(data)) {
+  _hasBase64Content = (validEntry) => {
+    for (const [_field, _value] of Object.entries(validEntry)) {
       if (_field === 'base64_image' || _field === 'base64_file') {
         return true;
       }
@@ -173,6 +173,7 @@ export default class DataModelUtils {
     return fileUrl;
   }
 
+  // read and process base64 content and save to json
   async _processBase64Content(file, options = {}) {
     const {
       compress = false,
@@ -333,35 +334,21 @@ export default class DataModelUtils {
       let dbRecord = null;
 
       try {
-        // --- A. Handle File Uploads (Pre-Write if ID exists) ---
-        let pendingFileUpload = false;
-
-        // If hasFileHandling and has base64 content
+        // --- A. Prepare data for CRUD (set file URL to PENDING if file handling needed) ---
+        let crudData = { ...validEntry };
         if (
           currentModel.hasFileHandling &&
           currentModel._hasBase64Content(validEntry)
         ) {
-          const fileType =
-            rawRow[currentModel.fileTypeField] ||
-            validEntry[currentModel.fileTypeField];
-          // store the file path
-          validEntry[currentModel.fileUrlField] =
-            await currentModel._validateAndSaveFile(rawRow, {
-              entityId: rootModelKeyValue,
-              fileType: fileType,
-            });
-        }
-        // If Create + Auto-Increment, we don't have ID yet. Mark for post-write upload.
-        else if (currentModel.hasFileHandling && !validEntry[pkField]) {
-          pendingFileUpload = true;
+          crudData[currentModel.fileUrlField] = 'PENDING';
         }
 
-        // --- B. Perform CRUD ---
+        // --- B. Perform CRUD first ---
         const crudResult = await this.crudO.performCrud({
           operation: rowAction, // 'create' or 'update'
           tableName: currentModel.tableName,
           id: rowAction === 'update' ? validEntry[pkField] : undefined,
-          data: validEntry,
+          data: crudData,
         });
 
         // --- C. Capture Result & ID ---
@@ -376,9 +363,14 @@ export default class DataModelUtils {
           validEntry[pkField] = dbRecord[pkField];
         }
 
-        // --- D. Handle Pending File Upload (Post-Write for Auto-Increment) ---
-        if (pendingFileUpload && validEntry[pkField]) {
-          const fileType = rawRow[currentModel.fileTypeField];
+        // --- D. Handle File Uploads (Post-Write after CRUD succeeds) ---
+        if (
+          currentModel.hasFileHandling &&
+          currentModel._hasBase64Content(validEntry)
+        ) {
+          const fileType =
+            rawRow[currentModel.fileTypeField] ||
+            validEntry[currentModel.fileTypeField];
 
           const fileUrl = await currentModel._validateAndSaveFile(rawRow, {
             entityId: rootModelKeyValue,
@@ -386,14 +378,14 @@ export default class DataModelUtils {
           });
 
           if (fileUrl) {
-            // Update the record we just inserted with the file URL
+            // Update the record with the file URL
+            validEntry[currentModel.fileUrlField] = fileUrl;
             await this.crudO.performCrud({
               operation: 'update',
               tableName: currentModel.tableName,
               id: validEntry[pkField],
               data: { [currentModel.fileUrlField]: fileUrl },
             });
-            validEntry[currentModel.fileUrlField] = fileUrl; // Update local object
           }
         }
       } catch (err) {
@@ -735,11 +727,6 @@ export default class DataModelUtils {
     if (rowAction === 'create') {
       // Always generate UUID for VARCHAR PKs on create
       validEntry[pkField] = validEntry[pkField] || uuidv4();
-      // const pkConfig = tableSchema[pkField];
-      // if (pkConfig.type && pkConfig.type.toUpperCase().includes('VARCHAR')) {
-      // } else {
-      //   delete validEntry[pkField]; // Let DB handle auto-increment
-      // }
     } else {
       // Update: Must have ID
       if (!validEntry[pkField]) {
@@ -1085,6 +1072,13 @@ export default class DataModelUtils {
     try {
       this.validateData(data);
 
+      const result = await this.crudO.performCrud({
+        operation: 'create',
+        tableName: this.tableName,
+        data,
+      });
+
+      // Handle file upload if applicable
       if (this.hasFileHandling) {
         const fileType = data[this.fileTypeField];
         data[this.fileUrlField] = await this._validateAndSaveFile(data, {
@@ -1092,12 +1086,6 @@ export default class DataModelUtils {
           fileType,
         });
       }
-
-      const result = await this.crudO.performCrud({
-        operation: 'create',
-        tableName: this.tableName,
-        data,
-      });
 
       return {
         message: `${this._capitalize(this.entityName)} created successfully`,
