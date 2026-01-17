@@ -7,6 +7,7 @@ import {
   deleteImage,
 } from './fileUpload.js';
 import { v4 as uuidv4 } from 'uuid';
+import { ai_log } from './aiDevTools.js';
 
 /**
  * Enhanced data model utility for standard database operations and file handling
@@ -592,7 +593,7 @@ export default class DataModelUtils {
    * - If a row has children present in the JSON -> It is a PATH (Do not delete).
    * - If a row has NO children in the JSON -> It is a LEAF (Delete it).
    */
-  _collectDeleteQueue(dataRow, currentModel, queue) {
+  async _collectDeleteQueue(dataRow, currentModel, queue) {
     const pk = currentModel.entityIdField;
 
     // FIX: Try configured PK first, then fallback to 'id'
@@ -602,6 +603,8 @@ export default class DataModelUtils {
 
     let isPathToChild = false;
 
+    const providedChildren = [];
+
     // Check if this model has children configured AND if those children exist in the JSON
     if (
       currentModel.childTableConfig &&
@@ -609,35 +612,67 @@ export default class DataModelUtils {
     ) {
       for (const childConfig of currentModel.childTableConfig) {
         // fallback to tableName
-        const jsonKey = childConfig.model.tableName;
+        const jsonKey = childConfig.jsonKey || childConfig.model.tableName;
         const childRows = dataRow[jsonKey];
 
         // CRITICAL: Only recurse if the JSON actually contains data for this child
         if (childRows && Array.isArray(childRows) && childRows.length > 0) {
           isPathToChild = true; // This row is just a container/path
-
-          for (const childRow of childRows) {
-            this._collectDeleteQueue(childRow, childConfig.model, queue);
-          }
+          providedChildren.push({ childConfig, childRows });
         }
       }
     }
 
-    // If it is NOT a path (meaning it's the last node provided in this JSON branch),
-    // then it is the target to delete.
-    if (!isPathToChild) {
-      // Avoid duplicates
-      const alreadyInQueue = queue.some(
-        (item) => item.tableName === currentModel.tableName && item.id === id,
-      );
-
-      if (!alreadyInQueue) {
-        queue.push({
-          tableName: currentModel.tableName,
-          id: id,
-          model: currentModel,
-        });
+    // If it IS a path (meaning explicit children were provided),
+    // do NOT delete current row; only recurse into provided children.
+    if (isPathToChild) {
+      for (const { childConfig, childRows } of providedChildren) {
+        for (const childRow of childRows) {
+          await this._collectDeleteQueue(childRow, childConfig.model, queue);
+        }
       }
+      return;
+    }
+
+    // If it is NOT a path (meaning it's the last node provided in this JSON branch),
+    // then it is the target to delete, and we also delete all descendants.
+    if (currentModel.childTableConfig && currentModel.childTableConfig.length) {
+      for (const childConfig of currentModel.childTableConfig) {
+        const foreignKeyField = this._resolveForeignKey(
+          currentModel,
+          childConfig,
+        );
+        try {
+          const childRows = await childConfig.model.getAllByParentId(
+            id,
+            false,
+            {},
+            foreignKeyField,
+          );
+
+          for (const childRow of childRows) {
+            await this._collectDeleteQueue(childRow, childConfig.model, queue);
+          }
+        } catch (err) {
+          console.error(
+            `Error fetching children for ${childConfig.model.tableName} during delete:`,
+            err.message,
+          );
+        }
+      }
+    }
+
+    // Avoid duplicates
+    const alreadyInQueue = queue.some(
+      (item) => item.tableName === currentModel.tableName && item.id === id,
+    );
+
+    if (!alreadyInQueue) {
+      queue.push({
+        tableName: currentModel.tableName,
+        id: id,
+        model: currentModel,
+      });
     }
   }
 
@@ -825,7 +860,7 @@ export default class DataModelUtils {
       // 2. Build Delete Queue (Identify Leafs)
       const deleteQueue = [];
       for (const row of rows) {
-        this._collectDeleteQueue(row, targetModel, deleteQueue);
+        await this._collectDeleteQueue(row, targetModel, deleteQueue);
       }
       console.log('deleteQueue: ', deleteQueue);
 
