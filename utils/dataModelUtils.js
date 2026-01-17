@@ -610,8 +610,8 @@ export default class DataModelUtils {
       currentModel.childTableConfig.length > 0
     ) {
       for (const childConfig of currentModel.childTableConfig) {
-        // Use configured jsonKey or fallback to tableName
-        const jsonKey = childConfig.jsonKey || childConfig.model.tableName;
+        // fallback to tableName
+        const jsonKey = childConfig.model.tableName;
         const childRows = dataRow[jsonKey];
 
         // CRITICAL: Only recurse if the JSON actually contains data for this child
@@ -829,6 +829,7 @@ export default class DataModelUtils {
       for (const row of rows) {
         this._collectDeleteQueue(row, targetModel, deleteQueue);
       }
+      console.log('deleteQueue: ', deleteQueue);
 
       // 3. Execute Deletes
       for (const item of deleteQueue) {
@@ -838,7 +839,7 @@ export default class DataModelUtils {
           // A. File Cleanup
           if (model.hasFileHandling) {
             try {
-              const record = await model.getById(model.tableName, id);
+              const record = await model.getById(id);
               if (record && record[model.fileUrlField]) {
                 const uploadDir = model.getUploadDir(id);
                 if (model.imagesOnly) {
@@ -848,6 +849,7 @@ export default class DataModelUtils {
                 }
               }
             } catch (fileErr) {
+              console.log(`tablename: ${model.tableName}, id: ${id}`);
               console.warn(`File cleanup warning: ${fileErr.message}`);
             }
           }
