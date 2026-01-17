@@ -73,7 +73,7 @@ export default class DataModelUtils {
     // 2. Auto-detect from Schema
     if (this.tableFields && this.tableFields.fields) {
       for (const [fieldName, fieldDef] of Object.entries(
-        this.tableFields.fields
+        this.tableFields.fields,
       )) {
         if (fieldDef.primaryKey) {
           return fieldName;
@@ -105,7 +105,7 @@ export default class DataModelUtils {
     // 1. Try to find the ONLY defined foreign key in the schema
     if (this.tableFields && this.tableFields.fields) {
       const fkFields = Object.entries(this.tableFields.fields).filter(
-        ([_, def]) => def.references
+        ([_, def]) => def.references,
       );
 
       if (fkFields.length === 1) {
@@ -115,7 +115,7 @@ export default class DataModelUtils {
 
     // 2. Fallback: Look for a required field ending in '_id' that isn't the PK
     const heuristicMatch = this.requiredFields.find(
-      (f) => f.endsWith('_id') && f !== this.entityIdField
+      (f) => f.endsWith('_id') && f !== this.entityIdField,
     );
 
     if (heuristicMatch) return heuristicMatch;
@@ -223,16 +223,14 @@ export default class DataModelUtils {
           .toBuffer();
 
         const base64Content = compressedBuffer.toString('base64');
-        file[
-          this.imagesOnly ? 'base64_image' : 'base64_file'
-        ] = `data:image/jpeg;base64,${base64Content}`;
+        file[this.imagesOnly ? 'base64_image' : 'base64_file'] =
+          `data:image/jpeg;base64,${base64Content}`;
         file.is_compressed = true;
       } else {
         const fileBuffer = await fs.readFile(filePath);
         const base64Content = fileBuffer.toString('base64');
-        file[
-          this.imagesOnly ? 'base64_image' : 'base64_file'
-        ] = `data:${mimeType};base64,${base64Content}`;
+        file[this.imagesOnly ? 'base64_image' : 'base64_file'] =
+          `data:${mimeType};base64,${base64Content}`;
         file.is_compressed = false;
       }
     } catch (error) {
@@ -273,7 +271,7 @@ export default class DataModelUtils {
     globalActionType,
     currentModel,
     tableSchema,
-    parentAction
+    parentAction,
   ) {
     if (parentAction === 'create') return 'create';
     if (globalActionType === 'create') return 'create';
@@ -301,7 +299,7 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction = null
+    parentAction = null,
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
@@ -313,7 +311,7 @@ export default class DataModelUtils {
         globalActionType,
         currentModel,
         tableSchema,
-        parentAction
+        parentAction,
       );
 
       // 2. Prepare Data (Validation, Defaults, Link Parent)
@@ -323,7 +321,7 @@ export default class DataModelUtils {
         parentData,
         parentTableName,
         currentModel,
-        rowAction
+        rowAction,
       );
       // assign the key value of root model
       if (rootModel.tableName === tableName) {
@@ -391,7 +389,7 @@ export default class DataModelUtils {
       } catch (err) {
         throw new AppError(
           `Failed to ${rowAction} ${tableName}: ${err.message}`,
-          500
+          500,
         );
       }
 
@@ -416,7 +414,7 @@ export default class DataModelUtils {
         result,
         schemaConfig,
         globalActionType,
-        rowAction
+        rowAction,
       );
     }
   }
@@ -484,7 +482,7 @@ export default class DataModelUtils {
     if (childModel.tableFields) {
       const foundEntry = Object.entries(childModel.tableFields).find(
         ([_, def]) =>
-          this._getBaseTableName(def.references?.table) === parentBaseName
+          this._getBaseTableName(def.references?.table) === parentBaseName,
       );
       if (foundEntry) return foundEntry[0];
     }
@@ -492,7 +490,7 @@ export default class DataModelUtils {
     // 3. FALLBACK: Naming convention (e.g., "product_customization" -> "product_customization_id")
     const fallbackForeignKey = `${parentModel.entityName.replace(
       /\s+/g,
-      '_'
+      '_',
     )}_id`;
 
     return fallbackForeignKey;
@@ -519,7 +517,7 @@ export default class DataModelUtils {
       } catch (error) {
         console.error(
           `Error fetching ${currentModel.tableName} by ID (${id}):`,
-          error.message
+          error.message,
         );
         return null;
       }
@@ -532,7 +530,7 @@ export default class DataModelUtils {
       } catch (error) {
         console.error(
           `Error processing Base64 for ${currentModel.tableName} ID (${id}):`,
-          error.message
+          error.message,
         );
       }
     }
@@ -549,7 +547,7 @@ export default class DataModelUtils {
         // --- Auto-Detect Foreign Key ---
         const foreignKeyField = this._resolveForeignKey(
           currentModel,
-          childConfig
+          childConfig,
         );
 
         // A. Fetch children
@@ -558,7 +556,7 @@ export default class DataModelUtils {
             id,
             false,
             {},
-            foreignKeyField
+            foreignKeyField,
           );
 
           // B. Recursively process each child
@@ -567,7 +565,7 @@ export default class DataModelUtils {
             const processedChild = await this._recursiveRead(
               childRow,
               childModel,
-              options
+              options,
             );
             if (processedChild) {
               processedChildren.push(processedChild);
@@ -580,7 +578,7 @@ export default class DataModelUtils {
         } catch (err) {
           console.error(
             `Error fetching children for ${childTableName}:`,
-            err.message
+            err.message,
           );
         }
       }
@@ -630,7 +628,7 @@ export default class DataModelUtils {
     if (!isPathToChild) {
       // Avoid duplicates
       const alreadyInQueue = queue.some(
-        (item) => item.tableName === currentModel.tableName && item.id === id
+        (item) => item.tableName === currentModel.tableName && item.id === id,
       );
 
       if (!alreadyInQueue) {
@@ -656,13 +654,13 @@ export default class DataModelUtils {
     result,
     schemaConfig,
     globalActionType,
-    parentAction
+    parentAction,
   ) {
     for (const [tableName, tableRows] of Object.entries(rawRow)) {
       if (!Array.isArray(tableRows)) continue;
 
       const childConfig = currentModel.childTableConfig.find(
-        (config) => config.model.tableName === tableName
+        (config) => config.model.tableName === tableName,
       );
 
       if (childConfig && childConfig.model) {
@@ -677,7 +675,7 @@ export default class DataModelUtils {
           result,
           schemaConfig,
           globalActionType,
-          parentAction
+          parentAction,
         );
       }
     }
@@ -689,7 +687,7 @@ export default class DataModelUtils {
     parentData,
     parentTableName,
     currentModel,
-    rowAction
+    rowAction,
   ) {
     let validEntry = {};
     const pkField = currentModel.entityIdField;
@@ -771,7 +769,7 @@ export default class DataModelUtils {
           result,
           schemaConfig,
           actionType,
-          null // parentAction
+          null, // parentAction
         );
       }
 
@@ -798,7 +796,7 @@ export default class DataModelUtils {
         } catch (error) {
           console.error(
             `Error processing row in table ${tableName}:`,
-            error.message
+            error.message,
           );
         }
       }
@@ -872,7 +870,7 @@ export default class DataModelUtils {
         } catch (err) {
           console.error(
             `Delete failed for ${item.tableName} ID ${item.id}`,
-            err
+            err,
           );
           if (!resultData[item.tableName]) resultData[item.tableName] = [];
           resultData[item.tableName].push({ id: item.id, error: err.message });
@@ -891,7 +889,7 @@ export default class DataModelUtils {
 
     // 2. Is it a configured child? (Direct Match)
     const childConfig = this.childTableConfig.find(
-      (c) => c.model.tableName === tableName || c.jsonKey === tableName
+      (c) => c.model.tableName === tableName || c.jsonKey === tableName,
     );
 
     if (childConfig) {
@@ -922,7 +920,7 @@ export default class DataModelUtils {
     if (!['create', 'update', 'read', 'delete'].includes(actionType)) {
       throw new AppError(
         'Invalid actionType. Must be create, update, read, or delete.',
-        400
+        400,
       );
     }
 
@@ -971,7 +969,7 @@ export default class DataModelUtils {
         ) {
           throw new AppError(
             `${this._formatFieldName(field)} is required`,
-            400
+            400,
           );
         }
       }
@@ -993,14 +991,14 @@ export default class DataModelUtils {
       if (validations.min !== undefined && data[field] < validations.min) {
         throw new AppError(
           `${this._formatFieldName(field)} must be at least ${validations.min}`,
-          400
+          400,
         );
       }
 
       if (validations.max !== undefined && data[field] > validations.max) {
         throw new AppError(
           `${this._formatFieldName(field)} cannot exceed ${validations.max}`,
-          400
+          400,
         );
       }
 
@@ -1013,7 +1011,7 @@ export default class DataModelUtils {
           `${this._formatFieldName(field)} must be at least ${
             validations.minLength
           } characters`,
-          400
+          400,
         );
       }
 
@@ -1022,7 +1020,7 @@ export default class DataModelUtils {
         if (validationResult !== true) {
           throw new AppError(
             validationResult || `Invalid ${this._formatFieldName(field)}`,
-            400
+            400,
           );
         }
       }
@@ -1065,7 +1063,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to create ${this.entityName}: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1096,7 +1094,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to create ${this.entityName}: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1112,7 +1110,7 @@ export default class DataModelUtils {
       if (!result.record) {
         throw new AppError(
           `${this._capitalize(this.entityName)} not found`,
-          404
+          404,
         );
       }
 
@@ -1125,7 +1123,7 @@ export default class DataModelUtils {
     } catch (error) {
       console.error(
         `Error in getById for ${this.entityName} (${id}):`,
-        error.message
+        error.message,
       );
       throw error;
     }
@@ -1142,7 +1140,7 @@ export default class DataModelUtils {
     parentId,
     includeBase64 = false,
     options = {},
-    foreignKeyField = null
+    foreignKeyField = null,
   ) {
     try {
       const searchField = this._inferForeignKeyField(foreignKeyField);
@@ -1150,7 +1148,7 @@ export default class DataModelUtils {
       if (!searchField) {
         throw new AppError(
           `Cannot determine foreign key for ${this.tableName}. Please provide it explicitly.`,
-          500
+          500,
         );
       }
 
@@ -1165,12 +1163,12 @@ export default class DataModelUtils {
       if (!includeBase64 || !this.hasFileHandling) return results;
 
       return Promise.all(
-        results.map((file) => this._processBase64Content(file, options))
+        results.map((file) => this._processBase64Content(file, options)),
       );
     } catch (error) {
       throw new AppError(
         `Failed to get ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1209,7 +1207,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to update ${this.entityName}: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1237,7 +1235,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to delete ${this.entityName}: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1250,7 +1248,7 @@ export default class DataModelUtils {
       if (!searchField) {
         throw new AppError(
           `Cannot determine foreign key for ${this.tableName} to perform delete.`,
-          500
+          500,
         );
       }
 
@@ -1259,7 +1257,7 @@ export default class DataModelUtils {
         parentId,
         false,
         {},
-        searchField
+        searchField,
       );
 
       if (entities.length === 0) {
@@ -1296,7 +1294,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to delete ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1307,7 +1305,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Transaction failed: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1332,7 +1330,7 @@ export default class DataModelUtils {
 
         return {
           message: `${this._capitalize(
-            this.entityName
+            this.entityName,
           )}s reordered successfully`,
           [this.entityIdField]: entityId,
           [this._pluralize(this._camelCase(this.entityName))]: files,
@@ -1341,7 +1339,7 @@ export default class DataModelUtils {
     } catch (error) {
       throw new AppError(
         `Failed to reorder ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -1356,14 +1354,14 @@ export default class DataModelUtils {
         return {
           success: true,
           message: `${this._capitalize(
-            this.entityName
+            this.entityName,
           )}s table has been truncated successfully`,
         };
       });
     } catch (error) {
       throw new AppError(
         `Failed to truncate ${this.entityName}s: ${error.message}`,
-        500
+        500,
       );
     }
   }
