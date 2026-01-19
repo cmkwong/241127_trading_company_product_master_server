@@ -57,6 +57,29 @@ export default class DataModelUtils {
   // ============================================================
 
   /**
+   * Static helper to remove a file tied to a model record.
+   * Safe to call in delete flows; failures are logged and ignored.
+   */
+  static async cleanupModelFile(model, id) {
+    if (!model?.hasFileHandling) return;
+
+    try {
+      const record = await model.getById(id);
+      if (record && record[model.fileUrlField]) {
+        const uploadDir = model.getUploadDir(id);
+        if (model.imagesOnly) {
+          await deleteImage(record[model.fileUrlField], uploadDir);
+        } else {
+          await deleteFile(record[model.fileUrlField], uploadDir);
+        }
+      }
+    } catch (fileErr) {
+      console.log(`tablename: ${model?.tableName}, id: ${id}`);
+      console.warn(`File cleanup warning: ${fileErr.message}`);
+    }
+  }
+
+  /**
    * Determines the Primary Key field name based on config or schema.
    * Priority:
    * 1. Manual config override (config.entityIdField)
@@ -367,6 +390,7 @@ export default class DataModelUtils {
           currentModel.hasFileHandling &&
           currentModel._hasBase64Content(validEntry)
         ) {
+          // get the file type if applicable
           const fileType =
             rawRow[currentModel.fileTypeField] ||
             validEntry[currentModel.fileTypeField];
@@ -862,7 +886,6 @@ export default class DataModelUtils {
       for (const row of rows) {
         await this._collectDeleteQueue(row, targetModel, deleteQueue);
       }
-      console.log('deleteQueue: ', deleteQueue);
 
       // 3. Execute Deletes
       for (const item of deleteQueue) {
@@ -870,22 +893,7 @@ export default class DataModelUtils {
           const { model, id } = item;
 
           // A. File Cleanup
-          if (model.hasFileHandling) {
-            try {
-              const record = await model.getById(id);
-              if (record && record[model.fileUrlField]) {
-                const uploadDir = model.getUploadDir(id);
-                if (model.imagesOnly) {
-                  await deleteImage(record[model.fileUrlField], uploadDir);
-                } else {
-                  await deleteFile(record[model.fileUrlField], uploadDir);
-                }
-              }
-            } catch (fileErr) {
-              console.log(`tablename: ${model.tableName}, id: ${id}`);
-              console.warn(`File cleanup warning: ${fileErr.message}`);
-            }
-          }
+          await DataModelUtils.cleanupModelFile(model, id);
 
           // B. Database Delete
           await model.crudO.performCrud({
