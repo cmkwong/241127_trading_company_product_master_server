@@ -66,11 +66,10 @@ export default class DataModelUtils {
     try {
       const record = await model.getById(id);
       if (record && record[model.fileUrlField]) {
-        const uploadDir = model.getUploadDir(id);
         if (model.imagesOnly) {
-          await deleteImage(record[model.fileUrlField], uploadDir);
+          await deleteImage(record[model.fileUrlField]);
         } else {
-          await deleteFile(record[model.fileUrlField], uploadDir);
+          await deleteFile(record[model.fileUrlField]);
         }
       }
     } catch (fileErr) {
@@ -362,6 +361,12 @@ export default class DataModelUtils {
           currentModel.hasFileHandling &&
           currentModel._hasBase64Content(validEntry)
         ) {
+          // remove the original file if exists
+          await DataModelUtils.cleanupModelFile(
+            currentModel,
+            validEntry[pkField],
+          );
+
           crudData[currentModel.fileUrlField] = 'PENDING';
         }
 
