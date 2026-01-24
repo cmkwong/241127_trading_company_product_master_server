@@ -355,7 +355,7 @@ export default class DataModelUtils {
       let dbRecord = null;
 
       try {
-        // --- A. Prepare data for CRUD (set file URL to PENDING if file handling needed) ---
+        // --- A. Prepare data for CRUD and clean-up original file if needed (set file URL to PENDING if file handling needed) ---
         let crudData = { ...validEntry };
         if (
           currentModel.hasFileHandling &&

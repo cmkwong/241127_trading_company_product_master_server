@@ -49,9 +49,8 @@ export const categoryExtensions = {
     // If id is 'root', get root categories (parent_id is null)
     const parentId = id === 'root' ? null : id;
 
-    const categories = await master_categoriesModel.getChildCategories(
-      parentId
-    );
+    const categories =
+      await master_categoriesModel.getChildCategories(parentId);
 
     res.prints = {
       status: 'success',
@@ -118,8 +117,8 @@ export const categoryExtensions = {
       next(
         new AppError(
           `Failed to check category existence: ${error.message}`,
-          500
-        )
+          500,
+        ),
       );
     }
   }),
@@ -136,9 +135,9 @@ const _insertAllDefaults = async (tableName) => {
     if (!tableDataMap[tableName]) {
       throw new AppError(
         `Unknown table: ${tableName}. Valid tables: ${Object.keys(
-          tableDataMap
+          tableDataMap,
         ).join(', ')}`,
-        400
+        400,
       );
     }
 
@@ -168,9 +167,7 @@ const _insertAllDefaults = async (tableName) => {
  * Insert defaults for all master data types
  */
 export const insertAllDefaults = catchAsync(async (req, res, next) => {
-  const results = {};
-
-  await _insertAllDefaults();
+  const results = await _insertAllDefaults();
 
   res.prints = {
     status: 'success',
@@ -190,7 +187,7 @@ const _clearProductMasterData = async (tableName) => {
       acc[name] = model;
       return acc;
     },
-    {}
+    {},
   );
 
   // If specific tableName is provided, truncate only that table
@@ -198,9 +195,9 @@ const _clearProductMasterData = async (tableName) => {
     if (!tableModels[tableName]) {
       throw new AppError(
         `Unknown table: ${tableName}. Valid tables: ${Object.keys(
-          tableModels
+          tableModels,
         ).join(', ')}`,
-        400
+        400,
       );
     }
 
@@ -246,11 +243,12 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
   await _clearProductMasterData();
 
   // Insert the default data
-  await _insertAllDefaults();
+  const results = await _insertAllDefaults();
 
   res.prints = {
     status: 'success',
     message: 'All master data has been reset successfully',
+    results,
   };
 
   next();
@@ -266,7 +264,7 @@ export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
 
   if (!tableDataMap[tableName]) {
     return next(
-      new AppError(`Unknown table: ${tableName}. Cannot reset data.`, 400)
+      new AppError(`Unknown table: ${tableName}. Cannot reset data.`, 400),
     );
   }
 

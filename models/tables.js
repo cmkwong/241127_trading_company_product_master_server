@@ -15,7 +15,7 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'product icon name',
       },
       icon_url: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         description: 'URL to product icon image',
       },
       hs_code: {
@@ -58,6 +58,16 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'VARCHAR(255)',
         description: 'Keyword description',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
     constraints: {
       unique_keyword_name: { type: 'UNIQUE', fields: ['name'] },
@@ -89,6 +99,16 @@ export const PRODUCT_TABLE_MASTER = {
         },
         description: 'Reference to master_keywords.id',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
     constraints: {
       unique_product_keyword: {
@@ -115,6 +135,16 @@ export const PRODUCT_TABLE_MASTER = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Image type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
     constraints: {
@@ -153,7 +183,7 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'image name',
       },
       image_url: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         notNull: true,
         description: 'URL to product image',
       },
@@ -165,6 +195,16 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'VARCHAR(36)',
         default: 0,
         description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
   },
@@ -186,6 +226,16 @@ export const PRODUCT_TABLE_MASTER = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Description of the name type',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
     constraints: {
@@ -223,6 +273,16 @@ export const PRODUCT_TABLE_MASTER = {
         },
         description: 'Reference to master_product_name_types.id',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
     constraints: {
       unique_product_name_type: {
@@ -259,6 +319,16 @@ export const PRODUCT_TABLE_MASTER = {
         },
         description: 'Parent category ID for hierarchical structure',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 
@@ -286,6 +356,16 @@ export const PRODUCT_TABLE_MASTER = {
           onDelete: 'CASCADE',
         },
         description: 'Reference to master_categories.id',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
     constraints: {
@@ -321,6 +401,16 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'TEXT',
         description: 'Additional notes about the customization',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 
@@ -349,14 +439,24 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'image name',
       },
       image_url: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         notNull: true,
         description: 'URL to customization image',
       },
       display_order: {
-        type: 'VARCHAR(36)',
+        type: 'INT',
         default: 0,
         description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
   },
@@ -377,12 +477,21 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'Reference to products.id',
       },
       link: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         notNull: true,
         description: 'URL link related to product',
       },
       remark: { type: 'TEXT', description: 'Additional notes about the link' },
-      link_date: { type: 'DATE', description: 'Date associated with the link' },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 
@@ -411,14 +520,24 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'image name',
       },
       image_url: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         notNull: true,
         description: 'URL to link-related image',
       },
       display_order: {
-        type: 'VARCHAR(36)',
+        type: 'INT',
         default: 0,
         description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
   },
@@ -444,8 +563,18 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'Alibaba product ID value',
       },
       link: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         description: 'URL to Alibaba product page',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
   },
@@ -467,6 +596,16 @@ export const PRODUCT_TABLE_MASTER = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Packing type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
     constraints: {
@@ -529,6 +668,16 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'TEXT',
         description: 'Packing Remark',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 
@@ -549,6 +698,16 @@ export const PRODUCT_TABLE_MASTER = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Certificate type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
     constraints: {
@@ -585,6 +744,16 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'TEXT',
         description: 'Additional notes about the certificate',
       },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 
@@ -613,7 +782,7 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'file name',
       },
       file_url: {
-        type: 'VARCHAR(255)',
+        type: 'TEXT',
         notNull: true,
         description: 'URL to certificate file',
       },
@@ -629,6 +798,16 @@ export const PRODUCT_TABLE_MASTER = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Description of the certificate file',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
       },
     },
   },
@@ -681,13 +860,13 @@ export const generateCreateTableSQL = (tableDefinition) => {
   for (const [constraintName, constraintDef] of Object.entries(constraints)) {
     if (constraintDef.type === 'PRIMARY KEY') {
       fieldDefinitions.push(
-        `  PRIMARY KEY (${constraintDef.fields.join(', ')})`
+        `  PRIMARY KEY (${constraintDef.fields.join(', ')})`,
       );
     } else if (constraintDef.type === 'UNIQUE') {
       fieldDefinitions.push(
         `  CONSTRAINT ${constraintName} UNIQUE (${constraintDef.fields.join(
-          ', '
-        )})`
+          ', ',
+        )})`,
       );
     }
   }
@@ -697,7 +876,7 @@ export const generateCreateTableSQL = (tableDefinition) => {
     if (fieldDef.references) {
       const { table, field, onDelete = 'RESTRICT' } = fieldDef.references;
       fieldDefinitions.push(
-        `  FOREIGN KEY (${fieldName}) REFERENCES ${table}(${field}) ON DELETE ${onDelete}`
+        `  FOREIGN KEY (${fieldName}) REFERENCES ${table}(${field}) ON DELETE ${onDelete}`,
       );
     }
   }

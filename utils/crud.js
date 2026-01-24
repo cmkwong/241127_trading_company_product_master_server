@@ -1,5 +1,6 @@
 import AppError from './appError.js';
 import { v4 as uuidv4 } from 'uuid';
+import { getTimezoneDate } from './time.js';
 
 /**
  * 🛠️ CRUD OPERATIONS UTILITY
@@ -40,7 +41,7 @@ class CrudOperations {
       if (!this.dbc) {
         throw new AppError(
           'A valid DatabaseConnection instance (dbc) is required',
-          500
+          500,
         );
       }
 
@@ -53,7 +54,7 @@ class CrudOperations {
       if (schema.length === 0) {
         throw new AppError(
           `Table ${tableName} not found or has no columns`,
-          400
+          400,
         );
       }
 
@@ -66,13 +67,13 @@ class CrudOperations {
 
       // Detect special timestamp columns
       const hasCreatedAt = schema.some(
-        (col) => col.COLUMN_NAME === 'created_at'
+        (col) => col.COLUMN_NAME === 'created_at',
       );
       const hasUpdatedAt = schema.some(
-        (col) => col.COLUMN_NAME === 'updated_at'
+        (col) => col.COLUMN_NAME === 'updated_at',
       );
       const hasDeletedAt = schema.some(
-        (col) => col.COLUMN_NAME === 'deleted_at'
+        (col) => col.COLUMN_NAME === 'deleted_at',
       );
 
       // =========================================================
@@ -87,7 +88,7 @@ class CrudOperations {
             schema,
             data,
             hasCreatedAt,
-            hasUpdatedAt
+            hasUpdatedAt,
           );
           break;
 
@@ -99,7 +100,7 @@ class CrudOperations {
             conditions,
             fields,
             orderBy,
-            hasDeletedAt
+            hasDeletedAt,
           );
           break;
 
@@ -109,7 +110,7 @@ class CrudOperations {
             schema,
             id,
             data,
-            hasUpdatedAt
+            hasUpdatedAt,
           );
           break;
 
@@ -119,7 +120,7 @@ class CrudOperations {
             schema,
             id,
             softDelete,
-            hasDeletedAt
+            hasDeletedAt,
           );
           break;
 
@@ -135,7 +136,7 @@ class CrudOperations {
     } catch (error) {
       throw new AppError(
         `CRUD operation failed: ${error.message}`,
-        error.statusCode || 500
+        error.statusCode || 500,
       );
     }
   }
@@ -154,7 +155,8 @@ class CrudOperations {
     // 1. Auto-generate UUID if the PK is a string (CHAR/VARCHAR) and missing
     const idColumn = schema.find(
       (col) =>
-        col.COLUMN_KEY === 'PRI' && col.COLUMN_NAME.toLowerCase().includes('id')
+        col.COLUMN_KEY === 'PRI' &&
+        col.COLUMN_NAME.toLowerCase().includes('id'),
     );
     if (
       idColumn &&
@@ -165,7 +167,7 @@ class CrudOperations {
     }
 
     // 2. Add Timestamps
-    const now = new Date();
+    const now = getTimezoneDate();
     if (hasCreatedAt) recordData.created_at = now;
     if (hasUpdatedAt) recordData.updated_at = now;
 
@@ -217,7 +219,7 @@ class CrudOperations {
     fields,
     orderBy,
     orderDirection = 'ASC',
-    hasDeletedAt = false
+    hasDeletedAt = false,
   ) {
     const selectFields = fields && fields.length > 0 ? fields.join(', ') : '*';
     let whereClause = '';
@@ -231,7 +233,7 @@ class CrudOperations {
     // Handle ID (Single or Array)
     if (id) {
       const primaryKeyColumn = schema.find(
-        (col) => col.COLUMN_KEY === 'PRI'
+        (col) => col.COLUMN_KEY === 'PRI',
       ).COLUMN_NAME;
 
       if (Array.isArray(id)) {
@@ -376,10 +378,10 @@ class CrudOperations {
 
     const updateData = { ...data };
     const primaryKeyColumn = schema.find(
-      (col) => col.COLUMN_KEY === 'PRI'
+      (col) => col.COLUMN_KEY === 'PRI',
     ).COLUMN_NAME;
 
-    if (hasUpdatedAt) updateData.updated_at = new Date();
+    if (hasUpdatedAt) updateData.updated_at = getTimezoneDate();
 
     const updateParts = [];
     const values = [];
@@ -440,7 +442,7 @@ class CrudOperations {
     if (!recordToDelete.record) {
       throw new AppError(
         `Record with the provided ID not found in ${tableName}`,
-        404
+        404,
       );
     }
 
@@ -454,7 +456,7 @@ class CrudOperations {
         if (id[column] === undefined) {
           throw new AppError(
             `Missing value for primary key column ${column}`,
-            400
+            400,
           );
         }
         conditions.push(`${column} = ?`);
@@ -473,7 +475,7 @@ class CrudOperations {
       SET deleted_at = ?
       WHERE ${whereClause}
     `;
-      await this.dbc.executeQuery(sql, [new Date(), ...whereParams]);
+      await this.dbc.executeQuery(sql, [getTimezoneDate(), ...whereParams]);
       return {
         message: `Record soft deleted successfully from ${tableName}`,
         id,

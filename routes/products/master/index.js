@@ -8,32 +8,32 @@ const router = express.Router();
 router.post(
   '/defaults/all',
   masterDataController.insertAllDefaults,
-  endController
+  endController,
+);
+
+router.post(
+  '/reset/all',
+  masterDataController.resetAllMasterData,
+  endController,
 );
 
 router.post(
   '/reset/:tableName',
   masterDataController.resetMasterDataByTable,
-  endController
+  endController,
 );
 
 router.get(
   '/statistics',
   masterDataController.getMasterDataStatistics,
-  endController
+  endController,
 );
 
 // Add new combined operations for truncate and reset
 router.post(
   '/truncate/all',
   masterDataController.truncateAllTables,
-  endController
-);
-
-router.post(
-  '/reset/all',
-  masterDataController.resetAllMasterData,
-  endController
+  endController,
 );
 
 export default router;

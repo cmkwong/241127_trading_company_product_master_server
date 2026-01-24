@@ -1,15 +1,13 @@
-export const getCurrentTimeStr = (datetime = null) => {
-  let today;
-  if (!datetime) {
-    // new Date() cannot get the correct timezone:
-    // https://stackoverflow.com/questions/15141762/how-to-initialize-a-javascript-date-to-a-particular-time-zone
-    let nz_date_string = new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Hong_Kong',
-    });
-    today = new Date(nz_date_string);
-  } else {
-    today = new Date(datetime);
-  }
+export const getTimezoneDate = (datetime = null, targetOffsetHours = 8) => {
+  const baseDate = datetime ? new Date(datetime) : new Date();
+  const targetOffsetMinutes = -targetOffsetHours * 60;
+  const currentOffsetMinutes = baseDate.getTimezoneOffset();
+  const diffMinutes = currentOffsetMinutes - targetOffsetMinutes;
+  return new Date(baseDate.getTime() + diffMinutes * 60 * 1000);
+};
+
+export const getCurrentTimeStr = (datetime = null, targetOffsetHours = 8) => {
+  let today = getTimezoneDate(datetime, targetOffsetHours);
   let year = today.getFullYear();
   let month = String(today.getMonth() + 1).padStart(2, '0');
   let day = String(today.getDate()).padStart(2, '0');
