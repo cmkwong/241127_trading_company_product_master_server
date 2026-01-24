@@ -23,6 +23,8 @@ router.post(
   endController,
 );
 
+router.get('/:tableName', masterDataController.getMasterData, endController);
+
 router.get(
   '/statistics',
   masterDataController.getMasterDataStatistics,

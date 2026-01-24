@@ -279,6 +279,27 @@ export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
   next();
 });
 
+export const getMasterData = catchAsync(async (req, res, next) => {
+  const tableName = req.params.tableName;
+  const tableDataMap = getTableDataMapping();
+  if (!tableDataMap[tableName]) {
+    return next(
+      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
+    );
+  }
+  const { model } = tableDataMap[tableName];
+
+  const sql = `SELECT * FROM ${tableName}`;
+
+  const results = await model.executeQuery(sql);
+
+  res.prints = {
+    status: 'success',
+    results,
+  };
+  next();
+});
+
 /**
  * Get statistics for all master data types
  */
