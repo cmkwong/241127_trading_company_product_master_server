@@ -10,7 +10,7 @@ import { productModel } from '../../../models/trade_business/products/data_produ
 export const createProduct = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
-    'create'
+    'create',
   );
   res.status(201).json({
     status: 'success',
@@ -18,14 +18,19 @@ export const createProduct = catchAsync(async (req, res, next) => {
 });
 
 export const getAllProducts = catchAsync(async (req, res, next) => {
+  const { includeBase64, compress } = req.query;
+
   const productIds = await productModel.executeQuery(
-    'SELECT id FROM products;'
+    'SELECT id FROM products;',
   );
   const data = { products: productIds };
   const structuredData = await productModel.processStructureDataOperation(
     data,
     'read',
-    req.body.options
+    {
+      includeBase64: includeBase64 === '1' ? true : false,
+      compress: compress === '1' ? true : false,
+    },
   );
   res.status(200).json({
     status: 'success',
@@ -41,7 +46,7 @@ export const getProductById = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
     'read',
-    req.body.options
+    req.body.options,
   );
 
   res.status(200).json({
@@ -55,10 +60,10 @@ export const getProductById = catchAsync(async (req, res, next) => {
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
-  console.log(req.body.data);
+  console.log('req.body.data updates: ', req.body.data);
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
-    'update'
+    'update',
   );
 
   res.status(200).json({
@@ -74,7 +79,7 @@ export const updateProduct = catchAsync(async (req, res, next) => {
 export const deleteProduct = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
-    'delete'
+    'delete',
   );
 
   res.status(200).json({
@@ -103,7 +108,7 @@ export const checkProductExists = catchAsync(async (req, res, next) => {
 export const importDefaultProducts = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
     defaultProducts,
-    'create'
+    'create',
   );
 
   res.status(200).json({

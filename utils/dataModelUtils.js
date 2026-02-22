@@ -160,7 +160,7 @@ export default class DataModelUtils {
   // 📂 FILE HANDLING
   // ============================================================
   async _validateAndSaveFile(data, options = {}) {
-    const { entityId, fileType } = options;
+    let { entityId, fileType } = options;
     const base64FieldName = this.imagesOnly ? 'base64_image' : 'base64_file';
 
     if (!data[base64FieldName]) {
@@ -169,11 +169,37 @@ export default class DataModelUtils {
 
     if (!data[base64FieldName]) return null;
 
-    if (this.fileTypeField && !this.imagesOnly && !fileType) {
-      throw new AppError('File type is required', 400);
+    // Auto-detect file type from base64 if not provided (ALWAYS, not just when fileTypeField is set)
+    if (!fileType && !this.imagesOnly) {
+      const base64Content = data[base64FieldName];
+      if (typeof base64Content === 'string') {
+        const match = base64Content.match(/^data:(.+);base64,/);
+        if (match) {
+          const mimeType = match[1];
+          ai_log('debug', `Auto-detecting file type from MIME: ${mimeType}`);
+          if (mimeType.includes('pdf')) fileType = 'pdf';
+          else if (mimeType.includes('sheet') || mimeType.includes('excel'))
+            fileType = 'spreadsheet';
+          else if (mimeType.includes('image')) fileType = 'image';
+          else if (
+            mimeType.includes('word') ||
+            mimeType.includes('text') ||
+            mimeType.includes('document')
+          )
+            fileType = 'document';
+          else if (mimeType.includes('zip') || mimeType.includes('tar'))
+            fileType = 'archive';
+          ai_log('debug', `Auto-detected file type: ${fileType}`);
+        }
+      }
+    }
+
+    if (!this.imagesOnly && !fileType) {
+      throw new AppError('File type could not be determined', 400);
     }
 
     let allowedTypes = ['IMAGE'];
+    ai_log('debug', `Validating file for ${this.tableName} (ID: ${entityId}) with detected type: ${fileType}`);
     if (!this.imagesOnly && fileType) {
       if (fileType === 'document') allowedTypes = ['DOCUMENT'];
       else if (fileType === 'pdf') allowedTypes = ['PDF'];
@@ -326,8 +352,9 @@ export default class DataModelUtils {
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
-
+    ai_log('debug', `Processing table: ${tableName}, rows count: ${rows.length}`);
     for (const rawRow of rows) {
+      ai_log('debug', `Processing rawRow: ${JSON.stringify(rawRow)}`);
       // 1. Determine Action (Create vs Update)
       const rowAction = await this._determineRowAction(
         rawRow,
@@ -371,6 +398,7 @@ export default class DataModelUtils {
         }
 
         // --- B. Perform CRUD first ---
+        console.log('Performing CRUD with data:', crudData);
         const crudResult = await this.crudO.performCrud({
           operation: rowAction, // 'create' or 'update'
           tableName: currentModel.tableName,
@@ -395,14 +423,9 @@ export default class DataModelUtils {
           currentModel.hasFileHandling &&
           currentModel._hasBase64Content(validEntry)
         ) {
-          // get the file type if applicable
-          const fileType =
-            rawRow[currentModel.fileTypeField] ||
-            validEntry[currentModel.fileTypeField];
-
+          // Auto-detect file type from base64 in _validateAndSaveFile
           const fileUrl = await currentModel._validateAndSaveFile(rawRow, {
             entityId: rootModelKeyValue,
-            fileType: fileType,
           });
 
           if (fileUrl) {
@@ -768,6 +791,8 @@ export default class DataModelUtils {
     }
 
     // 2. Link Parent
+    console.log('rawRow:', rawRow);
+    console.log('Parent Data:', parentData);
     if (parentData && parentTableName) {
       for (const [field, fieldConfig] of Object.entries(tableSchema)) {
         if (
