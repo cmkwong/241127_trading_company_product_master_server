@@ -14,19 +14,19 @@ router
   .route('/')
   .get(
     authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.getAllProducts
+    productsController.getAllProducts,
   )
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.createProduct,
-    endController
+    endController,
   );
 
 // Truncate all product tables - ADMIN ONLY
 router.post(
   '/truncate',
   authController.restrictTo('admin'), // Restrict to admin only
-  productsController.truncateProductTables
+  productsController.truncateProductTables,
 );
 
 // defaults
@@ -35,13 +35,13 @@ router
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.importDefaultProducts,
-    endController
+    endController,
   );
 
 // Routes that require ID validation
 router
   .route('/ids')
-  .get(productsController.getProductById, endController)
+  .post(productsController.getProductById, endController)
   .patch(productsController.updateProduct, endController)
   .delete(productsController.deleteProduct, endController);
 

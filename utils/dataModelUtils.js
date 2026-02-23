@@ -62,8 +62,12 @@ export default class DataModelUtils {
    */
   static async cleanupModelFile(model, id) {
     if (!model?.hasFileHandling) return;
+    if (!id) return;
 
     try {
+      const exists = await model.checkExists(id, model.entityIdField);
+      if (!exists) return;
+
       const record = await model.getById(id);
       if (record && record[model.fileUrlField]) {
         if (model.imagesOnly) {
@@ -199,7 +203,10 @@ export default class DataModelUtils {
     }
 
     let allowedTypes = ['IMAGE'];
-    ai_log('debug', `Validating file for ${this.tableName} (ID: ${entityId}) with detected type: ${fileType}`);
+    ai_log(
+      'debug',
+      `Validating file for ${this.tableName} (ID: ${entityId}) with detected type: ${fileType}`,
+    );
     if (!this.imagesOnly && fileType) {
       if (fileType === 'document') allowedTypes = ['DOCUMENT'];
       else if (fileType === 'pdf') allowedTypes = ['PDF'];
@@ -224,12 +231,21 @@ export default class DataModelUtils {
 
   // read and process base64 content and save to json
   async _processBase64Content(file, options = {}) {
-    const {
+    let {
       compress = false,
       maxWidth = 800,
       maxHeight = 800,
       quality = 0.7,
+      base64OnlyTable,
     } = options;
+
+    if (
+      base64OnlyTable &&
+      Array.isArray(base64OnlyTable) &&
+      !base64OnlyTable.includes(this.tableName)
+    ) {
+      return file;
+    }
 
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -352,7 +368,10 @@ export default class DataModelUtils {
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
-    ai_log('debug', `Processing table: ${tableName}, rows count: ${rows.length}`);
+    ai_log(
+      'debug',
+      `Processing table: ${tableName}, rows count: ${rows.length}`,
+    );
     for (const rawRow of rows) {
       ai_log('debug', `Processing rawRow: ${JSON.stringify(rawRow)}`);
       // 1. Determine Action (Create vs Update)
@@ -388,11 +407,13 @@ export default class DataModelUtils {
           currentModel.hasFileHandling &&
           currentModel._hasBase64Content(validEntry)
         ) {
-          // remove the original file if exists
-          await DataModelUtils.cleanupModelFile(
-            currentModel,
-            validEntry[pkField],
-          );
+          // remove original file only when replacing an existing row
+          if (rowAction === 'update') {
+            await DataModelUtils.cleanupModelFile(
+              currentModel,
+              validEntry[pkField],
+            );
+          }
 
           crudData[currentModel.fileUrlField] = 'PENDING';
         }

@@ -18,17 +18,19 @@ export const createProduct = catchAsync(async (req, res, next) => {
 });
 
 export const getAllProducts = catchAsync(async (req, res, next) => {
-  const { includeBase64, compress } = req.query;
+  const { includeBase64, iconOnly, compress } = req.query;
 
   const productIds = await productModel.executeQuery(
     'SELECT id FROM products;',
   );
+
   const data = { products: productIds };
   const structuredData = await productModel.processStructureDataOperation(
     data,
     'read',
     {
       includeBase64: includeBase64 === '1' ? true : false,
+      base64OnlyTable: iconOnly === '1' ? ['products'] : null, // to control which tables should return only base64 data
       compress: compress === '1' ? true : false,
     },
   );
@@ -43,10 +45,16 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
  * @route GET /api/products/:id
  */
 export const getProductById = catchAsync(async (req, res, next) => {
+  const { includeBase64, iconOnly, compress } = req.query;
+
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
     'read',
-    req.body.options,
+    {
+      includeBase64: includeBase64 === '1' ? true : false,
+      base64OnlyTable: iconOnly === '1' ? ['products'] : null, // to control which tables should return only base64 data
+      compress: compress === '1' ? true : false,
+    },
   );
 
   res.status(200).json({
