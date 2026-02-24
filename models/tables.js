@@ -136,6 +136,15 @@ export const PRODUCT_TABLE_MASTER = {
         type: 'VARCHAR(255)',
         description: 'Image type description',
       },
+      parent_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_product_image_types',
+          field: 'id',
+          onDelete: 'SET NULL', // to allow for hierarchical image types without forcing deletion of child types if a parent is deleted
+        },
+        description: 'Parent image type ID for hierarchical structure',
+      },
       created_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP',
@@ -681,6 +690,53 @@ export const PRODUCT_TABLE_MASTER = {
     },
   },
 
+  PRODUCT_PACKING_IMAGES: {
+    name: 'product_packing_images',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      packing_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'product_packings',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to product_packings.id',
+      },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Image name',
+      },
+      image_url: {
+        type: 'TEXT',
+        notNull: true,
+        description: 'URL to packing image',
+      },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+
   MASTER_CERTIFICATE_TYPES: {
     name: 'master_certificate_types',
     table_type: 'master',
@@ -809,6 +865,48 @@ export const PRODUCT_TABLE_MASTER = {
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
         description: 'Last update timestamp',
       },
+    },
+  },
+  MASTER_SUPPLIER_TYPES: {
+    name: 'master_supplier_types',
+    table_type: 'master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Supplier type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Supplier type description',
+      },
+      parent_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_supplier_types',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Parent supplier type ID for hierarchical structure',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_type_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
 };

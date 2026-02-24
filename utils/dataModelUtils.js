@@ -7,7 +7,6 @@ import {
   deleteImage,
 } from './fileUpload.js';
 import { v4 as uuidv4 } from 'uuid';
-import { ai_log } from './aiDevTools.js';
 
 /**
  * Enhanced data model utility for standard database operations and file handling
@@ -180,7 +179,7 @@ export default class DataModelUtils {
         const match = base64Content.match(/^data:(.+);base64,/);
         if (match) {
           const mimeType = match[1];
-          ai_log('debug', `Auto-detecting file type from MIME: ${mimeType}`);
+
           if (mimeType.includes('pdf')) fileType = 'pdf';
           else if (mimeType.includes('sheet') || mimeType.includes('excel'))
             fileType = 'spreadsheet';
@@ -193,7 +192,6 @@ export default class DataModelUtils {
             fileType = 'document';
           else if (mimeType.includes('zip') || mimeType.includes('tar'))
             fileType = 'archive';
-          ai_log('debug', `Auto-detected file type: ${fileType}`);
         }
       }
     }
@@ -203,10 +201,7 @@ export default class DataModelUtils {
     }
 
     let allowedTypes = ['IMAGE'];
-    ai_log(
-      'debug',
-      `Validating file for ${this.tableName} (ID: ${entityId}) with detected type: ${fileType}`,
-    );
+
     if (!this.imagesOnly && fileType) {
       if (fileType === 'document') allowedTypes = ['DOCUMENT'];
       else if (fileType === 'pdf') allowedTypes = ['PDF'];
@@ -368,12 +363,8 @@ export default class DataModelUtils {
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
-    ai_log(
-      'debug',
-      `Processing table: ${tableName}, rows count: ${rows.length}`,
-    );
+
     for (const rawRow of rows) {
-      ai_log('debug', `Processing rawRow: ${JSON.stringify(rawRow)}`);
       // 1. Determine Action (Create vs Update)
       const rowAction = await this._determineRowAction(
         rawRow,
@@ -399,20 +390,19 @@ export default class DataModelUtils {
 
       // 3. EXECUTE DATABASE WRITE (Real-time)
       let dbRecord = null;
+      const hasFilePayload =
+        currentModel.hasFileHandling &&
+        currentModel._hasBase64Content(validEntry);
+      let previousFileUrl = null;
 
       try {
         // --- A. Prepare data for CRUD and clean-up original file if needed (set file URL to PENDING if file handling needed) ---
         let crudData = { ...validEntry };
-        if (
-          currentModel.hasFileHandling &&
-          currentModel._hasBase64Content(validEntry)
-        ) {
-          // remove original file only when replacing an existing row
+        if (hasFilePayload) {
+          // Keep previous URL for rollback and post-success cleanup
           if (rowAction === 'update') {
-            await DataModelUtils.cleanupModelFile(
-              currentModel,
-              validEntry[pkField],
-            );
+            const existingRow = await currentModel.getById(validEntry[pkField]);
+            previousFileUrl = existingRow?.[currentModel.fileUrlField] || null;
           }
 
           crudData[currentModel.fileUrlField] = 'PENDING';
@@ -440,10 +430,7 @@ export default class DataModelUtils {
         }
 
         // --- D. Handle File Uploads (Post-Write after CRUD succeeds) ---
-        if (
-          currentModel.hasFileHandling &&
-          currentModel._hasBase64Content(validEntry)
-        ) {
+        if (hasFilePayload) {
           // Auto-detect file type from base64 in _validateAndSaveFile
           const fileUrl = await currentModel._validateAndSaveFile(rawRow, {
             entityId: rootModelKeyValue,
@@ -458,9 +445,48 @@ export default class DataModelUtils {
               id: validEntry[pkField],
               data: { [currentModel.fileUrlField]: fileUrl },
             });
+
+            // Delete old file only after new file is saved and DB URL is updated
+            if (
+              rowAction === 'update' &&
+              previousFileUrl &&
+              previousFileUrl !== fileUrl
+            ) {
+              if (currentModel.imagesOnly) {
+                await deleteImage(previousFileUrl);
+              } else {
+                await deleteFile(previousFileUrl);
+              }
+            }
           }
         }
       } catch (err) {
+        // Rollback stale PENDING state if file upload failed mid-flow
+        if (hasFilePayload && validEntry[pkField]) {
+          try {
+            if (rowAction === 'create') {
+              // Created row with PENDING URL should be removed
+              await this.crudO.performCrud({
+                operation: 'delete',
+                tableName: currentModel.tableName,
+                id: validEntry[pkField],
+              });
+            } else if (rowAction === 'update' && previousFileUrl) {
+              // Restore previous URL for updates
+              await this.crudO.performCrud({
+                operation: 'update',
+                tableName: currentModel.tableName,
+                id: validEntry[pkField],
+                data: { [currentModel.fileUrlField]: previousFileUrl },
+              });
+            }
+          } catch (rollbackErr) {
+            console.warn(
+              `PENDING rollback warning for ${currentModel.tableName} (${validEntry[pkField]}): ${rollbackErr.message}`,
+            );
+          }
+        }
+
         throw new AppError(
           `Failed to ${rowAction} ${tableName}: ${err.message}`,
           500,

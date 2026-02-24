@@ -8,6 +8,7 @@ import AppError from './appError.js';
  */
 const FILE_TYPES = {
   IMAGE: ['image/'],
+  VIDEO: ['video/'],
   PDF: ['application/pdf'],
   DOCUMENT: [
     'application/msword',
@@ -60,6 +61,10 @@ const getExtensionFromMimeType = (mimeType) => {
     'image/gif': 'gif',
     'image/webp': 'webp',
     'image/svg+xml': 'svg',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/quicktime': 'mov',
+    'video/x-msvideo': 'avi',
     'application/pdf': 'pdf',
     'application/msword': 'doc',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
@@ -102,7 +107,9 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
     }
 
     // Extract file data and type
-    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const matches = base64Data.match(
+      /^data:([A-Za-z0-9.+-]+\/[A-Za-z0-9.+-]+)(?:;[A-Za-z0-9.+-]+=[^;]+)*;base64,([\s\S]+)$/,
+    );
 
     if (!matches || matches.length !== 3) {
       throw new AppError('Invalid base64 file format', 400);
@@ -110,13 +117,13 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
 
     // Get mime type and data
     const mimeType = matches[1];
-    const base64FileData = matches[2];
+    const base64FileData = matches[2].replace(/\s+/g, '');
 
     // Check file type
     if (!isAllowedFileType(mimeType, allowedTypes)) {
       throw new AppError(
         `Unsupported file type. Allowed types: ${allowedTypes.join(', ')}`,
-        400
+        400,
       );
     }
 
@@ -128,7 +135,7 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
     if (fileSizeInMB > maxSizeInMB) {
       throw new AppError(
         `File size exceeds the maximum allowed size of ${maxSizeInMB}MB`,
-        400
+        400,
       );
     }
 
@@ -152,7 +159,7 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
   } catch (error) {
     throw new AppError(
       `Failed to save file: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };
@@ -178,7 +185,7 @@ export const deleteFile = async (filePath) => {
     return true;
   } catch (error) {
     console.error(
-      `Warning: Failed to delete file at ${filePath}: ${error.message}`
+      `Warning: Failed to delete file at ${filePath}: ${error.message}`,
     );
     return false;
   }
@@ -190,7 +197,7 @@ export const deleteFile = async (filePath) => {
 export const saveBase64Image = (base64Data, uploadDir, filename = null) => {
   return saveBase64File(base64Data, uploadDir, {
     filename,
-    allowedTypes: ['IMAGE'],
+    allowedTypes: ['IMAGE', 'VIDEO'],
   });
 };
 

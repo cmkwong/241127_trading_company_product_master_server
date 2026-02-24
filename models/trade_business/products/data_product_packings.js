@@ -1,6 +1,7 @@
 import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
+import { packingImagesModel } from './data_product_packing_images.js';
 
 // Create a data model utility for product packings
 export const packingModel = new DataModelUtils({
@@ -27,4 +28,11 @@ export const packingModel = new DataModelUtils({
   defaults: {
     quantity: 1,
   },
+  childTableConfig: [
+    {
+      tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKING_IMAGES'].name,
+      connectedKeys: { id: 'packingId' }, // parent table -> child table
+      model: packingImagesModel,
+    },
+  ],
 });

@@ -153,6 +153,21 @@ export const defaultProducts = {
           remark: null,
           created_at: '2026-01-24T12:28:27.000Z',
           updated_at: '2026-01-24T12:28:27.000Z',
+          product_packing_images: [
+            {
+              id: 'a4401d2e-c5d4-4f55-a1f8-a8fd8ecf5ea1',
+              packing_id: '5464ae6b-a061-4197-ad8c-f8dd7fd59fed',
+              image_name: 'Master-Carton-24pcs.jpg',
+              image_url:
+                '/public/13649f12-f9b6-4abf-8a8c-b63fe2f11091/packings//ce0eb8d6-c862-4a3f-87d2-0870b5c0f67f.png',
+              display_order: 1,
+              created_at: '2026-01-24T12:28:27.000Z',
+              updated_at: '2026-01-24T12:28:27.000Z',
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+              is_compressed: true,
+            },
+          ],
         },
       ],
       product_certificates: [
@@ -333,6 +348,21 @@ export const defaultProducts = {
           remark: null,
           created_at: '2026-01-24T12:28:25.000Z',
           updated_at: '2026-01-24T12:28:25.000Z',
+          product_packing_images: [
+            {
+              id: 'f9c4ec9f-2bc6-4f6d-a8de-a160f5d2437b',
+              packing_id: 'b226310f-f57c-474c-94eb-1e3cea2a62c1',
+              image_name: 'Master-Carton-24pcs.jpg',
+              image_url:
+                '/public/1d532b23-1cb1-4bc1-9169-c250d51f0302/packings//709ea37b-04d5-4922-9cdf-e5b24235b717.png',
+              display_order: 1,
+              created_at: '2026-01-24T12:28:25.000Z',
+              updated_at: '2026-01-24T12:28:25.000Z',
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+              is_compressed: true,
+            },
+          ],
         },
       ],
       product_certificates: [
@@ -513,6 +543,21 @@ export const defaultProducts = {
           remark: null,
           created_at: '2026-01-24T12:28:29.000Z',
           updated_at: '2026-01-24T12:28:29.000Z',
+          product_packing_images: [
+            {
+              id: 'f5fb31d2-32c1-4ca9-b6b3-e9fbf495de77',
+              packing_id: 'e4625a4b-ce4c-4c52-93a7-4662f298e78e',
+              image_name: 'Master-Carton-24pcs.jpg',
+              image_url:
+                '/public/3348dd2a-70a8-418b-a858-82f7e91ea106/packings//f179fc66-2d22-490f-a58f-4f1f8b89f1b9.png',
+              display_order: 1,
+              created_at: '2026-01-24T12:28:29.000Z',
+              updated_at: '2026-01-24T12:28:29.000Z',
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+              is_compressed: true,
+            },
+          ],
         },
       ],
       product_certificates: [
@@ -744,6 +789,21 @@ export const defaultProducts = {
           remark: 'testing',
           created_at: '2026-01-24T12:28:21.000Z',
           updated_at: '2026-01-24T12:28:21.000Z',
+          product_packing_images: [
+            {
+              id: '550e8400-e29b-41d4-a716-446655441201',
+              packing_id: '550e8400-e29b-41d4-a716-446655440901',
+              image_name: 'Box-Packing.jpg',
+              image_url:
+                '/public/550e8400-e29b-41d4-a716-446655440001/packings//f5fb2f59-012b-4065-8955-ccdd75a32434.png',
+              display_order: 1,
+              created_at: '2026-01-24T12:28:21.000Z',
+              updated_at: '2026-01-24T12:28:21.000Z',
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+              is_compressed: true,
+            },
+          ],
         },
       ],
       product_certificates: [
@@ -768,7 +828,7 @@ export const defaultProducts = {
               created_at: '2026-01-24T12:28:21.000Z',
               updated_at: '2026-01-24T12:28:21.000Z',
               base64_file:
-                'data:application/octet-stream;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
+                'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSB0ZXh0IGZpbGUgd2l0aCBjb250ZW50IGVuY29kZWQgaW4gYmFzZTY0Lg==',
               is_compressed: false,
             },
           ],
@@ -934,7 +994,7 @@ export const defaultProducts = {
               created_at: '2026-01-24T12:28:22.000Z',
               updated_at: '2026-01-24T12:28:22.000Z',
               base64_file:
-                'data:application/octet-stream;base64,VGhpcyBpcyBhIHNhbXBsZSBJU08gY2VydGlmaWNhdGUgZmlsZSBlbmNvZGVkIGluIGJhc2U2NC4=',
+                'data:text/plain;base64,VGhpcyBpcyBhIHNhbXBsZSBJU08gY2VydGlmaWNhdGUgZmlsZSBlbmNvZGVkIGluIGJhc2U2NC4=',
               is_compressed: false,
             },
           ],
@@ -1092,6 +1152,21 @@ export const defaultProducts = {
           remark: null,
           created_at: '2026-01-24T12:28:28.000Z',
           updated_at: '2026-01-24T12:28:28.000Z',
+          product_packing_images: [
+            {
+              id: '0d76b1a3-d3cb-4f2b-9c6e-4f28f37d3384',
+              packing_id: '2b618d5d-f9f7-40f7-980e-95dbd61fb00e',
+              image_name: 'Master-Carton-24pcs.jpg',
+              image_url:
+                '/public/a7dac19e-c6e9-4fa7-a0de-3af624dbd1b9/packings//ed4f5d50-f9b5-4b8e-8d17-1c1d7f525f24.png',
+              display_order: 1,
+              created_at: '2026-01-24T12:28:28.000Z',
+              updated_at: '2026-01-24T12:28:28.000Z',
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+              is_compressed: true,
+            },
+          ],
         },
       ],
       product_certificates: [
@@ -1210,32 +1285,170 @@ export const product_master_data = {
     {
       id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
       name: '1688',
+      parent_id: null,
       description: 'main image type',
     },
     {
       id: 'b2f0d5c3-4e9a-5b6d-0f2c-3a4b5c6d7e8f',
       name: 'Alibaba',
+      parent_id: null,
       description: 'Alibaba image type',
     },
     {
       id: 'c3a1e6d4-5f0b-6c7e-1a3d-4b5c6d7e8f9a',
       name: 'Amazon',
+      parent_id: null,
       description: 'Amazon image type',
     },
     {
       id: 'd4b2f7e5-6a1c-7d8f-2b4e-5c6d7e8f9a0b',
       name: 'IG',
+      parent_id: null,
       description: 'Instagram image type',
     },
     {
       id: 'e5c3a8f6-7b2d-8e9a-3c5f-6d7e8f9a0b1c',
       name: 'Temu',
+      parent_id: null,
       description: 'Temu image type',
     },
     {
+      id: 'a233ase2-223d-ghj6-wer4-qwe28f9aqw23',
+      name: 'Original',
+      parent_id: null,
+      description: 'Original content type',
+    },
+    {
+      id: 'ygwe6232-sdh7-4hj6-w234-ig97kc9aqfi3',
+      name: 'Edited',
+      parent_id: null,
+      description: 'Edited content type',
+    },
+    {
+      id: '15f5b308-8c3e-4e8a-9d84-9157fafe8429',
+      name: '1688 - description',
+      parent_id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
+      description: 'Description type under 1688',
+    },
+    {
+      id: '5afc93e2-4f4a-4f31-9da2-02f31e7452d7',
+      name: '1688 - display',
+      parent_id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
+      description: 'Display type under 1688',
+    },
+    {
+      id: '95004c1b-f42d-46c3-a250-5b1f5abb7f3d',
+      name: '1688 - video',
+      parent_id: 'a1e9c4b2-3d8f-4a5c-9e1b-2f3d4e5a6c7b',
+      description: 'Video type under 1688',
+    },
+    {
+      id: '565e00b7-4f58-43ed-bff4-c3f1de6f0831',
+      name: 'Alibaba - description',
+      parent_id: 'b2f0d5c3-4e9a-5b6d-0f2c-3a4b5c6d7e8f',
+      description: 'Description type under Alibaba',
+    },
+    {
+      id: '33d67045-970f-4e71-a5d2-afd76d42b6f0',
+      name: 'Alibaba - display',
+      parent_id: 'b2f0d5c3-4e9a-5b6d-0f2c-3a4b5c6d7e8f',
+      description: 'Display type under Alibaba',
+    },
+    {
+      id: '1138969f-362e-4ff7-a50f-78ffbf173e3e',
+      name: 'Alibaba - video',
+      parent_id: 'b2f0d5c3-4e9a-5b6d-0f2c-3a4b5c6d7e8f',
+      description: 'Video type under Alibaba',
+    },
+    {
+      id: '607463e9-9a74-4028-a9b5-afbc2d37e86d',
+      name: 'Amazon - description',
+      parent_id: 'c3a1e6d4-5f0b-6c7e-1a3d-4b5c6d7e8f9a',
+      description: 'Description type under Amazon',
+    },
+    {
+      id: 'f07cf57c-f39f-4f15-b74d-ab460dbf8101',
+      name: 'Amazon - display',
+      parent_id: 'c3a1e6d4-5f0b-6c7e-1a3d-4b5c6d7e8f9a',
+      description: 'Display type under Amazon',
+    },
+    {
+      id: '005c83af-f747-4f6d-90be-201ef89eb7dd',
+      name: 'Amazon - video',
+      parent_id: 'c3a1e6d4-5f0b-6c7e-1a3d-4b5c6d7e8f9a',
+      description: 'Video type under Amazon',
+    },
+    {
+      id: '8d9f95e6-f13f-428d-acae-406f77dc6488',
+      name: 'IG - description',
+      parent_id: 'd4b2f7e5-6a1c-7d8f-2b4e-5c6d7e8f9a0b',
+      description: 'Description type under IG',
+    },
+    {
+      id: 'a9f7f3db-137c-4d57-8533-17ecf682dc6b',
+      name: 'IG - display',
+      parent_id: 'd4b2f7e5-6a1c-7d8f-2b4e-5c6d7e8f9a0b',
+      description: 'Display type under IG',
+    },
+    {
+      id: '63a88845-e5bc-4628-9340-f27e2ead10a1',
+      name: 'IG - video',
+      parent_id: 'd4b2f7e5-6a1c-7d8f-2b4e-5c6d7e8f9a0b',
+      description: 'Video type under IG',
+    },
+    {
+      id: '69ce76f8-8d8f-40de-9440-b14be9eab63f',
+      name: 'Temu - description',
+      parent_id: 'e5c3a8f6-7b2d-8e9a-3c5f-6d7e8f9a0b1c',
+      description: 'Description type under Temu',
+    },
+    {
+      id: '39922de2-e3a6-40d4-b4db-9297ebf79b50',
+      name: 'Temu - display',
+      parent_id: 'e5c3a8f6-7b2d-8e9a-3c5f-6d7e8f9a0b1c',
+      description: 'Display type under Temu',
+    },
+    {
+      id: '6ead0faa-a6b0-4cc0-bf2d-1342b6bc4741',
+      name: 'Temu - video',
+      parent_id: 'e5c3a8f6-7b2d-8e9a-3c5f-6d7e8f9a0b1c',
+      description: 'Video type under Temu',
+    },
+    {
+      id: 'ba163613-9c03-4a77-b360-2f581ecb4f78',
+      name: 'Original - description',
+      parent_id: 'a233ase2-223d-ghj6-wer4-qwe28f9aqw23',
+      description: 'Description type under Original',
+    },
+    {
+      id: '8f2f2f75-96f7-40dc-8108-2959bf5b6c1f',
+      name: 'Original - display',
+      parent_id: 'a233ase2-223d-ghj6-wer4-qwe28f9aqw23',
+      description: 'Display type under Original',
+    },
+    {
       id: 'f6d4b9a7-8c3e-9f0b-4d6a-7e8f9a0b1c2d',
-      name: 'Video',
-      description: 'Video content type',
+      name: 'Original - video',
+      parent_id: 'a233ase2-223d-ghj6-wer4-qwe28f9aqw23',
+      description: 'Video type under Original',
+    },
+    {
+      id: '8e71f4f4-c6dd-44ad-8903-299610df9221',
+      name: 'Edited - description',
+      parent_id: 'ygwe6232-sdh7-4hj6-w234-ig97kc9aqfi3',
+      description: 'Description type under Edited',
+    },
+    {
+      id: '28c100f4-9ef2-43f8-b1dd-00882c3c5ac9',
+      name: 'Edited - display',
+      parent_id: 'ygwe6232-sdh7-4hj6-w234-ig97kc9aqfi3',
+      description: 'Display type under Edited',
+    },
+    {
+      id: '2c67f34c-9f5c-4b8d-b8c5-fcbfbd3dca8f',
+      name: 'Edited - video',
+      parent_id: 'ygwe6232-sdh7-4hj6-w234-ig97kc9aqfi3',
+      description: 'Video type under Edited',
     },
   ],
   // Updated master_categories based on the image structure
@@ -1566,6 +1779,175 @@ export const product_master_data = {
       id: '5r8s9t0u-1v2w-3x4y-5z6a-7b8c9d0e1f2g',
       name: 'CPSC',
       description: 'Consumer Product Safety Commission compliance',
+    },
+  ],
+
+  master_supplier_types: [
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+      name: 'Packing',
+      description: 'Packing supplier type',
+      parent_id: null,
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+      name: 'Products',
+      description: 'Products supplier type',
+      parent_id: null,
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d103',
+      name: 'Cert',
+      description: 'Certificate supplier type',
+      parent_id: null,
+    },
+
+    // Packing children
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d201',
+      name: 'Laser Logo',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d202',
+      name: 'Labels',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d203',
+      name: 'Belly Band',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d204',
+      name: 'Color Box',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d205',
+      name: 'Bubble',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d206',
+      name: 'Carton',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d207',
+      name: 'Blister Pack',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d208',
+      name: 'Sealed Bag',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d209',
+      name: 'PVC Folding Box',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d20a',
+      name: 'PVC Blister Card Insert',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d20b',
+      name: 'White Card Box',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d20c',
+      name: 'Window Box',
+      description: 'Child type under Packing',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+    },
+
+    // Products children
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d301',
+      name: 'Plant Soil',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d302',
+      name: 'Pet Clothes',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d303',
+      name: 'Pet Harness',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d304',
+      name: 'Poop Bag',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d305',
+      name: 'Toilet Mat',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d306',
+      name: 'Cat Sand Litter Box',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d307',
+      name: 'Filter',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d308',
+      name: 'Tennis Ball',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d309',
+      name: 'Metal Jewelry',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d30a',
+      name: 'Cat Litter',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d30b',
+      name: 'Pet Nest',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d30c',
+      name: 'Pet Bowl',
+      description: 'Child type under Products',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
     },
   ],
 };

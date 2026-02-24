@@ -4,6 +4,7 @@ import * as master_productNameTypesModel from '../../../models/trade_business/pr
 import * as master_certificateTypesModel from '../../../models/trade_business/products/master_certificateTypesModel.js';
 import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
 import * as master_productKeywordsModel from '../../../models/trade_business/products/master_productKeywordsModel.js';
+import * as master_supplierTypesModel from '../../../models/trade_business/products/master_supplierTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { product_master_data } from '../../../datas/products.js';
@@ -37,6 +38,10 @@ const getTableDataMapping = () => {
     master_keywords: {
       model: master_productKeywordsModel.masterKeywordModel,
       data: product_master_data.master_keywords,
+    },
+    master_supplier_types: {
+      model: master_supplierTypesModel.supplierTypeModel,
+      data: product_master_data.master_supplier_types,
     },
   };
 };
