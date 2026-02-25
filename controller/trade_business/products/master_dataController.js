@@ -1,13 +1,13 @@
-import * as master_packingTypesModel from '../../../models/trade_business/products/master_packingTypesModel.js';
-import * as master_productImagesModel from '../../../models/trade_business/products/master_productImagesTypeModel.js';
-import * as master_productNameTypesModel from '../../../models/trade_business/products/master_productNameTypesModel.js';
-import * as master_certificateTypesModel from '../../../models/trade_business/products/master_certificateTypesModel.js';
-import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
-import * as master_productKeywordsModel from '../../../models/trade_business/products/master_productKeywordsModel.js';
-import * as master_supplierTypesModel from '../../../models/trade_business/products/master_supplierTypesModel.js';
+import * as master_packingTypesModel from '../../../models/trade_business/master/master_packingTypesModel.js';
+import * as master_productImagesModel from '../../../models/trade_business/master/master_productImagesTypeModel.js';
+import * as master_productNameTypesModel from '../../../models/trade_business/master/master_productNameTypesModel.js';
+import * as master_certificateTypesModel from '../../../models/trade_business/master/master_certificateTypesModel.js';
+import * as master_categoriesModel from '../../../models/trade_business/master/master_categoriesModel.js';
+import * as master_productKeywordsModel from '../../../models/trade_business/master/master_productKeywordsModel.js';
+import * as master_supplierTypesModel from '../../../models/trade_business/master/master_supplierTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
-import { product_master_data } from '../../../datas/products.js';
+import { product_master_data } from '../../../datas/master.js';
 
 /**
  * Get table mapping with models and data
@@ -279,6 +279,62 @@ export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
   res.prints = {
     status: 'success',
     message: `Master data for table ${tableName} has been reset successfully`,
+  };
+
+  next();
+});
+
+export const updateProductMaster = catchAsync(async (req, res, next) => {
+  const { tableName, id: idFromParams } = req.params;
+  const tableDataMap = getTableDataMapping();
+
+  if (!tableDataMap[tableName]) {
+    return next(
+      new AppError(`Unknown table: ${tableName}. Cannot update data.`, 400),
+    );
+  }
+
+  const { model } = tableDataMap[tableName];
+  const requestData = req.body?.data;
+
+  if (!requestData || typeof requestData !== 'object') {
+    return next(new AppError('Invalid request body data', 400));
+  }
+
+  let structuredPayload;
+
+  // Accept both shapes:
+  // 1) { data: { id, ...fields } }
+  // 2) { data: { [tableName]: [{ id, ...fields }] } }
+  if (requestData[tableName] !== undefined) {
+    const tableRows = requestData[tableName];
+    structuredPayload = {
+      [tableName]: Array.isArray(tableRows) ? tableRows : [tableRows],
+    };
+  } else {
+    const row = { ...requestData };
+    if (idFromParams && !row.id) {
+      row.id = idFromParams;
+    }
+
+    if (!row.id) {
+      return next(new AppError('Record id is required for update', 400));
+    }
+
+    structuredPayload = {
+      [tableName]: [row],
+    };
+  }
+
+  const result = await model.processStructureDataOperation(
+    structuredPayload,
+    'update',
+  );
+
+  res.prints = {
+    status: 'success',
+    message: `Master data for table ${tableName} has been updated successfully`,
+    result,
   };
 
   next();

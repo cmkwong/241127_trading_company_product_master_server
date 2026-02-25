@@ -2,6 +2,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
+import { product_master_data } from '../../../datas/master.js';
 
 // Table name constants for consistency
 const CATEGORIES_TABLE = PRODUCT_TABLE_MASTER['MASTER_CATEGORIES'].name;
@@ -82,7 +83,7 @@ export const getAllCategories = async (options = {}) => {
 
     const countResult = await categoryMasterModel.executeQuery(
       countSQL,
-      params
+      params,
     );
     const total = countResult[0].total;
 
@@ -103,7 +104,7 @@ export const getAllCategories = async (options = {}) => {
     const queryParams = [...params, limit, offset];
     const categories = await categoryMasterModel.executeQuery(
       selectSQL,
-      queryParams
+      queryParams,
     );
 
     return {
@@ -134,9 +135,8 @@ export const getCategoryTree = async () => {
       ORDER BY c.name ASC
     `;
 
-    const allCategories = await categoryMasterModel.executeQuery(
-      allCategoriesSQL
-    );
+    const allCategories =
+      await categoryMasterModel.executeQuery(allCategoriesSQL);
 
     // Build the tree structure
     const categoryMap = {};
@@ -157,7 +157,7 @@ export const getCategoryTree = async () => {
       } else {
         if (categoryMap[category.parent_id]) {
           categoryMap[category.parent_id].children.push(
-            categoryMap[category.id]
+            categoryMap[category.id],
           );
         } else {
           // If parent doesn't exist, treat as root
@@ -207,7 +207,7 @@ const isDescendantOf = async (categoryId, potentialAncestorId) => {
   } catch (error) {
     throw new AppError(
       `Failed to check category hierarchy: ${error.message}`,
-      500
+      500,
     );
   }
 };
@@ -233,7 +233,7 @@ export const deleteCategory = async (id, force = false) => {
     if (childCount > 0 && !force) {
       throw new AppError(
         `Cannot delete category that has ${childCount} subcategories. Use force=true to override.`,
-        400
+        400,
       );
     }
 
@@ -245,7 +245,7 @@ export const deleteCategory = async (id, force = false) => {
     if (usageCount > 0 && !force) {
       throw new AppError(
         `Cannot delete category that is in use by ${usageCount} products. Use force=true to override.`,
-        400
+        400,
       );
     }
 
@@ -275,7 +275,7 @@ export const deleteCategory = async (id, force = false) => {
   } catch (error) {
     throw new AppError(
       `Failed to delete category: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };
@@ -368,7 +368,7 @@ export const getProductsByCategory = async (categoryId, options = {}) => {
   } catch (error) {
     throw new AppError(
       `Failed to get products by category: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };
@@ -404,7 +404,7 @@ const getDescendantCategoryIds = async (categoryId) => {
   } catch (error) {
     throw new AppError(
       `Failed to get category descendants: ${error.message}`,
-      500
+      500,
     );
   }
 };
@@ -448,7 +448,7 @@ export const batchCreateCategories = async (categories) => {
   } catch (error) {
     throw new AppError(
       `Failed to batch create categories: ${error.message}`,
-      500
+      500,
     );
   }
 };
@@ -466,10 +466,9 @@ export const truncateCategories = () => categoryMasterModel.truncateTable();
 export const insertDefaultCategories = async () => {
   try {
     // Import categories from data file
-    const { product_master_data } = await import('../../../datas/products.js');
 
     const results = await batchCreateCategories(
-      product_master_data.master_categories
+      product_master_data.master_categories,
     );
 
     return {
@@ -479,7 +478,7 @@ export const insertDefaultCategories = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to insert default categories: ${error.message}`,
-      500
+      500,
     );
   }
 };

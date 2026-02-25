@@ -1,7 +1,7 @@
 import { PRODUCT_TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
-import * as master_categoriesModel from '../../../models/trade_business/products/master_categoriesModel.js';
+import * as master_categoriesModel from '../master/master_categoriesModel.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for product categories with multiple joins
@@ -45,7 +45,7 @@ export const getCategoryHierarchy = async () => {
         // This is a child category
         if (categoryMap[category.parent_id]) {
           categoryMap[category.parent_id].children.push(
-            categoryMap[category.id]
+            categoryMap[category.id],
           );
         } else {
           // Parent not found, treat as root
@@ -61,7 +61,7 @@ export const getCategoryHierarchy = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to get category hierarchy: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };
@@ -81,13 +81,13 @@ export const getProductsByCategoryId = async (categoryId) => {
       WHERE pc.category_id = ?
       ORDER BY p.name
       `,
-      [categoryId]
+      [categoryId],
     );
     return result;
   } catch (error) {
     throw new AppError(
       `Failed to get products by category: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };

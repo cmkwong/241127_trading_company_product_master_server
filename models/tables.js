@@ -44,9 +44,8 @@ export const PRODUCT_TABLE_MASTER = {
     table_type: 'master',
     fields: {
       id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         primaryKey: true,
-        autoIncrement: true,
         description: 'id for master keywords',
       },
       name: {
@@ -90,7 +89,7 @@ export const PRODUCT_TABLE_MASTER = {
         description: 'Reference to products.id',
       },
       keyword_id: {
-        type: 'INT',
+        type: 'VARCHAR(36)',
         notNull: true,
         references: {
           table: 'master_keywords',
@@ -907,6 +906,407 @@ export const PRODUCT_TABLE_MASTER = {
     },
     constraints: {
       unique_supplier_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  SUPPLIERS: {
+    name: 'suppliers',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_code: {
+        type: 'VARCHAR(50)',
+        notNull: true,
+        description: 'Unique code for the supplier',
+      },
+      name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Supplier name',
+      },
+      supplier_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_supplier_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_supplier_types.id',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_code: { type: 'UNIQUE', fields: ['supplier_code'] },
+    },
+  },
+  MASTER_ADDRESS_TYPES: {
+    name: 'master_address_types',
+    table_type: 'master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Address type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Address type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_address_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  SUPPLIER_ADDRESSES: {
+    name: 'supplier_addresses',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to suppliers.id',
+      },
+      address_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_address_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_address_types.id',
+      },
+      address_line1: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'First line of the address',
+      },
+      address_line2: {
+        type: 'VARCHAR(255)',
+        description: 'Second line of the address',
+      },
+      address_line3: {
+        type: 'VARCHAR(255)',
+        description: 'Third line of the address',
+      },
+      city: {
+        type: 'VARCHAR(100)',
+        description: 'City of the address',
+      },
+      state: {
+        type: 'VARCHAR(100)',
+        description: 'State of the address',
+      },
+      zip_code: {
+        type: 'VARCHAR(20)',
+        description: 'ZIP code of the address',
+      },
+      country: {
+        type: 'VARCHAR(100)',
+        description: 'Country of the address',
+      },
+      remark: {
+        type: 'TEXT',
+        description: 'Additional notes about the address',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_address: {
+        type: 'UNIQUE',
+        fields: ['supplier_id', 'address_type_id'],
+      },
+    },
+  },
+  MASTER_CONTACT_TYPES: {
+    name: 'master_contact_types',
+    table_type: 'master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Contact type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Contact type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_contact_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  SUPPLIER_CONTACTS: {
+    name: 'supplier_contacts',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to suppliers.id',
+      },
+      contact_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_contact_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_contact_types.id',
+      },
+      contact_name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Name of the contact',
+      },
+      contact_number: {
+        type: 'VARCHAR(50)',
+        description: 'Contact number (e.g., phone, fax)',
+      },
+      contact_email: {
+        type: 'VARCHAR(255)',
+        description: 'Contact email address',
+      },
+      remark: {
+        type: 'TEXT',
+        description: 'Additional notes about the contact',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_contact: {
+        type: 'UNIQUE',
+        fields: ['supplier_id', 'contact_type_id'],
+      },
+    },
+  },
+  SUPPLIER_LINKS: {
+    name: 'supplier_links',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to suppliers.id',
+      },
+      link: {
+        type: 'TEXT',
+        notNull: true,
+        description: 'URL link related to supplier',
+      },
+      remark: { type: 'TEXT', description: 'Additional notes about the link' },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {},
+  },
+  MASTER_SERVICE_TYPES: {
+    name: 'master_service_types',
+    table_type: 'master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Service type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Service type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_service_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  SUPPLIER_SERVICES: {
+    name: 'supplier_services',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to suppliers.id',
+      },
+      service_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_service_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_service_types.id',
+      },
+      description: {
+        type: 'TEXT',
+        description: 'Description of the service provided by the supplier',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {},
+  },
+  SUPPLIER_SERVICE_IMAGES: {
+    name: 'supplier_service_images',
+    table_type: 'data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_service_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'supplier_services',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to supplier_services.id',
+      },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Image name',
+      },
+      image_url: {
+        type: 'TEXT',
+        notNull: true,
+        description: 'URL to service image',
+      },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
 };

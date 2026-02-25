@@ -23,6 +23,12 @@ router.post(
   endController,
 );
 
+router.patch(
+  '/:tableName/:id?',
+  masterDataController.updateProductMaster,
+  endController,
+);
+
 router.get('/:tableName', masterDataController.getMasterData, endController);
 
 router.get(
