@@ -2,25 +2,25 @@ import * as dbConn from '../../../utils/dbConn.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import AppError from '../../../utils/appError.js';
 import {
-  PRODUCT_TABLE_MASTER,
+  TABLE_MASTER,
   generateCreateTableSQL,
   getAllTableNames,
   getTableFields,
 } from '../../tables.js';
 
 /**
- * Creates a table based on its definition in PRODUCT_TABLE_MASTER
- * @param {string} tableKey - The key of the table in PRODUCT_TABLE_MASTER
+ * Creates a table based on its definition in TABLE_MASTER
+ * @param {string} tableKey - The key of the table in TABLE_MASTER
  * @returns {Promise} Promise that resolves when the table is created
  */
 const createTable = async (tableKey) => {
   try {
     const pool = dbConn.tb_pool;
-    const tableDefinition = PRODUCT_TABLE_MASTER[tableKey];
+    const tableDefinition = TABLE_MASTER[tableKey];
 
     if (!tableDefinition) {
       throw new Error(
-        `Table definition for ${tableKey} not found in PRODUCT_TABLE_MASTER`
+        `Table definition for ${tableKey} not found in TABLE_MASTER`,
       );
     }
 
@@ -31,12 +31,32 @@ const createTable = async (tableKey) => {
       message: `${tableDefinition.name} table created successfully`,
     };
   } catch (error) {
-    const tableName = PRODUCT_TABLE_MASTER[tableKey]?.name || tableKey;
+    const tableName = TABLE_MASTER[tableKey]?.name || tableKey;
     throw new AppError(
       `Failed to create ${tableName} table: ${error.message}`,
-      500
+      500,
     );
   }
+};
+
+const PRODUCT_TABLE_KEYS = Object.entries(TABLE_MASTER)
+  .filter(([, table]) => table.table_type?.startsWith('products-'))
+  .map(([tableKey]) => tableKey);
+
+const normalizeProductTableType = (tableType) => {
+  if (!tableType) {
+    return null;
+  }
+
+  if (tableType === 'data') {
+    return 'products-data';
+  }
+
+  if (tableType === 'master') {
+    return 'products-master';
+  }
+
+  return tableType;
 };
 
 /**
@@ -160,22 +180,29 @@ export const createProductCertificateFilesTable = async () => {
 };
 
 /**
- * Get the table creation order from PRODUCT_TABLE_MASTER
+ * Get the table creation order from TABLE_MASTER
  * @returns {string[]} Array of table keys in the correct creation order
  */
 const getRequiredTableByType = (tableType) => {
-  let tableNames = [];
-  for (const [k, o] of Object.entries(PRODUCT_TABLE_MASTER)) {
-    if (tableType) {
-      if (o.table_type === tableType) {
-        tableNames.push(k);
-      }
-    } else {
-      tableNames.push(k);
-    }
+  const normalizedTableType = normalizeProductTableType(tableType);
+
+  if (!normalizedTableType) {
+    return PRODUCT_TABLE_KEYS;
   }
-  // The order of keys in PRODUCT_TABLE_MASTER determines the creation order
-  return tableNames;
+
+  if (
+    normalizedTableType !== 'products-data' &&
+    normalizedTableType !== 'products-master'
+  ) {
+    throw new AppError(
+      `Invalid tableType: ${tableType}. Expected one of: products-data, products-master`,
+      400,
+    );
+  }
+
+  return PRODUCT_TABLE_KEYS.filter(
+    (tableKey) => TABLE_MASTER[tableKey]?.table_type === normalizedTableType,
+  );
 };
 
 /**
@@ -184,7 +211,7 @@ const getRequiredTableByType = (tableType) => {
  */
 export const createAllProductTables = async (tableType) => {
   try {
-    // Get table keys in the order they appear in PRODUCT_TABLE_MASTER
+    // Get table keys in the order they appear in TABLE_MASTER
     const tableCreationOrder = getRequiredTableByType(tableType);
 
     for (const tableKey of tableCreationOrder) {
@@ -195,7 +222,7 @@ export const createAllProductTables = async (tableType) => {
   } catch (error) {
     throw new AppError(
       `Failed to create product tables: ${error.message}`,
-      500
+      500,
     );
   }
 };
@@ -208,11 +235,11 @@ export const dropAllProductTables = async (tableType) => {
   try {
     const pool = dbConn.tb_pool;
 
-    // Get table keys in reverse order of PRODUCT_TABLE_MASTER
+    // Get table keys in reverse order of TABLE_MASTER
     const tableDropOrder = getRequiredTableByType(tableType).reverse();
 
     for (const tableKey of tableDropOrder) {
-      const tableName = PRODUCT_TABLE_MASTER[tableKey].name;
+      const tableName = TABLE_MASTER[tableKey].name;
       await tradeBusinessDbc.executeQuery(`DROP TABLE IF EXISTS ${tableName};`);
     }
 
@@ -229,9 +256,7 @@ export const dropAllProductTables = async (tableType) => {
 export const checkProductTablesExist = async () => {
   try {
     const pool = dbConn.tb_pool;
-    const tableNames = Object.values(PRODUCT_TABLE_MASTER).map(
-      (table) => table.name
-    );
+    const tableNames = Object.values(TABLE_MASTER).map((table) => table.name);
 
     const checkTableSQL = `
       SELECT COUNT(*) as count 
@@ -242,13 +267,13 @@ export const checkProductTablesExist = async () => {
 
     const result = await tradeBusinessDbc.executeQuery(
       checkTableSQL,
-      tableNames
+      tableNames,
     );
     return result[0].count === tableNames.length;
   } catch (error) {
     throw new AppError(
       `Failed to check if product tables exist: ${error.message}`,
-      500
+      500,
     );
   }
 };
@@ -260,9 +285,7 @@ export const checkProductTablesExist = async () => {
 export const getProductTablesSchema = async () => {
   try {
     const pool = dbConn.tb_pool;
-    const tableNames = Object.values(PRODUCT_TABLE_MASTER).map(
-      (table) => table.name
-    );
+    const tableNames = Object.values(TABLE_MASTER).map((table) => table.name);
     const schemas = {};
 
     for (const tableName of tableNames) {
@@ -281,7 +304,7 @@ export const getProductTablesSchema = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to get product tables schema: ${error.message}`,
-      500
+      500,
     );
   }
 };

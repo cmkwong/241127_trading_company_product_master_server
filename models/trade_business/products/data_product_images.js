@@ -1,4 +1,4 @@
-import { PRODUCT_TABLE_MASTER } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 import { v4 as uuidv4 } from 'uuid';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
@@ -6,8 +6,8 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 // Create a data model utility for product categories with multiple joins
 export const productImagesModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
-  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].fields,
+  tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_IMAGES'].fields,
   entityName: 'product images',
   entityIdField: 'id',
   requiredFields: ['product_id', 'image_url', 'image_type_id'],
@@ -19,7 +19,7 @@ export const productImagesModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'image_url',
-    uploadDir: 'public/{id}/products/',
+    uploadDir: 'public/products/{id}/images/',
     imagesOnly: true,
   },
 });

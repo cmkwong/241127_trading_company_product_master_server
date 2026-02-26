@@ -39,9 +39,10 @@ router
   );
 
 // Routes that require ID validation
+router.route('/get/ids').post(productsController.getProductById, endController);
+
 router
   .route('/ids')
-  .post(productsController.getProductById, endController)
   .patch(productsController.updateProduct, endController)
   .delete(productsController.deleteProduct, endController);
 

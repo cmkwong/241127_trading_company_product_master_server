@@ -1,9 +1,9 @@
 // Centralized table and field definitions
-export const PRODUCT_TABLE_MASTER = {
+export const TABLE_MASTER = {
   // Main tables
   PRODUCTS: {
     name: 'products',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -41,7 +41,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_KEYWORDS: {
     name: 'master_keywords',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -75,7 +75,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_KEYWORDS: {
     name: 'product_keywords',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -119,7 +119,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_PRODUCT_IMAGE_TYPES: {
     name: 'master_product_image_types',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -162,7 +162,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_IMAGES: {
     name: 'product_images',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -219,7 +219,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_PRODUCT_NAME_TYPES: {
     name: 'master_product_name_types',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -253,7 +253,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_NAMES: {
     name: 'product_names',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -302,7 +302,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_CATEGORIES: {
     name: 'master_categories',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -342,7 +342,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_CATEGORIES: {
     name: 'product_categories',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -386,7 +386,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_CUSTOMIZATIONS: {
     name: 'product_customizations',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -424,7 +424,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_CUSTOMIZATION_IMAGES: {
     name: 'product_customization_images',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -471,7 +471,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_LINKS: {
     name: 'product_links',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -505,7 +505,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_LINK_IMAGES: {
     name: 'product_link_images',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -552,7 +552,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_ALIBABA_IDS: {
     name: 'product_alibaba_ids',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -589,7 +589,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_PACKING_TYPES: {
     name: 'master_packing_types',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -623,7 +623,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_PACKINGS: {
     name: 'product_packings',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -691,7 +691,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_PACKING_IMAGES: {
     name: 'product_packing_images',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -738,7 +738,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   MASTER_CERTIFICATE_TYPES: {
     name: 'master_certificate_types',
-    table_type: 'master',
+    table_type: 'products-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -772,7 +772,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_CERTIFICATES: {
     name: 'product_certificates',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -814,7 +814,7 @@ export const PRODUCT_TABLE_MASTER = {
 
   PRODUCT_CERTIFICATE_FILES: {
     name: 'product_certificate_files',
-    table_type: 'data',
+    table_type: 'products-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -868,7 +868,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   MASTER_SUPPLIER_TYPES: {
     name: 'master_supplier_types',
-    table_type: 'master',
+    table_type: 'suppliers-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -910,7 +910,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIERS: {
     name: 'suppliers',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -954,7 +954,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   MASTER_ADDRESS_TYPES: {
     name: 'master_address_types',
-    table_type: 'master',
+    table_type: 'suppliers-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -987,7 +987,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIER_ADDRESSES: {
     name: 'supplier_addresses',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1063,7 +1063,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   MASTER_CONTACT_TYPES: {
     name: 'master_contact_types',
-    table_type: 'master',
+    table_type: 'suppliers-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1096,7 +1096,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIER_CONTACTS: {
     name: 'supplier_contacts',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1156,7 +1156,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIER_LINKS: {
     name: 'supplier_links',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1190,7 +1190,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   MASTER_SERVICE_TYPES: {
     name: 'master_service_types',
-    table_type: 'master',
+    table_type: 'suppliers-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1223,7 +1223,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIER_SERVICES: {
     name: 'supplier_services',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1265,7 +1265,7 @@ export const PRODUCT_TABLE_MASTER = {
   },
   SUPPLIER_SERVICE_IMAGES: {
     name: 'supplier_service_images',
-    table_type: 'data',
+    table_type: 'suppliers-data',
     fields: {
       id: {
         type: 'VARCHAR(36)',
@@ -1313,7 +1313,7 @@ export const PRODUCT_TABLE_MASTER = {
 
 /**
  * Helper function to generate SQL for creating a table based on its definition
- * @param {Object} tableDefinition - Table definition from PRODUCT_TABLE_MASTER
+ * @param {Object} tableDefinition - Table definition from TABLE_MASTER
  * @returns {string} SQL statement for creating the table
  */
 export const generateCreateTableSQL = (tableDefinition) => {
@@ -1392,7 +1392,7 @@ export const generateCreateTableSQL = (tableDefinition) => {
  * @returns {string[]} Array of table names
  */
 export const getAllTableNames = () => {
-  return Object.values(PRODUCT_TABLE_MASTER).map((table) => table.name);
+  return Object.values(TABLE_MASTER).map((table) => table.name);
 };
 
 /**
@@ -1401,7 +1401,7 @@ export const getAllTableNames = () => {
  * @returns {Object|null} Field definitions or null if table not found
  */
 export const getTableFields = (tableName) => {
-  for (const table of Object.values(PRODUCT_TABLE_MASTER)) {
+  for (const table of Object.values(TABLE_MASTER)) {
     if (table.name === tableName) {
       return table.fields;
     }

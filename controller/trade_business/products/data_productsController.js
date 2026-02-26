@@ -68,7 +68,6 @@ export const getProductById = catchAsync(async (req, res, next) => {
  * @route PATCH /api/products/:id
  */
 export const updateProduct = catchAsync(async (req, res, next) => {
-  console.log('req.body.data updates: ', req.body.data);
   const structuredData = await productModel.processStructureDataOperation(
     req.body.data,
     'update',

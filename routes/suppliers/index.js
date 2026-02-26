@@ -1,26 +1,13 @@
 import express from 'express';
-import * as authController from '../../middleware/authController.js';
-import endController from '../../middleware/endController.js';
-import schemaRoutes from './schema/index.js';
-
-// Import supplier controller when available
-// import * as supplierController from '../../controller/trade_business/suppliers/supplierController.js';
+import dataRoutes from './data/index.js';
+import tableRoutes from './table/index.js';
 
 const router = express.Router();
 
-// Mount schema routes
-router.use('/schema', schemaRoutes);
+// Supplier table routes
+router.use('/table', tableRoutes);
 
-// Placeholder for supplier data routes
-router.route('/placeholder').get(
-  authController.protect,
-  (req, res, next) => {
-    res.prints = { message: 'Supplier data routes to be implemented' };
-    next();
-  },
-  endController
-);
-
-// Add supplier data routes here when controller is available
+// Supplier data routes
+router.use('/data', dataRoutes);
 
 export default router;

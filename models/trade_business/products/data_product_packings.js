@@ -1,4 +1,4 @@
-import { PRODUCT_TABLE_MASTER } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import { packingImagesModel } from './data_product_packing_images.js';
@@ -6,8 +6,8 @@ import { packingImagesModel } from './data_product_packing_images.js';
 // Create a data model utility for product packings
 export const packingModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].name,
-  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].fields,
+  tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
+  tableFields: TABLE_MASTER['PRODUCT_PACKINGS'].fields,
   entityName: 'product packing',
   entityIdField: 'id',
   requiredFields: [
@@ -30,7 +30,7 @@ export const packingModel = new DataModelUtils({
   },
   childTableConfig: [
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKING_IMAGES'].name,
+      tableName: TABLE_MASTER['PRODUCT_PACKING_IMAGES'].name,
       connectedKeys: { id: 'packingId' }, // parent table -> child table
       model: packingImagesModel,
     },

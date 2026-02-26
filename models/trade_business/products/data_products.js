@@ -1,6 +1,6 @@
 import AppError from '../../../utils/appError.js';
 import { v4 as uuidv4 } from 'uuid';
-import { PRODUCT_TABLE_MASTER } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 
@@ -18,8 +18,8 @@ import * as ProductKeywords from './data_product_keywords.js';
 // Create a data model utility for products
 export const productModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: PRODUCT_TABLE_MASTER['PRODUCTS'].name,
-  tableFields: PRODUCT_TABLE_MASTER['PRODUCTS'].fields,
+  tableName: TABLE_MASTER['PRODUCTS'].name,
+  tableFields: TABLE_MASTER['PRODUCTS'].fields,
   entityName: 'product',
   entityIdField: 'id',
   requiredFields: ['product_id'],
@@ -33,53 +33,53 @@ export const productModel = new DataModelUtils({
   },
   fileConfig: {
     fileUrlField: 'icon_url',
-    uploadDir: 'public/{id}/icon/',
+    uploadDir: 'public/products/{id}/icon/',
     imagesOnly: true,
   },
   // Add relationship with child table (customization images)
   childTableConfig: [
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_KEYWORDS'].name,
+      tableName: TABLE_MASTER['PRODUCT_KEYWORDS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductKeywords.productKeywordModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_NAMES'].name,
+      tableName: TABLE_MASTER['PRODUCT_NAMES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductNames.productNameModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_IMAGES'].name,
+      tableName: TABLE_MASTER['PRODUCT_IMAGES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductImages.productImagesModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CATEGORIES'].name,
+      tableName: TABLE_MASTER['PRODUCT_CATEGORIES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCategories.productCategoryModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
       // connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCustomizations.customizationModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_LINKS'].name,
+      tableName: TABLE_MASTER['PRODUCT_LINKS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductLinks.productLinkModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
+      tableName: TABLE_MASTER['PRODUCT_ALIBABA_IDS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductAlibabaIds.alibabaIdModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_PACKINGS'].name,
+      tableName: TABLE_MASTER['PRODUCT_PACKINGS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductPackings.packingModel,
     },
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
+      tableName: TABLE_MASTER['PRODUCT_CERTIFICATES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCertificates.certificateModel,
     },
@@ -99,7 +99,7 @@ export const productExists = async (id) => {
   } catch (error) {
     throw new AppError(
       `Failed to check if product exists: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };
@@ -112,8 +112,8 @@ export const truncateAllProductTables = async () => {
   try {
     // List of product-related tables in the correct order for truncation
     // We need to truncate child tables before parent tables to avoid foreign key constraints
-    const productTables = Object.values(PRODUCT_TABLE_MASTER)
-      .map((table) => table.table_type === 'data' && table.name)
+    const productTables = Object.values(TABLE_MASTER)
+      .map((table) => table.table_type === 'products-data' && table.name)
       .reverse();
 
     const results = {
@@ -152,7 +152,7 @@ export const truncateAllProductTables = async () => {
   } catch (error) {
     throw new AppError(
       `Failed to truncate product tables: ${error.message}`,
-      error.statusCode || 500
+      error.statusCode || 500,
     );
   }
 };

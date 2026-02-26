@@ -41,7 +41,7 @@ export const createProductNameTypesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -82,7 +82,7 @@ export const createProductCategoriesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -110,7 +110,7 @@ export const createCustomizationImagesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -138,7 +138,7 @@ export const createProductLinkImagesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -192,7 +192,7 @@ export const createCertificateTypesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -207,7 +207,7 @@ export const createProductCertificatesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -222,7 +222,7 @@ export const createProductCertificateFilesTable = catchAsync(
       status: 'success',
       message: result.message,
     });
-  }
+  },
 );
 
 /**
@@ -238,8 +238,8 @@ export const dropAllTables = catchAsync(async (req, res, next) => {
     return next(
       new AppError(
         'Confirmation string required to drop all tables. Please provide { "confirm": "DROP_ALL_PRODUCT_TABLES" } in the request body.',
-        400
-      )
+        400,
+      ),
     );
   }
 

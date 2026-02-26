@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { PRODUCT_TABLE_MASTER } from '../../tables.js';
+import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import * as CustomizationImages from './data_product_customization_images.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
@@ -7,8 +7,8 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 // Create a data model utility for product customizations
 export const customizationModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
-  tableFields: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].fields,
+  tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].name,
+  tableFields: TABLE_MASTER['PRODUCT_CUSTOMIZATIONS'].fields,
   entityName: 'customization',
   entityIdField: 'id',
   requiredFields: ['product_id', 'name'],
@@ -23,7 +23,7 @@ export const customizationModel = new DataModelUtils({
   // Add relationship with child table (customization images)
   childTableConfig: [
     {
-      tableName: PRODUCT_TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
+      tableName: TABLE_MASTER['PRODUCT_CUSTOMIZATION_IMAGES'].name,
       model: CustomizationImages.customizationImageModel,
     },
   ],

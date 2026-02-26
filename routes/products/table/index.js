@@ -18,77 +18,77 @@ router.post('/create-all', tableController.createAllTables, endController);
 router.post(
   '/create/products',
   tableController.createProductsTable,
-  endController
+  endController,
 );
 router.post(
   '/create/name-types',
   tableController.createProductNameTypesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/names',
   tableController.createProductNamesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/categories',
   tableController.createCategoriesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/product-categories',
   tableController.createProductCategoriesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/customizations',
   tableController.createCustomizationsTable,
-  endController
+  endController,
 );
 router.post(
   '/create/customization-images',
   tableController.createCustomizationImagesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/links',
   tableController.createProductLinksTable,
-  endController
+  endController,
 );
 router.post(
   '/create/link-images',
   tableController.createProductLinkImagesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/alibaba-ids',
   tableController.createAlibabaIdsTable,
-  endController
+  endController,
 );
 router.post(
   '/create/packing-types',
   tableController.createPackingTypesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/packings',
   tableController.createProductPackingsTable,
-  endController
+  endController,
 );
 router.post(
   '/create/certificate-types',
   tableController.createCertificateTypesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/certificates',
   tableController.createProductCertificatesTable,
-  endController
+  endController,
 );
 router.post(
   '/create/certificate-files',
   tableController.createProductCertificateFilesTable,
-  endController
+  endController,
 );
 
 // Route for dropping all product tables

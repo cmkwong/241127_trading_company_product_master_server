@@ -5,6 +5,9 @@ import * as master_certificateTypesModel from '../../../models/trade_business/ma
 import * as master_categoriesModel from '../../../models/trade_business/master/master_categoriesModel.js';
 import * as master_productKeywordsModel from '../../../models/trade_business/master/master_productKeywordsModel.js';
 import * as master_supplierTypesModel from '../../../models/trade_business/master/master_supplierTypesModel.js';
+import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
+import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
+import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { product_master_data } from '../../../datas/master.js';
@@ -43,90 +46,19 @@ const getTableDataMapping = () => {
       model: master_supplierTypesModel.supplierTypeModel,
       data: product_master_data.master_supplier_types,
     },
+    master_address_types: {
+      model: master_addressTypesModel.addressTypeModel,
+      data: product_master_data.master_address_types,
+    },
+    master_contact_types: {
+      model: master_contactTypesModel.contactTypeModel,
+      data: product_master_data.master_contact_types,
+    },
+    master_service_types: {
+      model: master_serviceTypesModel.serviceTypeModel,
+      data: product_master_data.master_service_types,
+    },
   };
-};
-
-// Add category-specific controller functions
-export const categoryExtensions = {
-  getChildCategories: catchAsync(async (req, res, next) => {
-    const { id } = req.params;
-
-    // If id is 'root', get root categories (parent_id is null)
-    const parentId = id === 'root' ? null : id;
-
-    const categories =
-      await master_categoriesModel.getChildCategories(parentId);
-
-    res.prints = {
-      status: 'success',
-      categories,
-    };
-
-    next();
-  }),
-
-  getCategoryPath: catchAsync(async (req, res, next) => {
-    const { id } = req.params;
-
-    if (!id) {
-      return next(new AppError('Category ID is required', 400));
-    }
-
-    const path = await master_categoriesModel.getCategoryPath(id);
-
-    res.prints = {
-      status: 'success',
-      path,
-    };
-
-    next();
-  }),
-
-  getCategoryTree: catchAsync(async (req, res, next) => {
-    const categoryTree = await master_categoriesModel.getCategoryTree();
-
-    res.prints = {
-      status: 'success',
-      categoryTree,
-    };
-
-    next();
-  }),
-
-  checkCategoryExists: catchAsync(async (req, res, next) => {
-    const { name } = req.query;
-
-    if (!name) {
-      return next(new AppError('Category name is required', 400));
-    }
-
-    try {
-      const options = {
-        search: name,
-        limit: 1,
-      };
-
-      const result = await master_categoriesModel.getAllCategories(options);
-      const exists =
-        result.categories.length > 0 &&
-        result.categories[0].name.toLowerCase() === name.toLowerCase();
-
-      res.prints = {
-        status: 'success',
-        exists,
-        category: exists ? result.categories[0] : null,
-      };
-
-      next();
-    } catch (error) {
-      next(
-        new AppError(
-          `Failed to check category existence: ${error.message}`,
-          500,
-        ),
-      );
-    }
-  }),
 };
 
 const _insertAllDefaults = async (tableName) => {
