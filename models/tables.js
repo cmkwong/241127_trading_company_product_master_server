@@ -1154,6 +1154,40 @@ export const TABLE_MASTER = {
       },
     },
   },
+  MASTER_SUPPLIER_LINK_TYPES: {
+    name: 'master_supplier_link_types',
+    table_type: 'suppliers-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Supplier type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Supplier type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_link_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+
   SUPPLIER_LINKS: {
     name: 'supplier_links',
     table_type: 'suppliers-data',
@@ -1168,6 +1202,16 @@ export const TABLE_MASTER = {
         notNull: true,
         references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
         description: 'Reference to suppliers.id',
+      },
+      link_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_supplier_link_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_supplier_link_types.id',
       },
       link: {
         type: 'TEXT',

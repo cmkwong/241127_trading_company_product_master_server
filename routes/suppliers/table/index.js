@@ -46,6 +46,11 @@ router.post(
   endController,
 );
 router.post(
+  '/create/link-types',
+  tableController.createSupplierLinkTypesTable,
+  endController,
+);
+router.post(
   '/create/links',
   tableController.createSupplierLinksTable,
   endController,

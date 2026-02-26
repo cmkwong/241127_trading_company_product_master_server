@@ -5,6 +5,7 @@ import * as master_certificateTypesModel from '../../../models/trade_business/ma
 import * as master_categoriesModel from '../../../models/trade_business/master/master_categoriesModel.js';
 import * as master_productKeywordsModel from '../../../models/trade_business/master/master_productKeywordsModel.js';
 import * as master_supplierTypesModel from '../../../models/trade_business/master/master_supplierTypesModel.js';
+import * as master_supplierLinkTypesModel from '../../../models/trade_business/master/master_supplierLinkTypesModel.js';
 import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
 import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
 import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
@@ -45,6 +46,10 @@ const getTableDataMapping = () => {
     master_supplier_types: {
       model: master_supplierTypesModel.supplierTypeModel,
       data: default_master_data.master_supplier_types,
+    },
+    master_supplier_link_types: {
+      model: master_supplierLinkTypesModel.supplierLinkTypeModel,
+      data: default_master_data.master_supplier_link_types,
     },
     master_address_types: {
       model: master_addressTypesModel.addressTypeModel,

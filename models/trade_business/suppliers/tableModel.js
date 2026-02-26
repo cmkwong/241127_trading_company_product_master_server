@@ -9,6 +9,7 @@ const SUPPLIER_TABLE_KEYS = [
   'SUPPLIER_ADDRESSES',
   'MASTER_CONTACT_TYPES',
   'SUPPLIER_CONTACTS',
+  'MASTER_SUPPLIER_LINK_TYPES',
   'SUPPLIER_LINKS',
   'MASTER_SERVICE_TYPES',
   'SUPPLIER_SERVICES',
@@ -100,6 +101,10 @@ export const createContactTypesTable = async () => {
 
 export const createSupplierContactsTable = async () => {
   return createTable('SUPPLIER_CONTACTS');
+};
+
+export const createSupplierLinkTypesTable = async () => {
+  return createTable('MASTER_SUPPLIER_LINK_TYPES');
 };
 
 export const createSupplierLinksTable = async () => {

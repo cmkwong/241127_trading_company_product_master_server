@@ -751,6 +751,39 @@ export const default_master_data = {
     },
   ],
 
+  master_supplier_link_types: [
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650001',
+      name: 'Website',
+      description: 'Official supplier website',
+    },
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650002',
+      name: 'Alibaba',
+      description: 'Alibaba supplier storefront or listing',
+    },
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650003',
+      name: '1688',
+      description: '1688 supplier storefront or listing',
+    },
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650004',
+      name: 'WeChat',
+      description: 'WeChat profile or official account link',
+    },
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650005',
+      name: 'WhatsApp',
+      description: 'WhatsApp chat link or contact entry',
+    },
+    {
+      id: '6f1b8a30-11d2-4f8a-9c70-19be7a650006',
+      name: 'Certification Profile',
+      description: 'Third-party certification or audit profile link',
+    },
+  ],
+
   master_address_types: [
     {
       id: '3b9f4aa0-4ac3-45f1-a0bc-41f5f4e84001',

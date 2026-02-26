@@ -99,6 +99,21 @@ export const createSupplierContactsTable = catchAsync(
 );
 
 /**
+ * Create master supplier link types table
+ * @route POST /api/suppliers/table/create/link-types
+ */
+export const createSupplierLinkTypesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createSupplierLinkTypesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
  * Create supplier links table
  * @route POST /api/suppliers/table/create/links
  */
