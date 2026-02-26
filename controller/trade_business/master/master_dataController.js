@@ -10,7 +10,7 @@ import * as master_contactTypesModel from '../../../models/trade_business/master
 import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
-import { product_master_data } from '../../../datas/master.js';
+import { default_master_data } from '../../../datas/master.js';
 
 /**
  * Get table mapping with models and data
@@ -20,43 +20,43 @@ const getTableDataMapping = () => {
   return {
     master_product_image_types: {
       model: master_productImagesModel.productImagesTypeModel,
-      data: product_master_data.master_product_image_types,
+      data: default_master_data.master_product_image_types,
     },
     master_product_name_types: {
       model: master_productNameTypesModel.productNameTypeModel,
-      data: product_master_data.master_product_name_types,
+      data: default_master_data.master_product_name_types,
     },
     master_categories: {
       model: master_categoriesModel.categoryMasterModel,
-      data: product_master_data.master_categories,
+      data: default_master_data.master_categories,
     },
     master_packing_types: {
       model: master_packingTypesModel.packingTypeModel,
-      data: product_master_data.master_packing_types,
+      data: default_master_data.master_packing_types,
     },
     master_certificate_types: {
       model: master_certificateTypesModel.certificateTypeModel,
-      data: product_master_data.master_certificate_types,
+      data: default_master_data.master_certificate_types,
     },
     master_keywords: {
       model: master_productKeywordsModel.masterKeywordModel,
-      data: product_master_data.master_keywords,
+      data: default_master_data.master_keywords,
     },
     master_supplier_types: {
       model: master_supplierTypesModel.supplierTypeModel,
-      data: product_master_data.master_supplier_types,
+      data: default_master_data.master_supplier_types,
     },
     master_address_types: {
       model: master_addressTypesModel.addressTypeModel,
-      data: product_master_data.master_address_types,
+      data: default_master_data.master_address_types,
     },
     master_contact_types: {
       model: master_contactTypesModel.contactTypeModel,
-      data: product_master_data.master_contact_types,
+      data: default_master_data.master_contact_types,
     },
     master_service_types: {
       model: master_serviceTypesModel.serviceTypeModel,
-      data: product_master_data.master_service_types,
+      data: default_master_data.master_service_types,
     },
   };
 };
@@ -114,7 +114,7 @@ export const insertAllDefaults = catchAsync(async (req, res, next) => {
   next();
 });
 
-const _clearProductMasterData = async (tableName) => {
+const _clearMasterData = async (tableName) => {
   const results = {};
 
   // Get table mapping and extract just the models
@@ -163,7 +163,7 @@ const _clearProductMasterData = async (tableName) => {
  * Truncate all master data tables
  */
 export const truncateAllTables = catchAsync(async (req, res, next) => {
-  const results = await _clearProductMasterData();
+  const results = await _clearMasterData();
   res.prints = {
     status: 'success',
     message: 'All master data tables have been truncated',
@@ -177,7 +177,7 @@ export const truncateAllTables = catchAsync(async (req, res, next) => {
  */
 export const resetAllMasterData = catchAsync(async (req, res, next) => {
   // First truncate all tables
-  await _clearProductMasterData();
+  await _clearMasterData();
 
   // Insert the default data
   const results = await _insertAllDefaults();
@@ -194,7 +194,7 @@ export const resetAllMasterData = catchAsync(async (req, res, next) => {
 export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
   const { tableName } = req.params;
   // First truncate the specified table
-  await _clearProductMasterData(tableName);
+  await _clearMasterData(tableName);
 
   // Insert the default data for the specified table
   const tableDataMap = getTableDataMapping();
@@ -216,7 +216,7 @@ export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
   next();
 });
 
-export const updateProductMaster = catchAsync(async (req, res, next) => {
+export const updateMasterData = catchAsync(async (req, res, next) => {
   const { tableName, id: idFromParams } = req.params;
   const tableDataMap = getTableDataMapping();
 

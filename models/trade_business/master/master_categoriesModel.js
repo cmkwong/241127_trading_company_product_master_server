@@ -2,7 +2,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 import AppError from '../../../utils/appError.js';
 import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
-import { product_master_data } from '../../../datas/master.js';
+import { default_master_data } from '../../../datas/master.js';
 
 // Table name constants for consistency
 const CATEGORIES_TABLE = TABLE_MASTER['MASTER_CATEGORIES'].name;
@@ -467,7 +467,7 @@ export const insertDefaultCategories = async () => {
     // Import categories from data file
 
     const results = await batchCreateCategories(
-      product_master_data.master_categories,
+      default_master_data.master_categories,
     );
 
     return {

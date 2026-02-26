@@ -1,4 +1,4 @@
-export const product_master_data = {
+export const default_master_data = {
   // Master data with UUID format
   master_product_name_types: [
     {

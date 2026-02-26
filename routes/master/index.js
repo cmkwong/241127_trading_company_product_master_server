@@ -25,17 +25,17 @@ router.post(
 
 router.patch(
   '/:tableName/:id?',
-  masterDataController.updateProductMaster,
+  masterDataController.updateMasterData,
   endController,
 );
-
-router.get('/:tableName', masterDataController.getMasterData, endController);
 
 router.get(
   '/statistics',
   masterDataController.getMasterDataStatistics,
   endController,
 );
+
+router.get('/:tableName', masterDataController.getMasterData, endController);
 
 // Add new combined operations for truncate and reset
 router.post(
