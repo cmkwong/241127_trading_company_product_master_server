@@ -13,6 +13,7 @@ export const packingModel = new DataModelUtils({
   requiredFields: [
     'product_id',
     'packing_type_id',
+    'packing_reliability_type_id',
     'length',
     'width',
     'height',
@@ -24,6 +25,7 @@ export const packingModel = new DataModelUtils({
     height: { min: 0, required: true },
     weight: { min: 0, required: true },
     packing_type_id: { required: true },
+    packing_reliability_type_id: { required: true },
   },
   defaults: {
     quantity: 1,

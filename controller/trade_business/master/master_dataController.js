@@ -1,4 +1,5 @@
 import * as master_packingTypesModel from '../../../models/trade_business/master/master_packingTypesModel.js';
+import * as master_packingReliabilityTypesModel from '../../../models/trade_business/master/master_packingReliabilityTypesModel.js';
 import * as master_productImagesModel from '../../../models/trade_business/master/master_productImagesTypeModel.js';
 import * as master_productNameTypesModel from '../../../models/trade_business/master/master_productNameTypesModel.js';
 import * as master_certificateTypesModel from '../../../models/trade_business/master/master_certificateTypesModel.js';
@@ -37,6 +38,10 @@ const getTableDataMapping = () => {
     master_packing_types: {
       model: master_packingTypesModel.packingTypeModel,
       data: default_master_data.master_packing_types,
+    },
+    master_packing_reliability_types: {
+      model: master_packingReliabilityTypesModel.packingReliabilityTypeModel,
+      data: default_master_data.master_packing_reliability_types,
     },
     master_certificate_types: {
       model: master_certificateTypesModel.certificateTypeModel,

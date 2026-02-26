@@ -620,7 +620,39 @@ export const TABLE_MASTER = {
       unique_packing_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
-
+  MASTER_PACKING_RELIABILITY_TYPES: {
+    name: 'master_packing_reliability_types',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Packing reliability type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Packing reliability type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_reliability_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
   PRODUCT_PACKINGS: {
     name: 'product_packings',
     table_type: 'products-data',
@@ -646,7 +678,16 @@ export const TABLE_MASTER = {
         },
         description: 'Reference to master_packing_types.id',
       },
-
+      packing_reliability_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_packing_reliability_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_packing_reliability_types.id',
+      },
       length: {
         type: 'DECIMAL(10,2)',
         notNull: true,

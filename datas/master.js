@@ -537,6 +537,29 @@ export const default_master_data = {
     },
   ],
 
+  master_packing_reliability_types: [
+    {
+      id: '4pr0a001-1111-4a11-8b11-000000000000',
+      name: 'Official',
+      description: 'Official packing reliability for standard shipping',
+    },
+    {
+      id: '4pr0a001-1111-4a11-8b11-000000000001',
+      name: 'High',
+      description: 'High packing reliability for long-distance shipping',
+    },
+    {
+      id: '4pr0a001-1111-4a11-8b11-000000000002',
+      name: 'Medium',
+      description: 'Standard packing reliability for routine logistics',
+    },
+    {
+      id: '4pr0a001-1111-4a11-8b11-000000000003',
+      name: 'Estimated',
+      description: 'Estimated packing reliability based on historical data',
+    },
+  ],
+
   // Updated master_certificate_types with missing IDs
   master_certificate_types: [
     {

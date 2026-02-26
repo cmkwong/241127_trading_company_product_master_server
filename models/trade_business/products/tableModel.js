@@ -148,6 +148,14 @@ export const createPackingTypesTable = async () => {
 };
 
 /**
+ * Creates the master_packing_reliability_types master table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createPackingReliabilityTypesTable = async () => {
+  return createTable('MASTER_PACKING_RELIABILITY_TYPES');
+};
+
+/**
  * Creates the product_packings table with reference to master_packing_types
  * @returns {Promise} Promise that resolves when the table is created
  */

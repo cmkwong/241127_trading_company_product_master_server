@@ -71,6 +71,11 @@ router.post(
   endController,
 );
 router.post(
+  '/create/packing-reliability-types',
+  tableController.createPackingReliabilityTypesTable,
+  endController,
+);
+router.post(
   '/create/packings',
   tableController.createProductPackingsTable,
   endController,

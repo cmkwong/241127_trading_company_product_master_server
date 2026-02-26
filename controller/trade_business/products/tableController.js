@@ -168,6 +168,21 @@ export const createPackingTypesTable = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Create packing reliability types table
+ * @route POST /api/products/table/create/packing-reliability-types
+ */
+export const createPackingReliabilityTypesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createPackingReliabilityTypesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
  * Create product packings table
  * @route POST /api/products/table/create/packings
  */

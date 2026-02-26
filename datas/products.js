@@ -145,6 +145,7 @@ export const defaultProducts = {
           id: '5464ae6b-a061-4197-ad8c-f8dd7fd59fed',
           product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
           packing_type_id: '0m3n4o5p-6q7r-8s9t-0u1v-9t0u1v2w3x5b',
+          packing_reliability_type_id: '4pr0a001-1111-4a11-8b11-000000000001',
           length: '50.00',
           width: '40.00',
           height: '30.00',
@@ -340,6 +341,7 @@ export const defaultProducts = {
           id: 'b226310f-f57c-474c-94eb-1e3cea2a62c1',
           product_id: '1d532b23-1cb1-4bc1-9169-c250d51f0302',
           packing_type_id: '0m3n4o5p-6q7r-8s9t-0u1v-9t0u1v2w3x5b',
+          packing_reliability_type_id: '4pr0a001-1111-4a11-8b11-000000000001',
           length: '50.00',
           width: '40.00',
           height: '30.00',
@@ -365,6 +367,7 @@ export const defaultProducts = {
           ],
         },
       ],
+      packing_reliability_type_id: '4pr0a001-1111-4a11-8b11-000000000001',
       product_certificates: [
         {
           id: 'fe2e9acf-1eec-491e-bc8e-75f67b8b2451',
@@ -391,6 +394,7 @@ export const defaultProducts = {
           ],
         },
       ],
+      packing_reliability_type_id: '4pr0a001-1111-4a11-8b11-000000000002',
     },
     {
       id: '3348dd2a-70a8-418b-a858-82f7e91ea106',
@@ -416,6 +420,7 @@ export const defaultProducts = {
         {
           id: '7af97e54-3c1f-4d04-bb6f-b8abb17a854b',
           product_id: '3348dd2a-70a8-418b-a858-82f7e91ea106',
+          packing_reliability_type_id: '4pr0a001-1111-4a11-8b11-000000000001',
           name: 'Anti-Skid Pet Feeder',
           name_type_id: '8a1b2c3d-4e5f-6g7h-8i9j-0k1l2m3n4o5p',
           created_at: '2026-01-24T12:28:29.000Z',
