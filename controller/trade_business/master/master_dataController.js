@@ -6,6 +6,9 @@ import * as master_categoriesModel from '../../../models/trade_business/master/m
 import * as master_productKeywordsModel from '../../../models/trade_business/master/master_productKeywordsModel.js';
 import * as master_supplierTypesModel from '../../../models/trade_business/master/master_supplierTypesModel.js';
 import * as master_supplierLinkTypesModel from '../../../models/trade_business/master/master_supplierLinkTypesModel.js';
+import * as master_customerNameTypesModel from '../../../models/trade_business/master/master_customerNameTypesModel.js';
+import * as master_customerTypesModel from '../../../models/trade_business/master/master_customerTypesModel.js';
+import * as master_customerImageTypesModel from '../../../models/trade_business/master/master_customerImageTypesModel.js';
 import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
 import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
 import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
@@ -50,6 +53,18 @@ const getTableDataMapping = () => {
     master_supplier_link_types: {
       model: master_supplierLinkTypesModel.supplierLinkTypeModel,
       data: default_master_data.master_supplier_link_types,
+    },
+    master_customer_name_types: {
+      model: master_customerNameTypesModel.customerNameTypeModel,
+      data: default_master_data.master_customer_name_types,
+    },
+    master_customer_types: {
+      model: master_customerTypesModel.customerTypeMasterModel,
+      data: default_master_data.master_customer_types,
+    },
+    master_customer_image_types: {
+      model: master_customerImageTypesModel.customerImageTypeModel,
+      data: default_master_data.master_customer_image_types,
     },
     master_address_types: {
       model: master_addressTypesModel.addressTypeModel,

@@ -784,6 +784,50 @@ export const default_master_data = {
     },
   ],
 
+  master_customer_name_types: [
+    {
+      id: 'cnt-0000-0000-0000-000000000001',
+      name: 'Legal Name',
+      description: 'Registered legal entity name',
+    },
+    {
+      id: 'cnt-0000-0000-0000-000000000002',
+      name: 'Trading Name',
+      description: 'Commercial or brand-facing name',
+    },
+  ],
+
+  master_customer_types: [
+    {
+      id: 'cty-0000-0000-0000-000000000001',
+      name: 'Distributor',
+      description: 'Regional distributor customer',
+    },
+    {
+      id: 'cty-0000-0000-0000-000000000002',
+      name: 'Retailer',
+      description: 'Retail channel customer',
+    },
+    {
+      id: 'cty-0000-0000-0000-000000000003',
+      name: 'Brand Owner',
+      description: 'Brand owner and private label account',
+    },
+  ],
+
+  master_customer_image_types: [
+    {
+      id: 'cit-0000-0000-0000-000000000001',
+      name: 'Logo',
+      description: 'Customer logo or identity mark',
+    },
+    {
+      id: 'cit-0000-0000-0000-000000000002',
+      name: 'Storefront',
+      description: 'Storefront or company profile image',
+    },
+  ],
+
   master_address_types: [
     {
       id: '3b9f4aa0-4ac3-45f1-a0bc-41f5f4e84001',
