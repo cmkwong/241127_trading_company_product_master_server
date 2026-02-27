@@ -21,6 +21,41 @@ router.post(
   endController,
 );
 router.post(
+  '/create/currencies',
+  tableController.createCurrenciesTable,
+  endController,
+);
+router.post(
+  '/create/size-types',
+  tableController.createSizeTypesTable,
+  endController,
+);
+router.post(
+  '/create/color-types',
+  tableController.createColorTypesTable,
+  endController,
+);
+router.post(
+  '/create/varient-sizes',
+  tableController.createProductVarientSizesTable,
+  endController,
+);
+router.post(
+  '/create/varient-colors',
+  tableController.createProductVarientColorsTable,
+  endController,
+);
+router.post(
+  '/create/varient-color-images',
+  tableController.createProductVarientColorImagesTable,
+  endController,
+);
+router.post(
+  '/create/costs',
+  tableController.createProductCostsTable,
+  endController,
+);
+router.post(
   '/create/name-types',
   tableController.createProductNameTypesTable,
   endController,

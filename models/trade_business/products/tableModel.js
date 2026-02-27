@@ -68,6 +68,62 @@ export const createProductsTable = async () => {
 };
 
 /**
+ * Creates the master_currencies table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createCurrenciesTable = async () => {
+  return createTable('MASTER_CURRENCIES');
+};
+
+/**
+ * Creates the master_size_types table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createSizeTypesTable = async () => {
+  return createTable('MASTER_SIZE_TYPES');
+};
+
+/**
+ * Creates the master_color_types table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createColorTypesTable = async () => {
+  return createTable('MASTER_COLOR_TYPES');
+};
+
+/**
+ * Creates the product_varient_sizes table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductVarientSizesTable = async () => {
+  return createTable('PRODUCT_VARIENT_SIZES');
+};
+
+/**
+ * Creates the product_varient_colors table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductVarientColorsTable = async () => {
+  return createTable('PRODUCT_VARIENT_COLORS');
+};
+
+/**
+ * Creates the product_varient_color_images table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductVarientColorImagesTable = async () => {
+  return createTable('PRODUCT_VARIENT_COLOR_IMAGES');
+};
+
+/**
+ * Creates the product_costs table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductCostsTable = async () => {
+  return createTable('PRODUCT_COSTS');
+};
+
+/**
  * Creates the master_product_name_types master table
  * @returns {Promise} Promise that resolves when the table is created
  */

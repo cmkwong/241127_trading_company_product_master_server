@@ -171,6 +171,115 @@ export const defaultProducts = {
           ],
         },
       ],
+      product_varient_sizes: [
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11101',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          size_type_id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3101',
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11102',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          size_type_id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3102',
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11103',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          size_type_id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3103',
+        },
+      ],
+      product_varient_colors: [
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          color_type_id: '8a6af61d-4dcb-4ed9-93e0-4fcb3a9de201',
+          product_varient_color_images: [
+            {
+              id: '13649f12-f9b6-4abf-8a8c-b63fe2f11301',
+              product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
+              image_name: 'red-variant.jpg',
+              image_url:
+                '/public/13649f12-f9b6-4abf-8a8c-b63fe2f11091/colors//red-variant.jpg',
+              display_order: 1,
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+            },
+          ],
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11202',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          color_type_id: '8a6af61d-4dcb-4ed9-93e0-4fcb3a9de202',
+          product_varient_color_images: [
+            {
+              id: '13649f12-f9b6-4abf-8a8c-b63fe2f11302',
+              product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11202',
+              image_name: 'blue-variant.jpg',
+              image_url:
+                '/public/13649f12-f9b6-4abf-8a8c-b63fe2f11091/colors//blue-variant.jpg',
+              display_order: 1,
+              base64_image:
+                'data:image/jpeg;base64,/9j/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABQb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCbgDlk/9k=',
+            },
+          ],
+        },
+      ],
+      product_costs: [
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11401',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11101',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
+          unit_cost: '10.50',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11402',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11101',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11202',
+          unit_cost: '10.70',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11403',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11102',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
+          unit_cost: '11.20',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11404',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11102',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11202',
+          unit_cost: '11.40',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11405',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11103',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
+          unit_cost: '12.00',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11406',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          product_varient_size_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11103',
+          product_varient_color_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11202',
+          unit_cost: '12.20',
+          currency: 'USD',
+          min_order_qty: 1,
+        },
+      ],
       product_certificates: [
         {
           id: 'a6bb8db5-f685-49a4-8cc8-80df3396b8f4',

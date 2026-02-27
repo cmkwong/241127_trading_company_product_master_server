@@ -13,6 +13,9 @@ import * as master_customerImageTypesModel from '../../../models/trade_business/
 import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
 import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
 import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
+import * as master_currenciesModel from '../../../models/trade_business/master/master_currenciesModel.js';
+import * as master_sizeTypesModel from '../../../models/trade_business/master/master_sizeTypesModel.js';
+import * as master_colorTypesModel from '../../../models/trade_business/master/master_colorTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { default_master_data } from '../../../datas/master.js';
@@ -82,6 +85,18 @@ const getTableDataMapping = () => {
     master_service_types: {
       model: master_serviceTypesModel.serviceTypeModel,
       data: default_master_data.master_service_types,
+    },
+    master_currencies: {
+      model: master_currenciesModel.currencyModel,
+      data: default_master_data.master_currencies,
+    },
+    master_size_types: {
+      model: master_sizeTypesModel.sizeTypeModel,
+      data: default_master_data.master_size_types,
+    },
+    master_color_types: {
+      model: master_colorTypesModel.colorTypeModel,
+      data: default_master_data.master_color_types,
     },
   };
 };

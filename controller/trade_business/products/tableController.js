@@ -30,6 +30,103 @@ export const createProductsTable = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Create currencies table
+ * @route POST /api/products/table/create/currencies
+ */
+export const createCurrenciesTable = catchAsync(async (req, res, next) => {
+  const result = await TableModel.createCurrenciesTable();
+
+  res.status(201).json({
+    status: 'success',
+    message: result.message,
+  });
+});
+
+/**
+ * Create size types table
+ * @route POST /api/products/table/create/size-types
+ */
+export const createSizeTypesTable = catchAsync(async (req, res, next) => {
+  const result = await TableModel.createSizeTypesTable();
+
+  res.status(201).json({
+    status: 'success',
+    message: result.message,
+  });
+});
+
+/**
+ * Create color types table
+ * @route POST /api/products/table/create/color-types
+ */
+export const createColorTypesTable = catchAsync(async (req, res, next) => {
+  const result = await TableModel.createColorTypesTable();
+
+  res.status(201).json({
+    status: 'success',
+    message: result.message,
+  });
+});
+
+/**
+ * Create product varient sizes table
+ * @route POST /api/products/table/create/varient-sizes
+ */
+export const createProductVarientSizesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createProductVarientSizesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
+ * Create product varient colors table
+ * @route POST /api/products/table/create/varient-colors
+ */
+export const createProductVarientColorsTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createProductVarientColorsTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
+ * Create product varient color images table
+ * @route POST /api/products/table/create/varient-color-images
+ */
+export const createProductVarientColorImagesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createProductVarientColorImagesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
+ * Create product costs table
+ * @route POST /api/products/table/create/costs
+ */
+export const createProductCostsTable = catchAsync(async (req, res, next) => {
+  const result = await TableModel.createProductCostsTable();
+
+  res.status(201).json({
+    status: 'success',
+    message: result.message,
+  });
+});
+
+/**
  * Create product name types table
  * @route POST /api/products/table/create/name-types
  */

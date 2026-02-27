@@ -38,7 +38,324 @@ export const TABLE_MASTER = {
       },
     },
   },
-
+  MASTER_CURRENCIES: {
+    name: 'master_currencies',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      code: {
+        type: 'VARCHAR(10)',
+        notNull: true,
+        description: 'Currency code (e.g., USD, EUR)',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Currency name',
+      },
+      symbol: {
+        type: 'VARCHAR(10)',
+        description: 'Currency symbol (e.g., $, €)',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+    },
+    constraints: {
+      unique_currency_code: { type: 'UNIQUE', fields: ['code'] },
+    },
+  },
+  MASTER_SIZE_TYPES: {
+    name: 'master_size_types',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'id for master size types',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Size type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Size type description',
+      },
+      default_display_cb: {
+        type: 'BOOLEAN',
+        default: false,
+        description: 'Indicates if this is the default size type in checkboxes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_size_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  PRODUCT_VARIENT_SIZES: {
+    name: 'product_varient_sizes',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
+      },
+      size_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_size_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_size_types.id',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  MASTER_COLOR_TYPES: {
+    name: 'master_color_types',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Color type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Color type description',
+      },
+      default_display_cb: {
+        type: 'BOOLEAN',
+        default: false,
+        description:
+          'Indicates if this is the default color type in checkboxes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_color_type_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  PRODUCT_VARIENT_COLORS: {
+    name: 'product_varient_colors',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
+      },
+      color_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_color_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_color_types.id',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  PRODUCT_VARIENT_COLOR_IMAGES: {
+    name: 'product_varient_color_images',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_varient_color_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'product_varient_colors',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to product_varient_colors.id',
+      },
+      image_name: {
+        type: 'VARCHAR(255)',
+        description: 'image name',
+      },
+      image_url: {
+        type: 'TEXT',
+        description: 'URL to color-related image',
+      },
+      alt_text: {
+        type: 'VARCHAR(255)',
+        description: 'alt text to color-related image',
+      },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  PRODUCT_COSTS: {
+    name: 'product_costs',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
+      },
+      product_varient_size_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'product_varient_sizes',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to product_varient_sizes.id',
+      },
+      product_varient_color_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'product_varient_colors',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to product_varient_colors.id',
+      },
+      unit_cost: {
+        type: 'DECIMAL(10,2)',
+        notNull: true,
+        description: 'Unit cost for the size-color variant combination',
+      },
+      currency: {
+        type: 'VARCHAR(10)',
+        notNull: true,
+        references: {
+          table: 'master_currencies',
+          field: 'code',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Currency code for unit cost',
+      },
+      min_order_qty: {
+        type: 'INT',
+        default: 1,
+        description: 'Minimum order quantity for this variant combination',
+      },
+      remark: {
+        type: 'TEXT',
+        description: 'Additional notes about pricing',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_product_size_color_cost: {
+        type: 'UNIQUE',
+        fields: [
+          'product_id',
+          'product_varient_size_id',
+          'product_varient_color_id',
+        ],
+      },
+    },
+  },
   MASTER_KEYWORDS: {
     name: 'master_keywords',
     table_type: 'products-master',

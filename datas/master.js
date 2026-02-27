@@ -13,6 +13,63 @@ export const default_master_data = {
     },
   ],
 
+  master_currencies: [
+    {
+      id: 'c4f51187-4f42-4a83-8cb1-4d8b8ce95a01',
+      code: 'USD',
+      name: 'US Dollar',
+      symbol: '$',
+    },
+    {
+      id: 'c4f51187-4f42-4a83-8cb1-4d8b8ce95a02',
+      code: 'EUR',
+      name: 'Euro',
+      symbol: '€',
+    },
+    {
+      id: 'c4f51187-4f42-4a83-8cb1-4d8b8ce95a03',
+      code: 'CNY',
+      name: 'Chinese Yuan',
+      symbol: '¥',
+    },
+  ],
+
+  master_size_types: [
+    {
+      id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3101',
+      name: 'S',
+      description: 'Small',
+      default_display_cb: true,
+    },
+    {
+      id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3102',
+      name: 'M',
+      description: 'Medium',
+      default_display_cb: true,
+    },
+    {
+      id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3103',
+      name: 'L',
+      description: 'Large',
+      default_display_cb: true,
+    },
+  ],
+
+  master_color_types: [
+    {
+      id: '8a6af61d-4dcb-4ed9-93e0-4fcb3a9de201',
+      name: 'Red',
+      description: 'Red color option',
+      default_display_cb: true,
+    },
+    {
+      id: '8a6af61d-4dcb-4ed9-93e0-4fcb3a9de202',
+      name: 'Blue',
+      description: 'Blue color option',
+      default_display_cb: true,
+    },
+  ],
+
   master_keywords: [
     {
       id: '1f4d2f3a-8b7c-4d6e-8a1b-2c3d4e5f6a70',
