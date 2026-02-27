@@ -624,7 +624,12 @@ export const default_master_data = {
       description: 'Certificate supplier type',
       parent_id: null,
     },
-
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
+      name: 'Shipping',
+      description: 'Shipping supplier type',
+      parent_id: null,
+    },
     // Packing children
     {
       id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d201',
@@ -771,6 +776,37 @@ export const default_master_data = {
       name: 'Pet Bowl',
       description: 'Child type under Products',
       parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+    },
+    // Shipping Children
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d401',
+      name: 'Air Freight',
+      description: 'Child type under Shipping',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d402',
+      name: 'Sea Freight',
+      description: 'Child type under Shipping',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d403',
+      name: 'Land Freight',
+      description: 'Child type under Shipping',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d404',
+      name: 'Express Courier',
+      description: 'Child type under Shipping',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
+    },
+    {
+      id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d405',
+      name: 'Freight Forwarder',
+      description: 'Child type under Shipping',
+      parent_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d104',
     },
   ],
 
