@@ -11,10 +11,10 @@ export const supplierServiceModel = new DataModelUtils({
   tableFields: TABLE_MASTER['SUPPLIER_SERVICES'].fields,
   entityName: 'supplier service',
   entityIdField: 'id',
-  requiredFields: ['supplier_id', 'service_type_id'],
+  requiredFields: ['supplier_id', 'service_id'],
   validations: {
     supplier_id: { required: true },
-    service_type_id: { required: true },
+    service_id: { required: true },
   },
   defaults: {
     id: uuidv4,

@@ -1591,23 +1591,56 @@ export const TABLE_MASTER = {
     },
     constraints: {},
   },
-  MASTER_SERVICE_TYPES: {
-    name: 'master_service_types',
-    table_type: 'suppliers-master',
+  // MASTER_SERVICE_TYPES: {
+  //   name: 'master_service_types',
+  //   table_type: 'suppliers-master',
+  //   fields: {
+  //     id: {
+  //       type: 'VARCHAR(36)',
+  //       primaryKey: true,
+  //       description: 'Auto-incremented primary key',
+  //     },
+  //     name: {
+  //       type: 'VARCHAR(100)',
+  //       notNull: true,
+  //       description: 'Service type name',
+  //     },
+  //     description: {
+  //       type: 'VARCHAR(255)',
+  //       description: 'Service type description',
+  //     },
+  //     created_at: {
+  //       type: 'TIMESTAMP',
+  //       default: 'CURRENT_TIMESTAMP',
+  //       description: 'Creation timestamp',
+  //     },
+  //     updated_at: {
+  //       type: 'TIMESTAMP',
+  //       default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  //       description: 'Last update timestamp',
+  //     },
+  //   },
+  //   constraints: {
+  //     unique_service_type_name: { type: 'UNIQUE', fields: ['name'] },
+  //   },
+  // },
+  MASTER_SERVICES: {
+    name: 'master_services',
+    table_type: 'services-master',
     fields: {
       id: {
         type: 'VARCHAR(36)',
         primaryKey: true,
         description: 'Auto-incremented primary key',
       },
-      name: {
-        type: 'VARCHAR(100)',
+      service_name: {
+        type: 'VARCHAR(255)',
         notNull: true,
-        description: 'Service type name',
+        description: 'Name of the service',
       },
       description: {
-        type: 'VARCHAR(255)',
-        description: 'Service type description',
+        type: 'TEXT',
+        description: 'Description of the service',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -1620,8 +1653,51 @@ export const TABLE_MASTER = {
         description: 'Last update timestamp',
       },
     },
-    constraints: {
-      unique_service_type_name: { type: 'UNIQUE', fields: ['name'] },
+  },
+  MASTER_SERVICE_IMAGES: {
+    name: 'master_service_images',
+    table_type: 'services-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      service_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_services',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to master_services.id',
+      },
+      image_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Image name',
+      },
+      image_url: {
+        type: 'TEXT',
+        notNull: true,
+        description: 'URL to service image',
+      },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
     },
   },
   SUPPLIER_SERVICES: {
@@ -1639,15 +1715,15 @@ export const TABLE_MASTER = {
         references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
         description: 'Reference to suppliers.id',
       },
-      service_type_id: {
+      service_id: {
         type: 'VARCHAR(36)',
         notNull: true,
         references: {
-          table: 'master_service_types',
+          table: 'master_services',
           field: 'id',
           onDelete: 'RESTRICT',
         },
-        description: 'Reference to master_service_types.id',
+        description: 'Reference to master_services.id',
       },
       description: {
         type: 'TEXT',
@@ -1971,21 +2047,6 @@ export const TABLE_MASTER = {
         description: 'Last update timestamp',
       },
     },
-    constraints: {
-      unique_customer_address: {
-        type: 'UNIQUE',
-        fields: [
-          'customer_id',
-          'address_line1',
-          'address_line2',
-          'address_line3',
-          'city',
-          'state',
-          'postal_code',
-          'country',
-        ],
-      },
-    },
   },
   CUSTOMER_CONTACTS: {
     name: 'customer_contacts',
@@ -2129,6 +2190,879 @@ export const TABLE_MASTER = {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
         description: 'Last update timestamp',
+      },
+    },
+  },
+  SALES_QUOTATIONS: {
+    name: 'sales_quotations',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      to_order: {
+        type: 'BOOLEAN',
+        default: false,
+        description: 'Indicates if this quotation is ordered',
+      },
+      remark: { type: 'TEXT', description: 'Remark' },
+      customer_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'customers', field: 'id', onDelete: 'RESTRICT' },
+        description: 'Reference to customers.id',
+      },
+      customer_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'customer_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Reference to customer_addresses.id',
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_DETAILS: {
+    name: 'sales_shipping_details',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_quotation_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_quotations',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      customer_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'customer_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
+      length: { type: 'DECIMAL(10,2)' },
+      width: { type: 'DECIMAL(10,2)' },
+      height: { type: 'DECIMAL(10,2)' },
+      qty: { type: 'INT', default: 0 },
+      weight: { type: 'DECIMAL(10,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_PRICES: {
+    name: 'sales_shipping_prices',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
+      },
+      incoterms: { type: 'VARCHAR(50)' },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
+      details: { type: 'TEXT' },
+      selected: {
+        type: 'BOOLEAN',
+        default: false,
+        description: 'Selected option for shipping',
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_IMAGES: {
+    name: 'sales_shipping_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_PRODUCT_DETAILS: {
+    name: 'sales_product_details',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_quotation_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_quotations',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'RESTRICT' },
+      },
+      qty: { type: 'INT', default: 1 },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_PRODUCT_DETAIL_IMAGE_SELECTIONS: {
+    name: 'sales_product_detail_image_selections',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_product_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'product_images',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+    constraints: {
+      unique_sales_product_image_selection: {
+        type: 'UNIQUE',
+        fields: ['sales_product_detail_id', 'image_id'],
+      },
+    },
+  },
+  SALES_SERVICE_DETAILS: {
+    name: 'sales_service_details',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_quotation_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_quotations',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
+      },
+      service_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_services',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      qty: { type: 'INT', default: 1 },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SERVICE_DETAIL_IMAGE_SELECTIONS: {
+    name: 'sales_service_detail_image_selections',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_service_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'supplier_service_images',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+    constraints: {
+      unique_sales_service_image_selection: {
+        type: 'UNIQUE',
+        fields: ['sales_service_detail_id', 'image_id'],
+      },
+    },
+  },
+  AR_INVOICES: {
+    name: 'ar_invoices',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      remark: { type: 'TEXT' },
+      customer_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'customers', field: 'id', onDelete: 'RESTRICT' },
+      },
+      customer_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'customer_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_SHIPPING_DETAILS: {
+    name: 'ari_shipping_details',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ar_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ar_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      sales_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      received: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_SHIPPING_FILES: {
+    name: 'ari_shipping_files',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ari_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'ari_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_PRODUCT_DETAILS: {
+    name: 'ari_product_details',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ar_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ar_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      sales_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_product_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      received: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_PRODUCT_FILES: {
+    name: 'ari_product_files',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ari_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'ari_product_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_SERVICE_DETAILS: {
+    name: 'ari_service_details',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ar_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ar_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      sales_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_service_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      received: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  ARI_SERVICE_FILES: {
+    name: 'ari_service_files',
+    table_type: 'ar-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ari_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'ari_service_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_REQUESTS: {
+    name: 'purchase_requests',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      to_order: { type: 'BOOLEAN', default: false },
+      remark: { type: 'TEXT' },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'RESTRICT' },
+      },
+      supplier_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'supplier_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_SHIPPING_DETAILS: {
+    name: 'purchase_shipping_details',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_request_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_requests',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      supplier_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'supplier_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
+      length: { type: 'DECIMAL(10,2)' },
+      width: { type: 'DECIMAL(10,2)' },
+      height: { type: 'DECIMAL(10,2)' },
+      quantity: { type: 'INT', default: 0 },
+      weight: { type: 'DECIMAL(10,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_SHIPPING_IMAGES: {
+    name: 'purchase_shipping_images',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_PRODUCT_DETAILS: {
+    name: 'purchase_product_details',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_request_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_requests',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'RESTRICT' },
+      },
+      qty: { type: 'INT', default: 1 },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_PRODUCT_IMAGES: {
+    name: 'purchase_product_images',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_product_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_SERVICE_DETAILS: {
+    name: 'purchase_service_details',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_request_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_requests',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
+      },
+      service_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_services',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      qty: { type: 'INT', default: 1 },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
+      details: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_SERVICE_IMAGES: {
+    name: 'purchase_service_images',
+    table_type: 'purchase-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      purchase_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_service_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  AP_INVOICES: {
+    name: 'ap_invoices',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      remark: { type: 'TEXT' },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'RESTRICT' },
+      },
+      supplier_address_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'supplier_addresses',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_SHIPPING_DETAILS: {
+    name: 'api_shipping_details',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ap_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ap_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      purchase_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_shipping_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      paid: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_SHIPPING_FILES: {
+    name: 'api_shipping_files',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      api_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'api_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_PRODUCT_DETAILS: {
+    name: 'api_product_details',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ap_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ap_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      purchase_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_product_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      paid: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_PRODUCT_FILES: {
+    name: 'api_product_files',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      api_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'api_product_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_SERVICE_DETAILS: {
+    name: 'api_service_details',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      ap_invoice_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'ap_invoices', field: 'id', onDelete: 'CASCADE' },
+      },
+      purchase_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_service_details',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      paid: { type: 'BOOLEAN', default: false },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  API_SERVICE_FILES: {
+    name: 'api_service_files',
+    table_type: 'ap-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      api_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'api_service_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      file_name: { type: 'VARCHAR(255)', notNull: true },
+      file_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      file_type: { type: 'VARCHAR(100)' },
+      description: { type: 'TEXT' },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
       },
     },
   },

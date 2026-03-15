@@ -12,13 +12,18 @@ import * as master_customerTypesModel from '../../../models/trade_business/maste
 import * as master_customerImageTypesModel from '../../../models/trade_business/master/master_customerImageTypesModel.js';
 import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
 import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
-import * as master_serviceTypesModel from '../../../models/trade_business/master/master_serviceTypesModel.js';
+import * as master_servicesModel from '../../../models/trade_business/master/master_servicesModel.js';
+import * as master_serviceImagesModel from '../../../models/trade_business/master/master_serviceImagesModel.js';
 import * as master_currenciesModel from '../../../models/trade_business/master/master_currenciesModel.js';
 import * as master_sizeTypesModel from '../../../models/trade_business/master/master_sizeTypesModel.js';
 import * as master_colorTypesModel from '../../../models/trade_business/master/master_colorTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { default_master_data } from '../../../datas/master.js';
+import {
+  TABLE_MASTER,
+  generateCreateTableSQL,
+} from '../../../models/tables.js';
 
 /**
  * Get table mapping with models and data
@@ -82,9 +87,13 @@ const getTableDataMapping = () => {
       model: master_contactTypesModel.contactTypeModel,
       data: default_master_data.master_contact_types,
     },
-    master_service_types: {
-      model: master_serviceTypesModel.serviceTypeModel,
-      data: default_master_data.master_service_types,
+    master_services: {
+      model: master_servicesModel.masterServiceModel,
+      data: default_master_data.master_services,
+    },
+    master_service_images: {
+      model: master_serviceImagesModel.masterServiceImageModel,
+      data: default_master_data.master_service_images,
     },
     master_currencies: {
       model: master_currenciesModel.currencyModel,
@@ -199,6 +208,85 @@ const _clearMasterData = async (tableName) => {
   return results;
 };
 
+const _dropMasterTables = async (tableName) => {
+  const tableDataMap = getTableDataMapping();
+  const validTables = Object.keys(tableDataMap);
+
+  if (tableName && !tableDataMap[tableName]) {
+    throw new AppError(
+      `Unknown table: ${tableName}. Valid tables: ${validTables.join(', ')}`,
+      400,
+    );
+  }
+
+  const targetTables = tableName ? [tableName] : validTables;
+  const dropOrder = [...targetTables].reverse();
+  const queryRunner = tableDataMap[validTables[0]].model;
+  const results = {};
+
+  await queryRunner.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+  try {
+    for (const table of dropOrder) {
+      try {
+        await queryRunner.executeQuery(`DROP TABLE IF EXISTS ${table}`);
+        results[table] = { success: true, message: `${table} dropped` };
+      } catch (error) {
+        results[table] = { success: false, error: error.message };
+      }
+    }
+  } finally {
+    await queryRunner.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+  }
+
+  return results;
+};
+
+const _createMasterTables = async (tableName) => {
+  const tableDataMap = getTableDataMapping();
+  const validTables = Object.keys(tableDataMap);
+
+  if (tableName && !tableDataMap[tableName]) {
+    throw new AppError(
+      `Unknown table: ${tableName}. Valid tables: ${validTables.join(', ')}`,
+      400,
+    );
+  }
+
+  const tableDefinitionsByName = Object.values(TABLE_MASTER).reduce(
+    (acc, tableDef) => {
+      acc[tableDef.name] = tableDef;
+      return acc;
+    },
+    {},
+  );
+
+  const targetTables = tableName ? [tableName] : validTables;
+  const queryRunner = tableDataMap[validTables[0]].model;
+  const results = {};
+
+  for (const table of targetTables) {
+    const tableDefinition = tableDefinitionsByName[table];
+
+    if (!tableDefinition) {
+      results[table] = {
+        success: false,
+        error: `Table definition not found for ${table}`,
+      };
+      continue;
+    }
+
+    try {
+      const sql = generateCreateTableSQL(tableDefinition);
+      await queryRunner.executeQuery(sql);
+      results[table] = { success: true, message: `${table} created` };
+    } catch (error) {
+      results[table] = { success: false, error: error.message };
+    }
+  }
+
+  return results;
+};
+
 /**
  * Truncate all master data tables
  */
@@ -209,6 +297,78 @@ export const truncateAllTables = catchAsync(async (req, res, next) => {
     message: 'All master data tables have been truncated',
     results,
   };
+  next();
+});
+
+export const createAllMasterTables = catchAsync(async (req, res, next) => {
+  const results = await _createMasterTables();
+
+  res.prints = {
+    status: 'success',
+    message: 'All master tables have been created',
+    results,
+  };
+
+  next();
+});
+
+export const createMasterTableByName = catchAsync(async (req, res, next) => {
+  const { tableName } = req.params;
+  const results = await _createMasterTables(tableName);
+
+  res.prints = {
+    status: 'success',
+    message: `Master table ${tableName} has been created`,
+    results,
+  };
+
+  next();
+});
+
+export const dropAllMasterTables = catchAsync(async (req, res, next) => {
+  const { confirm } = req.body || {};
+
+  if (confirm !== 'DROP_ALL_MASTER_TABLES') {
+    return next(
+      new AppError(
+        'Confirmation string required to drop all master tables. Please provide { "confirm": "DROP_ALL_MASTER_TABLES" } in the request body.',
+        400,
+      ),
+    );
+  }
+
+  const results = await _dropMasterTables();
+
+  res.prints = {
+    status: 'success',
+    message: 'All master tables have been dropped',
+    results,
+  };
+
+  next();
+});
+
+export const dropMasterTableByName = catchAsync(async (req, res, next) => {
+  const { tableName } = req.params;
+  const { confirm } = req.body || {};
+
+  if (confirm !== 'DROP_MASTER_TABLE') {
+    return next(
+      new AppError(
+        'Confirmation string required to drop master table. Please provide { "confirm": "DROP_MASTER_TABLE" } in the request body.',
+        400,
+      ),
+    );
+  }
+
+  const results = await _dropMasterTables(tableName);
+
+  res.prints = {
+    status: 'success',
+    message: `Master table ${tableName} has been dropped`,
+    results,
+  };
+
   next();
 });
 

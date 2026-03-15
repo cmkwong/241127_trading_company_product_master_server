@@ -1045,86 +1045,111 @@ export const default_master_data = {
     },
   ],
 
-  master_service_types: [
+  master_services: [
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2001',
-      name: 'Laser Engraving',
+      service_name: 'Laser Engraving',
+
       description: 'Custom laser engraving for logos and text',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2002',
-      name: 'Logo Printing',
+      service_name: 'Logo Printing',
       description: 'Logo and artwork printing on products or packaging',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2003',
-      name: 'UV Printing',
+      service_name: 'UV Printing',
       description: 'UV print service for premium surface finishing',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2004',
-      name: 'Label / Sticker Printing',
+      service_name: 'Label / Sticker Printing',
       description: 'Custom label and sticker design/printing service',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2005',
-      name: 'Packaging Design',
+      service_name: 'Packaging Design',
       description: 'Structural and artwork design for packaging',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2006',
-      name: 'Packaging Production',
+      service_name: 'Packaging Production',
       description: 'Production of color boxes, cartons, and related packaging',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2007',
-      name: 'Color Box / Carton Production',
+      service_name: 'Color Box / Carton Production',
       description: 'Production service for color boxes and cartons',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2008',
-      name: 'PVC Box / Blister Packaging',
+      service_name: 'PVC Box / Blister Packaging',
       description: 'PVC box and blister packaging service',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200d',
-      name: 'Bubble Bag / Polybag Packaging',
+      service_name: 'Bubble Bag / Polybag Packaging',
       description: 'Bubble bag and polybag packaging service',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2009',
-      name: 'Product Assembly',
+      service_name: 'Product Assembly',
       description: 'Assembly service for product parts and finished goods',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200e',
-      name: 'OEM / Custom Manufacturing',
+      service_name: 'OEM / Custom Manufacturing',
       description: 'OEM/ODM custom production service',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200a',
-      name: 'Material Supply',
+      service_name: 'Material Supply',
       description: 'Supply of raw materials (e.g. PBAT, PLA, cat litter)',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200b',
-      name: 'Metal Parts Fabrication',
+      service_name: 'Metal Parts Fabrication',
       description: 'Fabrication service for metal parts and accessories',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200f',
-      name: 'Export Documentation',
+      service_name: 'Export Documentation',
       description: 'Export compliance support such as MSDS and certificates',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200c',
-      name: 'Sample and Prototype Service',
+      service_name: 'Sample and Prototype Service',
       description: 'Sampling, prototyping, and trial production service',
     },
     {
       id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2010',
-      name: 'Freight / Shipping Coordination',
+      service_name: 'Freight / Shipping Coordination',
       description: 'Freight booking and shipping coordination service',
+    },
+  ],
+
+  master_service_images: [
+    {
+      id: '7b2ce8d1-66f8-4a18-9f11-cc7f9f1a3001',
+      service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2001',
+      image_name: 'laser-engraving-service.jpg',
+      image_url: '/public/master/services/laser-engraving-service.jpg',
+      display_order: 1,
+    },
+    {
+      id: '7b2ce8d1-66f8-4a18-9f11-cc7f9f1a3002',
+      service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2005',
+      image_name: 'packaging-design-service.jpg',
+      image_url: '/public/master/services/packaging-design-service.jpg',
+      display_order: 1,
+    },
+    {
+      id: '7b2ce8d1-66f8-4a18-9f11-cc7f9f1a3003',
+      service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2010',
+      image_name: 'freight-shipping-coordination.jpg',
+      image_url: '/public/master/services/freight-shipping-coordination.jpg',
+      display_order: 1,
     },
   ],
 };

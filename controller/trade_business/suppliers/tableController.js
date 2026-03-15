@@ -140,6 +140,21 @@ export const createServiceTypesTable = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Create master service images table
+ * @route POST /api/suppliers/table/create/master-service-images
+ */
+export const createMasterServiceImagesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createMasterServiceImagesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
  * Create supplier services table
  * @route POST /api/suppliers/table/create/services
  */

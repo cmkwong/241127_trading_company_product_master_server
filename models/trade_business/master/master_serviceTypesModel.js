@@ -6,11 +6,11 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 // Create DataModelUtils instance for service types
 export const serviceTypeModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['MASTER_SERVICE_TYPES'].name,
-  tableFields: TABLE_MASTER['MASTER_SERVICE_TYPES'].fields,
-  entityName: 'service type',
-  requiredFields: ['name'],
+  tableName: TABLE_MASTER['MASTER_SERVICES'].name,
+  tableFields: TABLE_MASTER['MASTER_SERVICES'].fields,
+  entityName: 'master service',
+  requiredFields: ['service_name'],
   validations: {
-    name: { required: true },
+    service_name: { required: true },
   },
 });

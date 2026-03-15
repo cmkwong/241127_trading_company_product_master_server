@@ -44,4 +44,28 @@ router.post(
   endController,
 );
 
+router.post(
+  '/create/all',
+  masterDataController.createAllMasterTables,
+  endController,
+);
+
+router.post(
+  '/create/:tableName',
+  masterDataController.createMasterTableByName,
+  endController,
+);
+
+router.delete(
+  '/drop/all',
+  masterDataController.dropAllMasterTables,
+  endController,
+);
+
+router.delete(
+  '/drop/:tableName',
+  masterDataController.dropMasterTableByName,
+  endController,
+);
+
 export default router;

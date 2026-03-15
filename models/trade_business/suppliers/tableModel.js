@@ -11,7 +11,8 @@ const SUPPLIER_TABLE_KEYS = [
   'SUPPLIER_CONTACTS',
   'MASTER_SUPPLIER_LINK_TYPES',
   'SUPPLIER_LINKS',
-  'MASTER_SERVICE_TYPES',
+  'MASTER_SERVICES',
+  'MASTER_SERVICE_IMAGES',
   'SUPPLIER_SERVICES',
   'SUPPLIER_SERVICE_IMAGES',
 ];
@@ -112,7 +113,11 @@ export const createSupplierLinksTable = async () => {
 };
 
 export const createServiceTypesTable = async () => {
-  return createTable('MASTER_SERVICE_TYPES');
+  return createTable('MASTER_SERVICES');
+};
+
+export const createMasterServiceImagesTable = async () => {
+  return createTable('MASTER_SERVICE_IMAGES');
 };
 
 export const createSupplierServicesTable = async () => {

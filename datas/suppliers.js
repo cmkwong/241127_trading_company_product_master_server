@@ -63,6 +63,7 @@ export const defaultSuppliers = {
         {
           id: 'a8bc6d11-65ad-4fc4-b8f9-28dcbcbf0001',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220001',
+          link_type_id: '6f1b8a30-11d2-4f8a-9c70-19be7a650002',
           link: 'https://www.alibaba.com/store/novapack',
           remark: 'Official store front',
           created_at: '2026-02-25T09:00:00.000Z',
@@ -73,7 +74,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610001',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220001',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2005',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2005',
           description: 'Packaging artwork adaptation and dieline setup',
           created_at: '2026-02-25T09:00:00.000Z',
           updated_at: '2026-02-25T09:00:00.000Z',
@@ -96,7 +97,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610002',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220001',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2007',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2007',
           description: 'Mass production of color boxes and master cartons',
           created_at: '2026-02-25T09:00:00.000Z',
           updated_at: '2026-02-25T09:00:00.000Z',
@@ -157,6 +158,7 @@ export const defaultSuppliers = {
         {
           id: 'a8bc6d11-65ad-4fc4-b8f9-28dcbcbf0002',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220002',
+          link_type_id: '6f1b8a30-11d2-4f8a-9c70-19be7a650002',
           link: 'https://www.alibaba.com/store/petgoodsmfg',
           remark: 'Factory profile and audit report',
           created_at: '2026-02-25T09:05:00.000Z',
@@ -167,7 +169,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610003',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220002',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2001',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2001',
           description: 'Laser logo engraving for stainless accessories',
           created_at: '2026-02-25T09:05:00.000Z',
           updated_at: '2026-02-25T09:05:00.000Z',
@@ -190,7 +192,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610004',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220002',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2009',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2009',
           description: 'Sub-assembly and final packing for pet products',
           created_at: '2026-02-25T09:05:00.000Z',
           updated_at: '2026-02-25T09:05:00.000Z',
@@ -237,6 +239,7 @@ export const defaultSuppliers = {
         {
           id: 'a8bc6d11-65ad-4fc4-b8f9-28dcbcbf0003',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220003',
+          link_type_id: '6f1b8a30-11d2-4f8a-9c70-19be7a650001',
           link: 'https://www.nbcert.com/msds-service',
           remark: 'MSDS and compliance service page',
           created_at: '2026-02-25T09:10:00.000Z',
@@ -247,7 +250,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610005',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220003',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200f',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa200f',
           description: 'MSDS, RoHS, and export documentation support',
           created_at: '2026-02-25T09:10:00.000Z',
           updated_at: '2026-02-25T09:10:00.000Z',
@@ -270,7 +273,7 @@ export const defaultSuppliers = {
         {
           id: 'd6f28d9e-f9a7-4f84-8cf7-b7f6b9610006',
           supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220003',
-          service_type_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2010',
+          service_id: '5d3ec7a2-6eb6-40d8-9f7f-c3b8c0aa2010',
           description: 'Freight booking coordination for export shipments',
           created_at: '2026-02-25T09:10:00.000Z',
           updated_at: '2026-02-25T09:10:00.000Z',

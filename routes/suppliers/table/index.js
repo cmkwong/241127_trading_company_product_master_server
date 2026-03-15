@@ -61,6 +61,11 @@ router.post(
   endController,
 );
 router.post(
+  '/create/master-service-images',
+  tableController.createMasterServiceImagesTable,
+  endController,
+);
+router.post(
   '/create/services',
   tableController.createSupplierServicesTable,
   endController,
