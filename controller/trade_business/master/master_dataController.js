@@ -1,114 +1,16 @@
-import * as master_packingTypesModel from '../../../models/trade_business/master/master_packingTypesModel.js';
-import * as master_packingReliabilityTypesModel from '../../../models/trade_business/master/master_packingReliabilityTypesModel.js';
-import * as master_productImagesModel from '../../../models/trade_business/master/master_productImagesTypeModel.js';
-import * as master_productNameTypesModel from '../../../models/trade_business/master/master_productNameTypesModel.js';
-import * as master_certificateTypesModel from '../../../models/trade_business/master/master_certificateTypesModel.js';
-import * as master_categoriesModel from '../../../models/trade_business/master/master_categoriesModel.js';
-import * as master_productKeywordsModel from '../../../models/trade_business/master/master_productKeywordsModel.js';
-import * as master_supplierTypesModel from '../../../models/trade_business/master/master_supplierTypesModel.js';
-import * as master_supplierLinkTypesModel from '../../../models/trade_business/master/master_supplierLinkTypesModel.js';
-import * as master_customerNameTypesModel from '../../../models/trade_business/master/master_customerNameTypesModel.js';
-import * as master_customerTypesModel from '../../../models/trade_business/master/master_customerTypesModel.js';
-import * as master_customerImageTypesModel from '../../../models/trade_business/master/master_customerImageTypesModel.js';
-import * as master_addressTypesModel from '../../../models/trade_business/master/master_addressTypesModel.js';
-import * as master_contactTypesModel from '../../../models/trade_business/master/master_contactTypesModel.js';
-import * as master_servicesModel from '../../../models/trade_business/master/master_servicesModel.js';
-import * as master_serviceImagesModel from '../../../models/trade_business/master/master_serviceImagesModel.js';
-import * as master_currenciesModel from '../../../models/trade_business/master/master_currenciesModel.js';
-import * as master_sizeTypesModel from '../../../models/trade_business/master/master_sizeTypesModel.js';
-import * as master_colorTypesModel from '../../../models/trade_business/master/master_colorTypesModel.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
-import { default_master_data } from '../../../datas/master.js';
 import {
   TABLE_MASTER,
   generateCreateTableSQL,
 } from '../../../models/tables.js';
+import { getMasterDefaultMappings } from '../../../models/mappings/defaultDataMappings.js';
 
 /**
  * Get table mapping with models and data
  * @returns {Object} Map of table names to their models and data
  */
-const getTableDataMapping = () => {
-  return {
-    master_product_image_types: {
-      model: master_productImagesModel.productImagesTypeModel,
-      data: default_master_data.master_product_image_types,
-    },
-    master_product_name_types: {
-      model: master_productNameTypesModel.productNameTypeModel,
-      data: default_master_data.master_product_name_types,
-    },
-    master_categories: {
-      model: master_categoriesModel.categoryMasterModel,
-      data: default_master_data.master_categories,
-    },
-    master_packing_types: {
-      model: master_packingTypesModel.packingTypeModel,
-      data: default_master_data.master_packing_types,
-    },
-    master_packing_reliability_types: {
-      model: master_packingReliabilityTypesModel.packingReliabilityTypeModel,
-      data: default_master_data.master_packing_reliability_types,
-    },
-    master_certificate_types: {
-      model: master_certificateTypesModel.certificateTypeModel,
-      data: default_master_data.master_certificate_types,
-    },
-    master_keywords: {
-      model: master_productKeywordsModel.masterKeywordModel,
-      data: default_master_data.master_keywords,
-    },
-    master_supplier_types: {
-      model: master_supplierTypesModel.supplierTypeModel,
-      data: default_master_data.master_supplier_types,
-    },
-    master_supplier_link_types: {
-      model: master_supplierLinkTypesModel.supplierLinkTypeModel,
-      data: default_master_data.master_supplier_link_types,
-    },
-    master_customer_name_types: {
-      model: master_customerNameTypesModel.customerNameTypeModel,
-      data: default_master_data.master_customer_name_types,
-    },
-    master_customer_types: {
-      model: master_customerTypesModel.customerTypeMasterModel,
-      data: default_master_data.master_customer_types,
-    },
-    master_customer_image_types: {
-      model: master_customerImageTypesModel.customerImageTypeModel,
-      data: default_master_data.master_customer_image_types,
-    },
-    master_address_types: {
-      model: master_addressTypesModel.addressTypeModel,
-      data: default_master_data.master_address_types,
-    },
-    master_contact_types: {
-      model: master_contactTypesModel.contactTypeModel,
-      data: default_master_data.master_contact_types,
-    },
-    master_services: {
-      model: master_servicesModel.masterServiceModel,
-      data: default_master_data.master_services,
-    },
-    master_service_images: {
-      model: master_serviceImagesModel.masterServiceImageModel,
-      data: default_master_data.master_service_images,
-    },
-    master_currencies: {
-      model: master_currenciesModel.currencyModel,
-      data: default_master_data.master_currencies,
-    },
-    master_size_types: {
-      model: master_sizeTypesModel.sizeTypeModel,
-      data: default_master_data.master_size_types,
-    },
-    master_color_types: {
-      model: master_colorTypesModel.colorTypeModel,
-      data: default_master_data.master_color_types,
-    },
-  };
-};
+const getTableDataMapping = getMasterDefaultMappings;
 
 const _insertAllDefaults = async (tableName) => {
   const results = {};
