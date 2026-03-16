@@ -122,6 +122,37 @@ const dropTradeBusinessTables = async (scope = 'all') => {
   };
 };
 
+const truncateTradeBusinessTables = async (scope = 'all') => {
+  const tableDefinitions = getTradeBusinessTableDefinitions(scope).reverse();
+  const results = {};
+
+  await tradeBusinessDbc.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+
+  try {
+    for (const tableDefinition of tableDefinitions) {
+      const tableName = tableDefinition.name;
+
+      try {
+        await tradeBusinessDbc.executeQuery(`TRUNCATE TABLE ${tableName}`);
+        results[tableName] = {
+          success: true,
+          message: `${tableName} truncated`,
+        };
+      } catch (error) {
+        results[tableName] = { success: false, error: error.message };
+      }
+    }
+  } finally {
+    await tradeBusinessDbc.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+  }
+
+  return {
+    scope: normalizeScope(scope),
+    totalTables: tableDefinitions.length,
+    results,
+  };
+};
+
 const getDropConfirmationByScope = (scope) => {
   const normalizedScope = normalizeScope(scope);
 
@@ -134,6 +165,20 @@ const getDropConfirmationByScope = (scope) => {
   }
 
   return 'DROP_ALL_TRADE_BUSINESS_TABLES';
+};
+
+const getTruncateConfirmationByScope = (scope) => {
+  const normalizedScope = normalizeScope(scope);
+
+  if (normalizedScope === 'master') {
+    return 'TRUNCATE_ALL_TRADE_BUSINESS_MASTER_TABLES';
+  }
+
+  if (normalizedScope === 'data') {
+    return 'TRUNCATE_ALL_TRADE_BUSINESS_DATA_TABLES';
+  }
+
+  return 'TRUNCATE_ALL_TRADE_BUSINESS_TABLES';
 };
 
 const insertMasterDefaults = async () => {
@@ -229,6 +274,32 @@ export const dropAllTradeBusinessTables = catchAsync(async (req, res, next) => {
 
   next();
 });
+
+export const truncateAllTradeBusinessTables = catchAsync(
+  async (req, res, next) => {
+    const scope = req.query.scope || 'all';
+    const expectedConfirmation = getTruncateConfirmationByScope(scope);
+    const { confirm } = req.body || {};
+
+    if (confirm !== expectedConfirmation) {
+      return next(
+        new AppError(
+          `Confirmation string required. Please provide { "confirm": "${expectedConfirmation}" } in the request body.`,
+          400,
+        ),
+      );
+    }
+
+    const summary = await truncateTradeBusinessTables(scope);
+
+    res.prints = {
+      message: `Trade business ${summary.scope} tables truncate completed`,
+      data: summary,
+    };
+
+    next();
+  },
+);
 
 export const insertAllTradeBusinessDefaults = catchAsync(
   async (req, res, next) => {

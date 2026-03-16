@@ -376,7 +376,7 @@ const TABLE_MASTER_RAW = {
       },
       product_varient_size_id: {
         type: 'VARCHAR(36)',
-        notNull: true,
+        notNull: false,
         references: {
           table: 'product_varient_sizes',
           field: 'id',
@@ -386,7 +386,7 @@ const TABLE_MASTER_RAW = {
       },
       product_varient_color_id: {
         type: 'VARCHAR(36)',
-        notNull: true,
+        notNull: false,
         references: {
           table: 'product_varient_colors',
           field: 'id',
@@ -394,20 +394,30 @@ const TABLE_MASTER_RAW = {
         },
         description: 'Reference to product_varient_colors.id',
       },
+      product_varient_capacity_id: {
+        type: 'VARCHAR(36)',
+        notNull: false,
+        references: {
+          table: 'product_varient_capacities',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to product_varient_capacities.id',
+      },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_currencies.id for the cost currency',
+      },
       unit_cost: {
         type: 'DECIMAL(10,2)',
         notNull: true,
         description: 'Unit cost for the size-color variant combination',
-      },
-      currency: {
-        type: 'VARCHAR(10)',
-        notNull: true,
-        references: {
-          table: 'master_currencies',
-          field: 'code',
-          onDelete: 'RESTRICT',
-        },
-        description: 'Currency code for unit cost',
       },
       min_order_qty: {
         type: 'INT',
@@ -436,6 +446,7 @@ const TABLE_MASTER_RAW = {
           'product_id',
           'product_varient_size_id',
           'product_varient_color_id',
+          'product_varient_capacity_id',
         ],
       },
     },

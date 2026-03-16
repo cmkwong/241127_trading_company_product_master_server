@@ -38,4 +38,10 @@ router.delete(
   endController,
 );
 
+router.delete(
+  '/trade-business/truncate/all',
+  tradeBusinessController.truncateAllTradeBusinessTables,
+  endController,
+);
+
 export default router;
