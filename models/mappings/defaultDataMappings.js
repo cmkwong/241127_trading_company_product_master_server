@@ -17,6 +17,7 @@ import * as master_servicesModel from '../trade_business/master/master_servicesM
 import * as master_serviceImagesModel from '../trade_business/master/master_serviceImagesModel.js';
 import * as master_currenciesModel from '../trade_business/master/master_currenciesModel.js';
 import * as master_sizeTypesModel from '../trade_business/master/master_sizeTypesModel.js';
+import * as master_capacityTypesModel from '../trade_business/master/master_capacityTypesModel.js';
 import * as master_colorTypesModel from '../trade_business/master/master_colorTypesModel.js';
 
 import { defaultProducts } from '../../datas/products.js';
@@ -108,6 +109,10 @@ export const getMasterDefaultMappings = () => {
     master_size_types: {
       model: master_sizeTypesModel.sizeTypeModel,
       data: default_master_data.master_size_types,
+    },
+    master_capacity_types: {
+      model: master_capacityTypesModel.capacityTypeModel,
+      data: default_master_data.master_capacity_types,
     },
     master_color_types: {
       model: master_colorTypesModel.colorTypeModel,

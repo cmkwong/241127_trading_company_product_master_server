@@ -84,6 +84,14 @@ export const createSizeTypesTable = async () => {
 };
 
 /**
+ * Creates the master_capacity_types table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createCapacityTypesTable = async () => {
+  return createTable('MASTER_CAPACITY_TYPES');
+};
+
+/**
  * Creates the master_color_types table
  * @returns {Promise} Promise that resolves when the table is created
  */
@@ -97,6 +105,14 @@ export const createColorTypesTable = async () => {
  */
 export const createProductVarientSizesTable = async () => {
   return createTable('PRODUCT_VARIENT_SIZES');
+};
+
+/**
+ * Creates the product_varient_capacities table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductVarientCapacitiesTable = async () => {
+  return createTable('PRODUCT_VARIENT_CAPACITIES');
 };
 
 /**

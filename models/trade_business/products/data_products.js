@@ -15,6 +15,7 @@ import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
 import * as ProductKeywords from './data_product_keywords.js';
 import * as ProductVarientSizes from './data_product_varient_sizes.js';
+import * as ProductVarientCapacities from './data_product_varient_capacities.js';
 import * as ProductVarientColors from './data_product_varient_colors.js';
 import * as ProductCosts from './data_product_costs.js';
 
@@ -90,6 +91,11 @@ export const productModel = new DataModelUtils({
       tableName: TABLE_MASTER['PRODUCT_VARIENT_SIZES'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductVarientSizes.productVarientSizeModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_VARIENT_CAPACITIES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductVarientCapacities.productVarientCapacityModel,
     },
     {
       tableName: TABLE_MASTER['PRODUCT_VARIENT_COLORS'].name,

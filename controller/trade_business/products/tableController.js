@@ -56,6 +56,19 @@ export const createSizeTypesTable = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Create capacity types table
+ * @route POST /api/products/table/create/capacity-types
+ */
+export const createCapacityTypesTable = catchAsync(async (req, res, next) => {
+  const result = await TableModel.createCapacityTypesTable();
+
+  res.status(201).json({
+    status: 'success',
+    message: result.message,
+  });
+});
+
+/**
  * Create color types table
  * @route POST /api/products/table/create/color-types
  */
@@ -75,6 +88,21 @@ export const createColorTypesTable = catchAsync(async (req, res, next) => {
 export const createProductVarientSizesTable = catchAsync(
   async (req, res, next) => {
     const result = await TableModel.createProductVarientSizesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
+ * Create product varient capacities table
+ * @route POST /api/products/table/create/varient-capacities
+ */
+export const createProductVarientCapacitiesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createProductVarientCapacitiesTable();
 
     res.status(201).json({
       status: 'success',

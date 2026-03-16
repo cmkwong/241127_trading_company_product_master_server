@@ -31,6 +31,11 @@ router.post(
   endController,
 );
 router.post(
+  '/create/capacity-types',
+  tableController.createCapacityTypesTable,
+  endController,
+);
+router.post(
   '/create/color-types',
   tableController.createColorTypesTable,
   endController,
@@ -38,6 +43,11 @@ router.post(
 router.post(
   '/create/varient-sizes',
   tableController.createProductVarientSizesTable,
+  endController,
+);
+router.post(
+  '/create/varient-capacities',
+  tableController.createProductVarientCapacitiesTable,
   endController,
 );
 router.post(

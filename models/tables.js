@@ -1,5 +1,5 @@
 // Centralized table and field definitions
-export const TABLE_MASTER = {
+const TABLE_MASTER_RAW = {
   // Main tables
   PRODUCTS: {
     name: 'products',
@@ -138,6 +138,90 @@ export const TABLE_MASTER = {
           onDelete: 'RESTRICT',
         },
         description: 'Reference to master_size_types.id',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  MASTER_CAPACITY_TYPES: {
+    name: 'master_capacity_types',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'id for master capacity types',
+      },
+      value: {
+        type: 'FLOAT',
+        notNull: true,
+        description: 'Capacity type value (e.g., 16)',
+      },
+      unit: {
+        type: 'VARCHAR(20)',
+        notNull: true,
+        description: 'Unit for capacity (e.g., g, ml, oz)',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Capacity type description',
+      },
+      default_display_cb: {
+        type: 'BOOLEAN',
+        default: false,
+        description:
+          'Indicates if this is the default capacity type in checkboxes',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_capacity_type_value_unit: {
+        type: 'UNIQUE',
+        fields: ['value', 'unit'],
+      },
+    },
+  },
+  PRODUCT_VARIENT_CAPACITIES: {
+    name: 'product_varient_capacities',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to products.id',
+      },
+      capacity_type_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_capacity_types',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_capacity_types.id',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -3067,6 +3151,28 @@ export const TABLE_MASTER = {
     },
   },
 };
+
+// Keep TABLE_MASTER organized as: master tables first, then data tables.
+// Relative order inside each group follows the original declaration order.
+const getTableOrderRank = (tableType = '') => {
+  if (tableType.endsWith('-master')) return 0;
+  if (tableType.endsWith('-data')) return 1;
+  return 2;
+};
+
+export const TABLE_MASTER = Object.fromEntries(
+  Object.entries(TABLE_MASTER_RAW)
+    .map(([key, value], index) => ({ key, value, index }))
+    .sort((a, b) => {
+      const rankDiff =
+        getTableOrderRank(a.value.table_type) -
+        getTableOrderRank(b.value.table_type);
+
+      if (rankDiff !== 0) return rankDiff;
+      return a.index - b.index;
+    })
+    .map(({ key, value }) => [key, value]),
+);
 
 /**
  * Helper function to generate SQL for creating a table based on its definition

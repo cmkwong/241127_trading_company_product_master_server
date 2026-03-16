@@ -188,6 +188,18 @@ export const defaultProducts = {
           size_type_id: '2d75fb2f-dcae-4a12-8eb4-1caaf9ac3103',
         },
       ],
+      product_varient_capacities: [
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11501',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          capacity_type_id: '5a41d289-6b13-4b5d-8e8a-63d5d3f90001',
+        },
+        {
+          id: '13649f12-f9b6-4abf-8a8c-b63fe2f11502',
+          product_id: '13649f12-f9b6-4abf-8a8c-b63fe2f11091',
+          capacity_type_id: '5a41d289-6b13-4b5d-8e8a-63d5d3f90002',
+        },
+      ],
       product_varient_colors: [
         {
           id: '13649f12-f9b6-4abf-8a8c-b63fe2f11201',
