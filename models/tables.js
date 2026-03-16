@@ -53,7 +53,7 @@ const TABLE_MASTER_RAW = {
         description: 'Currency code (e.g., USD, EUR)',
       },
       name: {
-        type: 'VARCHAR(100)',
+        type: 'VARCHAR(255)',
         notNull: true,
         description: 'Currency name',
       },

@@ -6,6 +6,10 @@ import {
   getMasterDefaultMappings,
   getDataDefaultMappings,
 } from '../../models/mappings/defaultDataMappings.js';
+import {
+  getSchemaDiff,
+  syncSchemaWithTableMaster,
+} from '../../models/schemaSync.js';
 
 const TRADE_BUSINESS_TABLE_PREFIXES = [
   'products-',
@@ -239,3 +243,45 @@ export const insertAllTradeBusinessDefaults = catchAsync(
     next();
   },
 );
+
+export const checkTradeBusinessSchema = catchAsync(async (req, res, next) => {
+  const scope = req.query.scope || 'all';
+  const diff = await getSchemaDiff(scope);
+
+  res.prints = {
+    message: `Schema diff generated for scope ${diff.scope}`,
+    data: diff,
+  };
+
+  next();
+});
+
+export const syncTradeBusinessSchema = catchAsync(async (req, res, next) => {
+  const scope = req.query.scope || req.body?.scope || 'all';
+  const allowDrop = Boolean(req.body?.allowDrop);
+  const dryRun = Boolean(req.body?.dryRun);
+
+  if (allowDrop && req.body?.confirm !== 'SYNC_SCHEMA_WITH_DROPS') {
+    return next(
+      new AppError(
+        'Confirmation string required for destructive sync. Please provide { "confirm": "SYNC_SCHEMA_WITH_DROPS" } when allowDrop=true.',
+        400,
+      ),
+    );
+  }
+
+  const result = await syncSchemaWithTableMaster({
+    scope,
+    allowDrop,
+    dryRun,
+  });
+
+  res.prints = {
+    message: result.dryRun
+      ? 'Schema dry-run completed'
+      : 'Schema sync completed',
+    data: result,
+  };
+
+  next();
+});

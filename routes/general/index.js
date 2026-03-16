@@ -20,6 +20,18 @@ router.post(
   endController,
 );
 
+router.get(
+  '/trade-business/schema/check',
+  tradeBusinessController.checkTradeBusinessSchema,
+  endController,
+);
+
+router.post(
+  '/trade-business/schema/sync',
+  tradeBusinessController.syncTradeBusinessSchema,
+  endController,
+);
+
 router.delete(
   '/trade-business/drop/all',
   tradeBusinessController.dropAllTradeBusinessTables,
