@@ -424,6 +424,11 @@ const TABLE_MASTER_RAW = {
         default: 1,
         description: 'Minimum order quantity for this variant combination',
       },
+      stock_qty: {
+        type: 'INT',
+        default: 0,
+        description: 'Current stock quantity for this variant combination',
+      },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about pricing',

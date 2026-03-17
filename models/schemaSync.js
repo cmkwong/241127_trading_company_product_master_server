@@ -219,6 +219,211 @@ const getCurrentDbSchema = async () => {
   return tables;
 };
 
+const getTargetTableUniqueConstraints = (tableDefinition) => {
+  const constraints = tableDefinition?.constraints || {};
+  const uniqueConstraints = new Map();
+
+  for (const [constraintName, constraintDef] of Object.entries(constraints)) {
+    if (String(constraintDef?.type || '').toUpperCase() !== 'UNIQUE') {
+      continue;
+    }
+
+    uniqueConstraints.set(constraintName, {
+      type: 'UNIQUE',
+      fields: Array.isArray(constraintDef.fields) ? constraintDef.fields : [],
+    });
+  }
+
+  return uniqueConstraints;
+};
+
+const getCurrentDbUniqueConstraints = async () => {
+  const rows = await tradeBusinessDbc.executeQuery(`
+    SELECT
+      TABLE_NAME,
+      INDEX_NAME,
+      NON_UNIQUE,
+      SEQ_IN_INDEX,
+      COLUMN_NAME
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX
+  `);
+
+  const constraintsByTable = new Map();
+
+  for (const row of rows) {
+    if (Number(row.NON_UNIQUE) !== 0) {
+      continue;
+    }
+
+    if (row.INDEX_NAME === 'PRIMARY') {
+      continue;
+    }
+
+    if (!constraintsByTable.has(row.TABLE_NAME)) {
+      constraintsByTable.set(row.TABLE_NAME, new Map());
+    }
+
+    const tableConstraints = constraintsByTable.get(row.TABLE_NAME);
+
+    if (!tableConstraints.has(row.INDEX_NAME)) {
+      tableConstraints.set(row.INDEX_NAME, {
+        type: 'UNIQUE',
+        fields: [],
+      });
+    }
+
+    tableConstraints.get(row.INDEX_NAME).fields.push(row.COLUMN_NAME);
+  }
+
+  return constraintsByTable;
+};
+
+const isSameConstraint = (targetConstraint, dbConstraint) => {
+  if (!targetConstraint || !dbConstraint) return false;
+  if (targetConstraint.type !== dbConstraint.type) return false;
+
+  const targetFields = targetConstraint.fields || [];
+  const dbFields = dbConstraint.fields || [];
+
+  if (targetFields.length !== dbFields.length) return false;
+
+  return targetFields.every((field, index) => field === dbFields[index]);
+};
+
+const getAddUniqueConstraintSql = (tableName, constraintName, fields) => {
+  const fieldSql = fields.map((field) => `\`${field}\``).join(', ');
+  return `ALTER TABLE \`${tableName}\` ADD CONSTRAINT \`${constraintName}\` UNIQUE (${fieldSql})`;
+};
+
+const getDropUniqueConstraintSql = (tableName, constraintName) =>
+  `ALTER TABLE \`${tableName}\` DROP INDEX \`${constraintName}\``;
+
+const getTableIndexes = async (tableName) => {
+  const rows = await tradeBusinessDbc.executeQuery(
+    `
+    SELECT INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = ?
+    ORDER BY INDEX_NAME, SEQ_IN_INDEX
+  `,
+    [tableName],
+  );
+
+  const indexes = new Map();
+
+  for (const row of rows) {
+    if (!indexes.has(row.INDEX_NAME)) {
+      indexes.set(row.INDEX_NAME, { fields: [] });
+    }
+    indexes.get(row.INDEX_NAME).fields.push(row.COLUMN_NAME);
+  }
+
+  return indexes;
+};
+
+const getTableForeignKeys = async (tableName) => {
+  const rows = await tradeBusinessDbc.executeQuery(
+    `
+    SELECT CONSTRAINT_NAME, ORDINAL_POSITION, COLUMN_NAME
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = ?
+      AND REFERENCED_TABLE_NAME IS NOT NULL
+    ORDER BY CONSTRAINT_NAME, ORDINAL_POSITION
+  `,
+    [tableName],
+  );
+
+  const foreignKeys = new Map();
+
+  for (const row of rows) {
+    if (!foreignKeys.has(row.CONSTRAINT_NAME)) {
+      foreignKeys.set(row.CONSTRAINT_NAME, { fields: [] });
+    }
+    foreignKeys.get(row.CONSTRAINT_NAME).fields.push(row.COLUMN_NAME);
+  }
+
+  return foreignKeys;
+};
+
+const indexSupportsForeignKey = (indexFields, fkFields) => {
+  if (!Array.isArray(indexFields) || !Array.isArray(fkFields)) return false;
+  if (fkFields.length === 0 || indexFields.length < fkFields.length) {
+    return false;
+  }
+
+  return fkFields.every((field, idx) => indexFields[idx] === field);
+};
+
+const hasSupportingIndex = (indexes, fkFields) => {
+  for (const indexDef of indexes.values()) {
+    if (indexSupportsForeignKey(indexDef.fields, fkFields)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const createSafeIndexName = (tableName, fields, existingIndexes) => {
+  const baseName = `idx_${tableName}_${fields.join('_')}`.slice(0, 58);
+  let candidate = baseName;
+  let suffix = 1;
+
+  while (existingIndexes.has(candidate)) {
+    candidate = `${baseName.slice(0, Math.max(1, 58 - String(suffix).length - 1))}_${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+};
+
+const ensureForeignKeyIndexesBeforeDroppingIndex = async (
+  tableName,
+  indexName,
+) => {
+  const indexes = await getTableIndexes(tableName);
+  const indexToDrop = indexes.get(indexName);
+
+  if (!indexToDrop) {
+    return;
+  }
+
+  const foreignKeys = await getTableForeignKeys(tableName);
+
+  // Snapshot indexes that will remain after dropping `indexName`.
+  const remainingIndexes = new Map(indexes);
+  remainingIndexes.delete(indexName);
+
+  for (const fkDef of foreignKeys.values()) {
+    const fkFields = fkDef.fields;
+
+    if (hasSupportingIndex(remainingIndexes, fkFields)) {
+      continue;
+    }
+
+    // If the dropped index was the only support, create a replacement index.
+    if (!indexSupportsForeignKey(indexToDrop.fields, fkFields)) {
+      continue;
+    }
+
+    const replacementIndexName = createSafeIndexName(
+      tableName,
+      fkFields,
+      remainingIndexes,
+    );
+    const fieldSql = fkFields.map((field) => `\`${field}\``).join(', ');
+
+    await tradeBusinessDbc.executeQuery(
+      `ALTER TABLE \`${tableName}\` ADD INDEX \`${replacementIndexName}\` (${fieldSql})`,
+    );
+
+    remainingIndexes.set(replacementIndexName, { fields: [...fkFields] });
+  }
+};
+
 export const getSchemaDiff = async (scope = 'all') => {
   const targetEntries = getTargetTableEntries(scope);
   const targetByName = new Map(
@@ -226,6 +431,7 @@ export const getSchemaDiff = async (scope = 'all') => {
   );
 
   const currentDb = await getCurrentDbSchema();
+  const currentDbUniqueConstraints = await getCurrentDbUniqueConstraints();
 
   const diff = {
     scope: normalizeScope(scope),
@@ -234,6 +440,9 @@ export const getSchemaDiff = async (scope = 'all') => {
     addColumns: [],
     alterColumns: [],
     dropColumns: [],
+    addConstraints: [],
+    alterConstraints: [],
+    dropConstraints: [],
   };
 
   for (const [tableName, { definition }] of targetByName.entries()) {
@@ -299,6 +508,42 @@ export const getSchemaDiff = async (scope = 'all') => {
         diff.dropColumns.push({ tableName, columnName: dbColumnName });
       }
     }
+
+    const targetConstraints = getTargetTableUniqueConstraints(definition);
+    const dbConstraints =
+      currentDbUniqueConstraints.get(tableName) || new Map();
+
+    for (const [constraintName, targetConstraint] of targetConstraints) {
+      const dbConstraint = dbConstraints.get(constraintName);
+
+      if (!dbConstraint) {
+        diff.addConstraints.push({
+          tableName,
+          constraintName,
+          constraintDef: targetConstraint,
+        });
+        continue;
+      }
+
+      if (!isSameConstraint(targetConstraint, dbConstraint)) {
+        diff.alterConstraints.push({
+          tableName,
+          constraintName,
+          target: targetConstraint,
+          current: dbConstraint,
+        });
+      }
+    }
+
+    for (const [constraintName, dbConstraint] of dbConstraints) {
+      if (!targetConstraints.has(constraintName)) {
+        diff.dropConstraints.push({
+          tableName,
+          constraintName,
+          constraintDef: dbConstraint,
+        });
+      }
+    }
   }
 
   for (const dbTableName of currentDb.keys()) {
@@ -334,6 +579,9 @@ export const syncSchemaWithTableMaster = async ({
     alteredColumns: [],
     droppedColumns: [],
     droppedTables: [],
+    addedConstraints: [],
+    alteredConstraints: [],
+    droppedConstraints: [],
     errors: [],
   };
 
@@ -396,9 +644,92 @@ export const syncSchemaWithTableMaster = async ({
     }
   }
 
+  for (const op of diff.addConstraints) {
+    try {
+      if (op.constraintDef.type !== 'UNIQUE') {
+        continue;
+      }
+
+      await tradeBusinessDbc.executeQuery(
+        getAddUniqueConstraintSql(
+          op.tableName,
+          op.constraintName,
+          op.constraintDef.fields,
+        ),
+      );
+      applied.addedConstraints.push(`${op.tableName}.${op.constraintName}`);
+    } catch (error) {
+      applied.errors.push({
+        step: 'add-constraint',
+        table: op.tableName,
+        constraint: op.constraintName,
+        error: error.message,
+      });
+    }
+  }
+
+  for (const op of diff.alterConstraints) {
+    try {
+      if (op.target.type !== 'UNIQUE') {
+        continue;
+      }
+
+      await ensureForeignKeyIndexesBeforeDroppingIndex(
+        op.tableName,
+        op.constraintName,
+      );
+
+      await tradeBusinessDbc.executeQuery(
+        getDropUniqueConstraintSql(op.tableName, op.constraintName),
+      );
+      await tradeBusinessDbc.executeQuery(
+        getAddUniqueConstraintSql(
+          op.tableName,
+          op.constraintName,
+          op.target.fields,
+        ),
+      );
+      applied.alteredConstraints.push(`${op.tableName}.${op.constraintName}`);
+    } catch (error) {
+      applied.errors.push({
+        step: 'alter-constraint',
+        table: op.tableName,
+        constraint: op.constraintName,
+        error: error.message,
+      });
+    }
+  }
+
   if (allowDrop) {
     await tradeBusinessDbc.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
     try {
+      for (const op of diff.dropConstraints) {
+        try {
+          if (op.constraintDef.type !== 'UNIQUE') {
+            continue;
+          }
+
+          await ensureForeignKeyIndexesBeforeDroppingIndex(
+            op.tableName,
+            op.constraintName,
+          );
+
+          await tradeBusinessDbc.executeQuery(
+            getDropUniqueConstraintSql(op.tableName, op.constraintName),
+          );
+          applied.droppedConstraints.push(
+            `${op.tableName}.${op.constraintName}`,
+          );
+        } catch (error) {
+          applied.errors.push({
+            step: 'drop-constraint',
+            table: op.tableName,
+            constraint: op.constraintName,
+            error: error.message,
+          });
+        }
+      }
+
       for (const op of diff.dropColumns) {
         try {
           const fkRows = await getColumnForeignKeys(
