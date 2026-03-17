@@ -121,6 +121,59 @@ export default class DataModelUtils {
     return parts[parts.length - 1];
   }
 
+  // Helper to escape identifiers (table and field names) for SQL queries
+  _escapeIdentifier(name) {
+    return `\`${String(name).replace(/`/g, '``')}\``;
+  }
+
+  // Helper to capitalize entity names for error messages
+  async _deleteRowFirstThenFile(model, id) {
+    const pkField = model.entityIdField || 'id';
+    const fileUrlField = model.fileUrlField;
+
+    return await model.dbc.executeTransaction(async (connection) => {
+      let fileUrl = null;
+
+      if (model.hasFileHandling && fileUrlField) {
+        const selectSql = `SELECT ${model._escapeIdentifier(fileUrlField)} AS file_url FROM ${model._escapeIdentifier(model.tableName)} WHERE ${model._escapeIdentifier(pkField)} = ? LIMIT 1`;
+        const rows = await model.dbc.executeQuery(selectSql, [id], connection);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+          throw new AppError(
+            `${model._capitalize(model.entityName)} not found`,
+            404,
+          );
+        }
+
+        fileUrl = rows[0]?.file_url || null;
+      }
+
+      const deleteSql = `DELETE FROM ${model._escapeIdentifier(model.tableName)} WHERE ${model._escapeIdentifier(pkField)} = ?`;
+      const deleteResult = await model.dbc.executeQuery(
+        deleteSql,
+        [id],
+        connection,
+      );
+
+      if (!deleteResult?.affectedRows) {
+        throw new AppError(
+          `${model._capitalize(model.entityName)} not found`,
+          404,
+        );
+      }
+
+      if (model.hasFileHandling && fileUrl) {
+        if (model.imagesOnly) {
+          await deleteImage(fileUrl);
+        } else {
+          await deleteFile(fileUrl);
+        }
+      }
+
+      return true;
+    });
+  }
+
   /**
    * Tries to identify the Foreign Key column that links to a parent.
    * Used when no specific FK is provided.
@@ -969,15 +1022,9 @@ export default class DataModelUtils {
         try {
           const { model, id } = item;
 
-          // A. File Cleanup
-          await DataModelUtils.cleanupModelFile(model, id);
-
-          // B. Database Delete
-          await model.crudO.performCrud({
-            operation: 'delete',
-            tableName: model.tableName,
-            id: id,
-          });
+          // A. Database delete first, then file delete in the same DB transaction.
+          //    If file deletion fails, DB delete is rolled back.
+          await this._deleteRowFirstThenFile(model, id);
 
           // C. Output Result
           if (!resultData[model.tableName]) {
@@ -1334,19 +1381,7 @@ export default class DataModelUtils {
 
   async delete(id) {
     try {
-      const entity = await this.getById(id);
-      if (this.hasFileHandling && entity[this.fileUrlField]) {
-        if (this.imagesOnly) {
-          await deleteImage(entity[this.fileUrlField]);
-        } else {
-          await deleteFile(entity[this.fileUrlField]);
-        }
-      }
-      await this.crudO.performCrud({
-        operation: 'delete',
-        tableName: this.tableName,
-        id: id,
-      });
+      await this._deleteRowFirstThenFile(this, id);
 
       return {
         message: `${this._capitalize(this.entityName)} deleted successfully`,
@@ -1387,24 +1422,23 @@ export default class DataModelUtils {
         };
       }
 
-      // Delete associated files
-      if (this.hasFileHandling) {
-        for (const entity of entities) {
-          if (entity[this.fileUrlField]) {
-            if (this.imagesOnly) {
-              await deleteImage(entity[this.fileUrlField]);
-            } else {
-              await deleteFile(entity[this.fileUrlField]);
+      await this.dbc.executeTransaction(async (connection) => {
+        // Delete rows first
+        const deleteSql = `DELETE FROM ${this._escapeIdentifier(this.tableName)} WHERE ${this._escapeIdentifier(searchField)} = ?`;
+        await this.dbc.executeQuery(deleteSql, [parentId], connection);
+
+        // Then delete files. Any failure throws and triggers transaction rollback.
+        if (this.hasFileHandling) {
+          for (const entity of entities) {
+            if (entity[this.fileUrlField]) {
+              if (this.imagesOnly) {
+                await deleteImage(entity[this.fileUrlField]);
+              } else {
+                await deleteFile(entity[this.fileUrlField]);
+              }
             }
           }
         }
-      }
-
-      // Delete the entities using the Foreign Key
-      await this.crudO.performCrud({
-        operation: 'delete',
-        tableName: this.tableName,
-        conditions: { [searchField]: parentId }, // ✅ Corrected: Use FK, not PK
       });
 
       return {
