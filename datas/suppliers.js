@@ -4,9 +4,17 @@ export const defaultSuppliers = {
       id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220001',
       supplier_code: 'S0000-0001',
       name: 'Guangzhou Nova Pack Co., Ltd.',
-      supplier_type_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
       created_at: '2026-02-25T09:00:00.000Z',
       updated_at: '2026-02-25T09:00:00.000Z',
+      supplier_types: [
+        {
+          id: '70f6e7df-8a34-4f68-9340-9107fc2d1001',
+          supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220001',
+          category_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d101',
+          created_at: '2026-02-25T09:00:00.000Z',
+          updated_at: '2026-02-25T09:00:00.000Z',
+        },
+      ],
       supplier_addresses: [
         {
           id: 'f3a2d17c-51bc-47d4-9df0-7fd7ea110001',
@@ -123,9 +131,17 @@ export const defaultSuppliers = {
       id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220002',
       supplier_code: 'S0000-0002',
       name: 'Shenzhen PetGoods Manufacturing',
-      supplier_type_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
       created_at: '2026-02-25T09:05:00.000Z',
       updated_at: '2026-02-25T09:05:00.000Z',
+      supplier_types: [
+        {
+          id: '70f6e7df-8a34-4f68-9340-9107fc2d1002',
+          supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220002',
+          category_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d102',
+          created_at: '2026-02-25T09:05:00.000Z',
+          updated_at: '2026-02-25T09:05:00.000Z',
+        },
+      ],
       supplier_addresses: [
         {
           id: 'f3a2d17c-51bc-47d4-9df0-7fd7ea110003',
@@ -204,9 +220,17 @@ export const defaultSuppliers = {
       id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220003',
       supplier_code: 'S0000-0003',
       name: 'Ningbo Cert & Compliance Services',
-      supplier_type_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d103',
       created_at: '2026-02-25T09:10:00.000Z',
       updated_at: '2026-02-25T09:10:00.000Z',
+      supplier_types: [
+        {
+          id: '70f6e7df-8a34-4f68-9340-9107fc2d1003',
+          supplier_id: '9a1d4f2b-31b0-4d22-a04b-2d6fdb220003',
+          category_id: '7f2de1c0-9a84-4d9b-8f5d-7a8ac3e2d103',
+          created_at: '2026-02-25T09:10:00.000Z',
+          updated_at: '2026-02-25T09:10:00.000Z',
+        },
+      ],
       supplier_addresses: [
         {
           id: 'f3a2d17c-51bc-47d4-9df0-7fd7ea110004',

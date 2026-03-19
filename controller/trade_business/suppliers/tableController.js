@@ -43,6 +43,21 @@ export const createSuppliersTable = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Create supplier types data table
+ * @route POST /api/suppliers/table/create/types
+ */
+export const createSupplierTypesDataTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createSupplierTypesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
  * Create master address types table
  * @route POST /api/suppliers/table/create/address-types
  */

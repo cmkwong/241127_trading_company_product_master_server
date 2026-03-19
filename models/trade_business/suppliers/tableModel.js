@@ -5,6 +5,7 @@ import { TABLE_MASTER, generateCreateTableSQL } from '../../tables.js';
 const SUPPLIER_TABLE_KEYS = [
   'MASTER_SUPPLIER_TYPES',
   'SUPPLIERS',
+  'SUPPLIER_TYPES',
   'MASTER_ADDRESS_TYPES',
   'SUPPLIER_ADDRESSES',
   'MASTER_CONTACT_TYPES',
@@ -86,6 +87,10 @@ export const createMasterSupplierTypesTable = async () => {
 
 export const createSuppliersTable = async () => {
   return createTable('SUPPLIERS');
+};
+
+export const createSupplierTypesTable = async () => {
+  return createTable('SUPPLIER_TYPES');
 };
 
 export const createAddressTypesTable = async () => {

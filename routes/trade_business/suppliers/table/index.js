@@ -26,6 +26,11 @@ router.post(
   endController,
 );
 router.post(
+  '/create/types',
+  tableController.createSupplierTypesDataTable,
+  endController,
+);
+router.post(
   '/create/address-types',
   tableController.createAddressTypesTable,
   endController,

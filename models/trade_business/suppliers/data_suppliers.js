@@ -8,6 +8,7 @@ import * as SupplierAddresses from './data_supplier_addresses.js';
 import * as SupplierContacts from './data_supplier_contacts.js';
 import * as SupplierLinks from './data_supplier_links.js';
 import * as SupplierServices from './data_supplier_services.js';
+import * as SupplierTypes from './data_supplier_types.js';
 
 // Create a data model utility for suppliers
 export const supplierModel = new DataModelUtils({
@@ -16,16 +17,19 @@ export const supplierModel = new DataModelUtils({
   tableFields: TABLE_MASTER['SUPPLIERS'].fields,
   entityName: 'supplier',
   entityIdField: 'id',
-  requiredFields: ['supplier_code', 'name', 'supplier_type_id'],
+  requiredFields: ['supplier_code', 'name'],
   validations: {
     supplier_code: { required: true },
     name: { required: true },
-    supplier_type_id: { required: true },
   },
   defaults: {
     id: uuidv4,
   },
   childTableConfig: [
+    {
+      tableName: TABLE_MASTER['SUPPLIER_TYPES'].name,
+      model: SupplierTypes.supplierTypeModel,
+    },
     {
       tableName: TABLE_MASTER['SUPPLIER_ADDRESSES'].name,
       model: SupplierAddresses.supplierAddressModel,

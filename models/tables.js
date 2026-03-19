@@ -1386,6 +1386,40 @@ const TABLE_MASTER_RAW = {
         notNull: true,
         description: 'Supplier name',
       },
+      remark: {
+        type: 'TEXT',
+        description: 'Additional notes about the supplier',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_supplier_code: { type: 'UNIQUE', fields: ['supplier_code'] },
+    },
+  },
+  SUPPLIER_TYPES: {
+    name: 'supplier_types',
+    table_type: 'suppliers-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      supplier_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: { table: 'suppliers', field: 'id', onDelete: 'CASCADE' },
+        description: 'Reference to suppliers.id',
+      },
       supplier_type_id: {
         type: 'VARCHAR(36)',
         notNull: true,
@@ -1406,9 +1440,6 @@ const TABLE_MASTER_RAW = {
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
         description: 'Last update timestamp',
       },
-    },
-    constraints: {
-      unique_supplier_code: { type: 'UNIQUE', fields: ['supplier_code'] },
     },
   },
   MASTER_ADDRESS_TYPES: {
@@ -1646,7 +1677,6 @@ const TABLE_MASTER_RAW = {
       unique_supplier_link_type_name: { type: 'UNIQUE', fields: ['name'] },
     },
   },
-
   SUPPLIER_LINKS: {
     name: 'supplier_links',
     table_type: 'suppliers-data',
@@ -1691,39 +1721,6 @@ const TABLE_MASTER_RAW = {
     },
     constraints: {},
   },
-  // MASTER_SERVICE_TYPES: {
-  //   name: 'master_service_types',
-  //   table_type: 'suppliers-master',
-  //   fields: {
-  //     id: {
-  //       type: 'VARCHAR(36)',
-  //       primaryKey: true,
-  //       description: 'Auto-incremented primary key',
-  //     },
-  //     name: {
-  //       type: 'VARCHAR(100)',
-  //       notNull: true,
-  //       description: 'Service type name',
-  //     },
-  //     description: {
-  //       type: 'VARCHAR(255)',
-  //       description: 'Service type description',
-  //     },
-  //     created_at: {
-  //       type: 'TIMESTAMP',
-  //       default: 'CURRENT_TIMESTAMP',
-  //       description: 'Creation timestamp',
-  //     },
-  //     updated_at: {
-  //       type: 'TIMESTAMP',
-  //       default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-  //       description: 'Last update timestamp',
-  //     },
-  //   },
-  //   constraints: {
-  //     unique_service_type_name: { type: 'UNIQUE', fields: ['name'] },
-  //   },
-  // },
   MASTER_SERVICES: {
     name: 'master_services',
     table_type: 'services-master',
