@@ -22,6 +22,10 @@ const TABLE_MASTER_RAW = {
         type: 'VARCHAR(255)',
         description: 'HS Code for the product',
       },
+      product_index: {
+        type: 'VARCHAR(255)',
+        description: 'Index for ordering products',
+      },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the product',
