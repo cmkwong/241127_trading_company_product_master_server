@@ -21,6 +21,12 @@ router.post(
 );
 
 router.get(
+  '/trade-business/defaults/data/file-mappings',
+  tradeBusinessController.getTradeBusinessDataFileMappings,
+  endController,
+);
+
+router.get(
   '/trade-business/schema/check',
   tradeBusinessController.checkTradeBusinessSchema,
   endController,

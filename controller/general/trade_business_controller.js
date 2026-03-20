@@ -10,6 +10,7 @@ import {
   getSchemaDiff,
   syncSchemaWithTableMaster,
 } from '../../models/schemaSync.js';
+import { getTradeBusinessDataFileMappingsModel } from '../../models/trade_business/general/data_file_mappings.js';
 
 const TRADE_BUSINESS_TABLE_PREFIXES = [
   'products-',
@@ -309,6 +310,19 @@ export const insertAllTradeBusinessDefaults = catchAsync(
     res.prints = {
       message: `Trade business ${summary.scope} default data insertion completed`,
       data: summary,
+    };
+
+    next();
+  },
+);
+
+export const getTradeBusinessDataFileMappings = catchAsync(
+  async (req, res, next) => {
+    const mappings = getTradeBusinessDataFileMappingsModel();
+
+    res.prints = {
+      message: 'Trade business data file mappings fetched',
+      data: { mappings },
     };
 
     next();
