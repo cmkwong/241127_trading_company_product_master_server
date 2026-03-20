@@ -38,6 +38,14 @@ router
     endController,
   );
 
+router
+  .route('/comparison-keys')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    productsController.getProductComparisonKeys,
+    endController,
+  );
+
 // Routes that require ID validation
 router.route('/get/ids').post(productsController.getProductById, endController);
 

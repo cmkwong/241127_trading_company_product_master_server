@@ -1541,4 +1541,57 @@ export default class DataModelUtils {
   _pluralize(str) {
     return str + 's';
   }
+
+  _getTableFieldDefinitions() {
+    if (
+      this.tableFields?.fields &&
+      typeof this.tableFields.fields === 'object'
+    ) {
+      return this.tableFields.fields;
+    }
+
+    if (this.tableFields && typeof this.tableFields === 'object') {
+      return this.tableFields;
+    }
+
+    return {};
+  }
+
+  /**
+   * Get first-level output keys for the current model.
+   * - Root table columns are included as direct keys.
+   * - Direct child tables are included as table keys.
+   *
+   * Useful for front-end comparison/whitelist checks.
+   */
+  getFirstLevelFieldNames(options = {}) {
+    const { excludedFields = [] } = options;
+    const rootTableName = this._getBaseTableName(this.tableName);
+    const fieldDefs = this._getTableFieldDefinitions();
+    const rootFields = Object.keys(fieldDefs).filter(
+      (field) => !excludedFields.includes(field),
+    );
+
+    const childTableKeys = (this.childTableConfig || [])
+      .map((childConfig) =>
+        this._getBaseTableName(
+          childConfig?.jsonKey || childConfig?.model?.tableName,
+        ),
+      )
+      .filter(Boolean);
+
+    const firstLevelKeys = [...new Set([...rootFields, ...childTableKeys])];
+
+    const keyDetails = firstLevelKeys.map((key) => ({
+      key,
+      tableName: rootFields.includes(key) ? rootTableName : key,
+      sourceType: rootFields.includes(key) ? 'field' : 'table',
+    }));
+
+    return {
+      tableName: rootTableName,
+      firstLevelKeys,
+      keyDetails,
+    };
+  }
 }

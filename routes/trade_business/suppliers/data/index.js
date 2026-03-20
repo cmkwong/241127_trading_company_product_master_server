@@ -38,6 +38,14 @@ router
     endController,
   );
 
+router
+  .route('/comparison-keys')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    supplierController.getSupplierComparisonKeys,
+    endController,
+  );
+
 // Truncate all supplier data - ADMIN ONLY
 router.post(
   '/truncate',
