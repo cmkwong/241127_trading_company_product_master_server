@@ -12,16 +12,14 @@ import {
 } from '../../models/schemaSync.js';
 import { getTradeBusinessDataFileMappingsModel } from '../../models/trade_business/general/data_file_mappings.js';
 
-const TRADE_BUSINESS_TABLE_PREFIXES = [
-  'products-',
-  'suppliers-',
-  'customers-',
-  'services-',
-  'sales-',
-  'ar-',
-  'purchase-',
-  'ap-',
-];
+const TRADE_BUSINESS_TABLE_TYPES = new Set(
+  Object.values(TABLE_MASTER)
+    .map((tableDefinition) => tableDefinition?.table_type)
+    .filter(
+      (tableType) =>
+        typeof tableType === 'string' && /-(master|data)$/.test(tableType),
+    ),
+);
 
 const TRADE_BUSINESS_SCOPE_VALUES = ['all', 'master', 'data'];
 
@@ -30,9 +28,7 @@ const isTradeBusinessTableType = (tableType) => {
     return false;
   }
 
-  return TRADE_BUSINESS_TABLE_PREFIXES.some((prefix) =>
-    tableType.startsWith(prefix),
-  );
+  return TRADE_BUSINESS_TABLE_TYPES.has(tableType);
 };
 
 const normalizeScope = (scope = 'all') => {
