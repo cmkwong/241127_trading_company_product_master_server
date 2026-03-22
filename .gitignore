@@ -3,3 +3,7 @@ dev-data
 public
 aiDev.txt
 docs
+
+.env
+.env.local
+.env.*.local

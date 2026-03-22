@@ -496,12 +496,24 @@ export const default_master_data = {
       description: 'Video type under Edited',
     },
   ],
-  // Updated master_categories based on the image structure
+  // Updated master_categories based on latest category tree
   master_categories: [
     // Main Categories
     {
+      id: 'c8000000-0000-0000-0000-000000000000',
+      name: 'Aquatic Accessories',
+      description: 'Products for aquatic pets and aquariums',
+      parent_id: null,
+    },
+    {
+      id: 'c9000000-0000-0000-0000-000000000000',
+      name: 'Pet Beds & Accessories',
+      description: 'Beds, mats, and related pet accessories',
+      parent_id: null,
+    },
+    {
       id: 'c1000000-0000-0000-0000-000000000000',
-      name: 'Pet Bowls & Accessories',
+      name: 'Pet Bowls & Feeders',
       description: 'Pet feeding and water accessories',
       parent_id: null,
     },
@@ -541,28 +553,96 @@ export const default_master_data = {
       description: 'Other pet accessories and products',
       parent_id: null,
     },
+
+    // Aquatic Accessories subcategories
     {
-      id: 'c8000000-0000-0000-0000-000000000000',
-      name: 'Aquatic Items',
-      description: 'Products for aquatic pets and aquariums',
-      parent_id: null,
+      id: 'c8100000-0000-0000-0000-000000000000',
+      name: 'Feedings',
+      description: 'Feeding products for aquatic pets',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8200000-0000-0000-0000-000000000000',
+      name: 'Tanks',
+      description: 'Aquarium tanks and tank accessories',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8300000-0000-0000-0000-000000000000',
+      name: 'Piping & Fittings',
+      description: 'Pipes, tubing, and fitting accessories',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8400000-0000-0000-0000-000000000000',
+      name: 'Lighting & Heating',
+      description: 'Lighting and heating accessories for aquariums',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8500000-0000-0000-0000-000000000000',
+      name: 'Filtration & Pumps',
+      description: 'Filtration systems and pump accessories',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8600000-0000-0000-0000-000000000000',
+      name: 'Decoration & Scaping',
+      description: 'Aquarium decorations and landscaping products',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8700000-0000-0000-0000-000000000000',
+      name: 'Maintenance Tools',
+      description: 'Tools for aquarium cleaning and maintenance',
+      parent_id: 'c8000000-0000-0000-0000-000000000000',
     },
 
-    // Pet Bowls & Accessories subcategories
+    // Lighting & Heating subcategories
+    {
+      id: 'c8410000-0000-0000-0000-000000000000',
+      name: 'Heaters',
+      description: 'Aquarium heater products',
+      parent_id: 'c8400000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8420000-0000-0000-0000-000000000000',
+      name: 'LED Lights',
+      description: 'LED lighting for aquariums',
+      parent_id: 'c8400000-0000-0000-0000-000000000000',
+    },
+
+    // Filtration & Pumps subcategories
+    {
+      id: 'c8510000-0000-0000-0000-000000000000',
+      name: 'Filters & Media',
+      description: 'Aquarium filter and media products',
+      parent_id: 'c8500000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8520000-0000-0000-0000-000000000000',
+      name: 'Air Pumps',
+      description: 'Air pumps for aquariums',
+      parent_id: 'c8500000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c8530000-0000-0000-0000-000000000000',
+      name: 'Water Pumps',
+      description: 'Water pumps for aquariums',
+      parent_id: 'c8500000-0000-0000-0000-000000000000',
+    },
+
+    // Pet Beds & Accessories subcategories
     {
       id: 'c1100000-0000-0000-0000-000000000000',
       name: 'Pet Mat',
-      description: 'Mats for pet feeding areas',
-      parent_id: 'c1000000-0000-0000-0000-000000000000',
+      description: 'Mats and bedding accessories for pets',
+      parent_id: 'c9000000-0000-0000-0000-000000000000',
     },
+
+    // Pet Bowls & Feeders subcategories
     {
       id: 'c1200000-0000-0000-0000-000000000000',
-      name: 'Pet Bowls & Feeders',
-      description: 'Bowls and automatic feeders for pets',
-      parent_id: 'c1000000-0000-0000-0000-000000000000',
-    },
-    {
-      id: 'c1300000-0000-0000-0000-000000000000',
       name: 'Pet Dispenser',
       description: 'Food and water dispensers for pets',
       parent_id: 'c1000000-0000-0000-0000-000000000000',
@@ -621,7 +701,7 @@ export const default_master_data = {
     },
     {
       id: 'c3500000-0000-0000-0000-000000000000',
-      name: 'Pet Carrier',
+      name: 'Pet Carriers',
       description: 'Carriers for pets',
       parent_id: 'c3000000-0000-0000-0000-000000000000',
     },
@@ -677,59 +757,57 @@ export const default_master_data = {
     // Others subcategories
     {
       id: 'c7100000-0000-0000-0000-000000000000',
+      name: 'Pet Foods',
+      description: 'Food products for pets',
+      parent_id: 'c7000000-0000-0000-0000-000000000000',
+    },
+    {
+      id: 'c7200000-0000-0000-0000-000000000000',
       name: 'Pet Ramp',
       description: 'Ramps for pets',
       parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c7200000-0000-0000-0000-000000000000',
+      id: 'c7300000-0000-0000-0000-000000000000',
       name: 'Pet Backseat Cover',
       description: 'Covers for car backseats',
       parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c7300000-0000-0000-0000-000000000000',
+      id: 'c7400000-0000-0000-0000-000000000000',
       name: 'Cat Scratching Board',
       description: 'Scratching boards for cats',
       parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c7400000-0000-0000-0000-000000000000',
-      name: 'Pet Clothing',
-      description: 'Clothing for pets',
+      id: 'c7500000-0000-0000-0000-000000000000',
+      name: 'Pet Dress',
+      description: 'Clothing and dresses for pets',
       parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c7500000-0000-0000-0000-000000000000',
+      id: 'c7600000-0000-0000-0000-000000000000',
       name: 'Pet Water Fountain',
       description: 'Water fountains for pets',
       parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
-
-    // Aquatic Items subcategories
     {
-      id: 'c8100000-0000-0000-0000-000000000000',
-      name: 'Pump',
-      description: 'Pumps for aquariums',
-      parent_id: 'c8000000-0000-0000-0000-000000000000',
-    },
-    {
-      id: 'c8200000-0000-0000-0000-000000000000',
+      id: 'c7700000-0000-0000-0000-000000000000',
       name: 'Horse Supplies',
       description: 'Supplies for horses',
-      parent_id: 'c8000000-0000-0000-0000-000000000000',
+      parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c8300000-0000-0000-0000-000000000000',
+      id: 'c7800000-0000-0000-0000-000000000000',
       name: 'Bird Supplies',
       description: 'Supplies for birds',
-      parent_id: 'c8000000-0000-0000-0000-000000000000',
+      parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
     {
-      id: 'c8400000-0000-0000-0000-000000000000',
+      id: 'c7900000-0000-0000-0000-000000000000',
       name: 'Dog Barking Controller',
       description: 'Devices to control dog barking',
-      parent_id: 'c8000000-0000-0000-0000-000000000000',
+      parent_id: 'c7000000-0000-0000-0000-000000000000',
     },
   ],
 

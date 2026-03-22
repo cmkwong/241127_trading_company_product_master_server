@@ -1109,30 +1109,35 @@ const TABLE_MASTER_RAW = {
         },
         description: 'Reference to master_packing_reliability_types.id',
       },
+      name: {
+        type: 'VARCHAR(255)',
+        notNull: false,
+        description: 'Packing name or identifier',
+      },
       length: {
         type: 'DECIMAL(10,2)',
-        notNull: true,
+        notNull: false,
         description: 'Length dimension',
       },
       width: {
         type: 'DECIMAL(10,2)',
-        notNull: true,
+        notNull: false,
         description: 'Width dimension',
       },
       height: {
         type: 'DECIMAL(10,2)',
-        notNull: true,
+        notNull: false,
         description: 'Height dimension',
       },
       quantity: {
         type: 'VARCHAR(36)',
-        notNull: true,
+        notNull: false,
         default: 1,
         description: 'Quantity in this packing',
       },
       weight: {
         type: 'DECIMAL(10,2)',
-        notNull: true,
+        notNull: false,
         description: 'Weight of the packing',
       },
       remark: {
@@ -1426,7 +1431,6 @@ const TABLE_MASTER_RAW = {
       },
       supplier_type_id: {
         type: 'VARCHAR(36)',
-        notNull: true,
         references: {
           table: 'master_supplier_types',
           field: 'id',

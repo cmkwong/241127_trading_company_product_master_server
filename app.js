@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
 import { fileURLToPath } from 'node:url';
 import AppError from './utils/appError.js';
+import { getConfiguredPublicRoot } from './utils/fileUpload.js';
 
 // self class
 import errorHandler from './middleware/errorHandler.js';
@@ -29,8 +30,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(cors());
 app.options('*', cors());
 
-// Serve static files from a folder and not from a route.
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from configured public root.
+app.use('/public', express.static(getConfiguredPublicRoot()));
+app.use(express.static(getConfiguredPublicRoot()));
 
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '500Mb' }));

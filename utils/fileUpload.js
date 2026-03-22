@@ -1,7 +1,69 @@
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import AppError from './appError.js';
+
+// ============================================================
+// 📁 PUBLIC STORAGE CONFIG (LOCAL SWITCH)
+// ============================================================
+// Configure in .env:
+// FILE_USE_EXTERNAL_PUBLIC_STORAGE=true|false
+// FILE_EXTERNAL_PUBLIC_ROOT=E:/Pet Product Images/public
+const USE_EXTERNAL_PUBLIC_STORAGE =
+  String(process.env.FILE_USE_EXTERNAL_PUBLIC_STORAGE || 'true') === 'true';
+const EXTERNAL_PUBLIC_ROOT =
+  process.env.FILE_EXTERNAL_PUBLIC_ROOT || 'E:/Pet Product Images/public';
+
+const getLocalPublicRoot = () => path.resolve('public');
+
+export const getConfiguredPublicRoot = () =>
+  USE_EXTERNAL_PUBLIC_STORAGE ? EXTERNAL_PUBLIC_ROOT : getLocalPublicRoot();
+
+const normalizePublicRelativePath = (inputPath = '') => {
+  const normalized = String(inputPath).replace(/\\/g, '/').replace(/^\/+/, '');
+
+  if (normalized.startsWith('public/')) {
+    return normalized;
+  }
+
+  if (normalized === 'public') {
+    return 'public';
+  }
+
+  return `public/${normalized}`;
+};
+
+const resolvePhysicalUploadDir = (uploadDir) => {
+  const publicRelativePath = normalizePublicRelativePath(uploadDir);
+
+  // Remove leading "public" for absolute join into configured public root.
+  const relativeUnderPublic = publicRelativePath
+    .replace(/^public\/?/, '')
+    .replace(/^\/+/, '');
+
+  return path.join(getConfiguredPublicRoot(), relativeUnderPublic);
+};
+
+const buildPublicUrlPath = (uploadDir, filename) => {
+  const publicRelativePath = normalizePublicRelativePath(uploadDir);
+  return `/${publicRelativePath}/${filename}`.replace(/\/+/g, '/');
+};
+
+const resolveStoredFilePath = (storedPath) => {
+  const normalized = String(storedPath || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+
+  // Preferred path format from DB: /public/...
+  if (normalized.startsWith('public/')) {
+    const relativeUnderPublic = normalized.replace(/^public\/?/, '');
+    return path.join(getConfiguredPublicRoot(), relativeUnderPublic);
+  }
+
+  // Backward compatibility with old relative paths.
+  return path.resolve(normalized);
+};
 
 /**
  * File types and their corresponding MIME prefixes
@@ -139,9 +201,11 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
       );
     }
 
+    const physicalUploadDir = resolvePhysicalUploadDir(uploadDir);
+
     // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(physicalUploadDir)) {
+      fs.mkdirSync(physicalUploadDir, { recursive: true });
     }
 
     // Get file extension
@@ -149,13 +213,13 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
 
     // Generate filename if not provided
     const finalFilename = `${filename || uuidv4()}.${extension}`;
-    const filePath = path.join(uploadDir, finalFilename);
+    const filePath = path.join(physicalUploadDir, finalFilename);
 
     // Write file
     fs.writeFileSync(filePath, fileBuffer);
 
-    // Return relative URL path (for storage in database)
-    return `/${uploadDir}/${finalFilename}`;
+    // Return public URL path (for storage in database)
+    return buildPublicUrlPath(uploadDir, finalFilename);
   } catch (error) {
     throw new AppError(
       `Failed to save file: ${error.message}`,
@@ -173,10 +237,7 @@ export const deleteFile = async (filePath) => {
   try {
     if (!filePath) return false;
 
-    // Remove leading slash if present
-    const normalizedPath = filePath.startsWith('/')
-      ? filePath.substring(1)
-      : filePath;
+    const normalizedPath = resolveStoredFilePath(filePath);
 
     // Check if file exists
     if (fs.existsSync(normalizedPath)) {
