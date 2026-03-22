@@ -5,6 +5,7 @@ import {
   saveBase64Image,
   deleteFile,
   deleteImage,
+  resolveStoredFilePathForRead,
 } from './fileUpload.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -127,7 +128,8 @@ export default class DataModelUtils {
   }
 
   // Helper to capitalize entity names for error messages
-  async _deleteRowFirstThenFile(model, id) {
+  async _deleteRowFirstThenFile(model, id, options = {}) {
+    const { ignoreNotFound = false } = options;
     const pkField = model.entityIdField || 'id';
     const fileUrlField = model.fileUrlField;
 
@@ -139,6 +141,10 @@ export default class DataModelUtils {
         const rows = await model.dbc.executeQuery(selectSql, [id], connection);
 
         if (!Array.isArray(rows) || rows.length === 0) {
+          if (ignoreNotFound) {
+            return false;
+          }
+
           throw new AppError(
             `${model._capitalize(model.entityName)} not found`,
             404,
@@ -156,6 +162,10 @@ export default class DataModelUtils {
       );
 
       if (!deleteResult?.affectedRows) {
+        if (ignoreNotFound) {
+          return false;
+        }
+
         throw new AppError(
           `${model._capitalize(model.entityName)} not found`,
           404,
@@ -308,7 +318,7 @@ export default class DataModelUtils {
     }
 
     try {
-      const filePath = file[this.fileUrlField]?.replace(/^\//, '');
+      const filePath = resolveStoredFilePathForRead(file[this.fileUrlField]);
       if (!filePath) throw new AppError('File URL is not available', 400);
 
       await fs.access(filePath);
@@ -1024,7 +1034,9 @@ export default class DataModelUtils {
 
           // A. Database delete first, then file delete in the same DB transaction.
           //    If file deletion fails, DB delete is rolled back.
-          await this._deleteRowFirstThenFile(model, id);
+          const deleted = await this._deleteRowFirstThenFile(model, id, {
+            ignoreNotFound: true,
+          });
 
           // C. Output Result
           if (!resultData[model.tableName]) {
@@ -1032,7 +1044,10 @@ export default class DataModelUtils {
           }
           // Avoid duplicates in response
           if (!resultData[model.tableName].some((r) => r.id === id)) {
-            resultData[model.tableName].push({ id: id, status: 'deleted' });
+            resultData[model.tableName].push({
+              id: id,
+              status: deleted ? 'deleted' : 'not_found',
+            });
           }
         } catch (err) {
           console.error(

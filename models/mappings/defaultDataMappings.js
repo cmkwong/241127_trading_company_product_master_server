@@ -20,7 +20,7 @@ import * as master_sizeTypesModel from '../trade_business/master/master_sizeType
 import * as master_capacityTypesModel from '../trade_business/master/master_capacityTypesModel.js';
 import * as master_colorTypesModel from '../trade_business/master/master_colorTypesModel.js';
 
-import { defaultProducts } from '../../datas/products.js';
+import { getProductsSeedData } from '../../utils/productsSource.js';
 import { defaultSuppliers } from '../../datas/suppliers.js';
 import { defaultCustomers } from '../../datas/customers.js';
 import { defaultSalesQuotations } from '../../datas/sales.js';
@@ -132,7 +132,7 @@ export const getDataDefaultMappings = () => {
     {
       name: 'products',
       model: productModel,
-      data: defaultProducts,
+      data: getProductsSeedData(),
     },
     {
       name: 'customers',

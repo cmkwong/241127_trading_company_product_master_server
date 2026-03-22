@@ -1,6 +1,6 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
 import catchAsync from '../../../utils/catchAsync.js';
-import { defaultProducts } from '../../../datas/products.js';
+import { getProductsSeedData } from '../../../utils/productsSource.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
 
 /**
@@ -127,7 +127,7 @@ export const checkProductExists = catchAsync(async (req, res, next) => {
  */
 export const importDefaultProducts = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
-    defaultProducts,
+    getProductsSeedData(),
     'create',
   );
 
@@ -144,7 +144,7 @@ export const truncateProductTables = catchAsync(async (req, res, next) => {
   // getting all of the product id
   const sql = `SELECT id FROM products;`;
   const ids = await productModel.dbc.executeQuery(sql);
-  productModel.processStructureDataOperation({ products: ids }, 'delete');
+  await productModel.processStructureDataOperation({ products: ids }, 'delete');
 
   // await productModel.truncateTable();
 

@@ -10,10 +10,13 @@ import AppError from './appError.js';
 // Configure in .env:
 // FILE_USE_EXTERNAL_PUBLIC_STORAGE=true|false
 // FILE_EXTERNAL_PUBLIC_ROOT=E:/Pet Product Images/public
+// FILE_DISABLE_PHYSICAL_DELETE=true|false
 const USE_EXTERNAL_PUBLIC_STORAGE =
   String(process.env.FILE_USE_EXTERNAL_PUBLIC_STORAGE || 'true') === 'true';
 const EXTERNAL_PUBLIC_ROOT =
   process.env.FILE_EXTERNAL_PUBLIC_ROOT || 'E:/Pet Product Images/public';
+const DISABLE_PHYSICAL_DELETE =
+  String(process.env.FILE_DISABLE_PHYSICAL_DELETE || 'false') === 'true';
 
 const getLocalPublicRoot = () => path.resolve('public');
 
@@ -50,7 +53,7 @@ const buildPublicUrlPath = (uploadDir, filename) => {
   return `/${publicRelativePath}/${filename}`.replace(/\/+/g, '/');
 };
 
-const resolveStoredFilePath = (storedPath) => {
+const resolveStoredFilePathForReadInternal = (storedPath) => {
   const normalized = String(storedPath || '')
     .replace(/\\/g, '/')
     .replace(/^\/+/, '');
@@ -58,10 +61,59 @@ const resolveStoredFilePath = (storedPath) => {
   // Preferred path format from DB: /public/...
   if (normalized.startsWith('public/')) {
     const relativeUnderPublic = normalized.replace(/^public\/?/, '');
-    return path.join(getConfiguredPublicRoot(), relativeUnderPublic);
+
+    const configured = path.join(
+      getConfiguredPublicRoot(),
+      relativeUnderPublic,
+    );
+    const local = path.join(getLocalPublicRoot(), relativeUnderPublic);
+
+    // If current configured root file exists, use it.
+    if (fs.existsSync(configured)) {
+      return configured;
+    }
+
+    // Backward compatibility: support files still stored in project local public.
+    if (fs.existsSync(local)) {
+      return local;
+    }
+
+    // Default to configured root for create/read attempts.
+    return configured;
   }
 
   // Backward compatibility with old relative paths.
+  if (USE_EXTERNAL_PUBLIC_STORAGE) {
+    return path.join(getConfiguredPublicRoot(), normalized);
+  }
+
+  return path.resolve(normalized);
+};
+
+export const resolveStoredFilePathForRead = (storedPath) =>
+  resolveStoredFilePathForReadInternal(storedPath);
+
+const resolveStoredFilePathForDelete = (storedPath) => {
+  const normalized = String(storedPath || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+
+  if (!normalized) return null;
+
+  const relativeUnderPublic = normalized
+    .replace(/^public\/?/, '')
+    .replace(/^\/+/, '');
+
+  // If external storage is enabled, delete strictly from external root.
+  if (USE_EXTERNAL_PUBLIC_STORAGE) {
+    return path.join(getConfiguredPublicRoot(), relativeUnderPublic);
+  }
+
+  // Local mode: keep backward compatibility for non-/public paths.
+  if (normalized.startsWith('public/')) {
+    return path.join(getLocalPublicRoot(), relativeUnderPublic);
+  }
+
   return path.resolve(normalized);
 };
 
@@ -237,7 +289,12 @@ export const deleteFile = async (filePath) => {
   try {
     if (!filePath) return false;
 
-    const normalizedPath = resolveStoredFilePath(filePath);
+    // Keep DB delete behavior while preserving files on disk when enabled.
+    if (DISABLE_PHYSICAL_DELETE) {
+      return true;
+    }
+
+    const normalizedPath = resolveStoredFilePathForDelete(filePath);
 
     // Check if file exists
     if (fs.existsSync(normalizedPath)) {
