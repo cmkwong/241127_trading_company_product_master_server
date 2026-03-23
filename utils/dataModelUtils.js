@@ -745,11 +745,42 @@ export default class DataModelUtils {
 
     const result = {};
 
+    const shouldAttachComputedBase64 =
+      !!selectedFields &&
+      !!options?.includeBase64 &&
+      currentModel.hasFileHandling;
+    const computedBase64Field = currentModel.imagesOnly
+      ? 'base64_image'
+      : 'base64_file';
+
     if (selectedFields) {
       for (const fieldName of selectedFields) {
         if (Object.prototype.hasOwnProperty.call(row, fieldName)) {
           result[fieldName] = row[fieldName];
         }
+      }
+
+      // base64 fields are computed at server side (not DB columns).
+      // Include them automatically for selected file tables when includeBase64=true.
+      if (
+        shouldAttachComputedBase64 &&
+        Object.prototype.hasOwnProperty.call(row, computedBase64Field)
+      ) {
+        result[computedBase64Field] = row[computedBase64Field];
+      }
+
+      if (
+        shouldAttachComputedBase64 &&
+        Object.prototype.hasOwnProperty.call(row, 'is_compressed')
+      ) {
+        result.is_compressed = row.is_compressed;
+      }
+
+      if (
+        shouldAttachComputedBase64 &&
+        Object.prototype.hasOwnProperty.call(row, 'error')
+      ) {
+        result.error = row.error;
       }
     } else {
       const pkField = currentModel.entityIdField || 'id';
