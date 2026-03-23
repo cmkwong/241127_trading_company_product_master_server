@@ -1,5 +1,6 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
 import catchAsync from '../../../utils/catchAsync.js';
+import { toBool } from '../../../utils/booleanFn.js';
 import { getProductsSeedData } from '../../../utils/productsSource.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
 
@@ -18,7 +19,12 @@ export const createProduct = catchAsync(async (req, res, next) => {
 });
 
 export const getAllProducts = catchAsync(async (req, res, next) => {
-  const { includeBase64, iconOnly, compress } = req.query;
+  const source = {
+    ...(req.query || {}),
+    ...(req.body || {}),
+  };
+
+  const { includeBase64, iconOnly, compress, fields } = source;
 
   const productIds = await productModel.executeQuery(
     'SELECT id FROM products;',
@@ -29,9 +35,10 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
     data,
     'read',
     {
-      includeBase64: includeBase64 === '1' ? true : false,
-      base64OnlyTable: iconOnly === '1' ? ['products'] : null, // to control which tables should return only base64 data
-      compress: compress === '1' ? true : false,
+      includeBase64: toBool(includeBase64),
+      base64OnlyTable: toBool(iconOnly) ? ['products'] : null, // to control which tables should return only base64 data
+      compress: toBool(compress),
+      fields,
     },
   );
   res.status(200).json({
@@ -58,15 +65,18 @@ export const getProductComparisonKeys = catchAsync(async (req, res, next) => {
  * @route GET /api/products/:id
  */
 export const getProductById = catchAsync(async (req, res, next) => {
-  const { includeBase64, iconOnly, compress } = req.query;
+  const source = req.body || {};
+
+  const { includeBase64, iconOnly, compress, fields, data } = source;
 
   const structuredData = await productModel.processStructureDataOperation(
-    req.body.data,
+    data,
     'read',
     {
-      includeBase64: includeBase64 === '1' ? true : false,
-      base64OnlyTable: iconOnly === '1' ? ['products'] : null, // to control which tables should return only base64 data
-      compress: compress === '1' ? true : false,
+      includeBase64: toBool(includeBase64),
+      base64OnlyTable: toBool(iconOnly) ? ['products'] : null, // to control which tables should return only base64 data
+      compress: toBool(compress),
+      fields,
     },
   );
 

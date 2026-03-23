@@ -12,15 +12,17 @@ router.use(authController.protect);
 // Routes that don't require ID validation
 router
   .route('/')
-  .get(
-    authController.restrictTo('admin', 'manager', 'product-manager'),
-    productsController.getAllProducts,
-  )
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     productsController.createProduct,
     endController,
   );
+
+router.post(
+  '/list',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  productsController.getAllProducts,
+);
 
 // Truncate all product tables - ADMIN ONLY
 router.post(

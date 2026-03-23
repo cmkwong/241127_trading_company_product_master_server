@@ -659,6 +659,135 @@ export default class DataModelUtils {
     return fallbackForeignKey;
   }
 
+  // Helper to recursively check if model has any descendant with selected fields
+  _normalizeReadFieldsSelection(fieldsOption) {
+    if (!fieldsOption) return null;
+
+    let parsed = fieldsOption;
+    if (typeof fieldsOption === 'string') {
+      try {
+        parsed = JSON.parse(fieldsOption);
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const fieldsByTable = new Map();
+
+    for (const [tableName, fields] of Object.entries(parsed)) {
+      if (!Array.isArray(fields) || fields.length === 0) continue;
+
+      const normalizedTableName = this._getBaseTableName(tableName);
+      const normalizedFields = [
+        ...new Set(fields.map((f) => String(f).trim())),
+      ].filter(Boolean);
+
+      if (normalizedFields.length === 0) continue;
+      fieldsByTable.set(normalizedTableName, new Set(normalizedFields));
+    }
+
+    if (fieldsByTable.size === 0) return null;
+
+    return {
+      fieldsByTable,
+      descendantMemo: new Map(),
+    };
+  }
+
+  // Recursive helper to check if any descendant of the model has selected fields
+  _modelHasSelectedDescendant(model, selection) {
+    const baseTable = this._getBaseTableName(model.tableName);
+
+    if (selection.descendantMemo.has(baseTable)) {
+      return selection.descendantMemo.get(baseTable);
+    }
+
+    let hasSelectedDescendant = false;
+    for (const childConfig of model.childTableConfig || []) {
+      const childModel = childConfig?.model;
+      if (!childModel) continue;
+
+      const childBaseTable = this._getBaseTableName(childModel.tableName);
+      if (selection.fieldsByTable.has(childBaseTable)) {
+        hasSelectedDescendant = true;
+        break;
+      }
+
+      if (this._modelHasSelectedDescendant(childModel, selection)) {
+        hasSelectedDescendant = true;
+        break;
+      }
+    }
+
+    selection.descendantMemo.set(baseTable, hasSelectedDescendant);
+    return hasSelectedDescendant;
+  }
+
+  // Helper to apply read field selection to a single row based on the current model and selection config
+  _applyReadFieldsToRow(row, currentModel, options) {
+    const selection = options?._readFieldsSelection;
+    if (!selection) return row;
+
+    const baseTable = this._getBaseTableName(currentModel.tableName);
+    const selectedFields = selection.fieldsByTable.get(baseTable);
+    const hasSelectedDescendant = this._modelHasSelectedDescendant(
+      currentModel,
+      selection,
+    );
+
+    if (!selectedFields && !hasSelectedDescendant) {
+      return null;
+    }
+
+    const result = {};
+
+    if (selectedFields) {
+      for (const fieldName of selectedFields) {
+        if (Object.prototype.hasOwnProperty.call(row, fieldName)) {
+          result[fieldName] = row[fieldName];
+        }
+      }
+    } else {
+      const pkField = currentModel.entityIdField || 'id';
+      if (Object.prototype.hasOwnProperty.call(row, pkField)) {
+        result[pkField] = row[pkField];
+      }
+    }
+
+    for (const childConfig of currentModel.childTableConfig || []) {
+      const childModel = childConfig?.model;
+      if (!childModel) continue;
+
+      const childTableName = childModel.tableName;
+      if (!Object.prototype.hasOwnProperty.call(row, childTableName)) continue;
+
+      const childBaseTable = this._getBaseTableName(childTableName);
+      const childSelected = selection.fieldsByTable.has(childBaseTable);
+      const childHasSelectedDescendant = this._modelHasSelectedDescendant(
+        childModel,
+        selection,
+      );
+
+      if (!childSelected && !childHasSelectedDescendant) continue;
+
+      const childValue = row[childTableName];
+      if (Array.isArray(childValue)) {
+        const cleaned = childValue.filter(Boolean);
+        if (cleaned.length > 0) {
+          result[childTableName] = cleaned;
+        }
+      } else if (childValue) {
+        result[childTableName] = childValue;
+      }
+    }
+
+    return result;
+  }
+
   async _recursiveRead(inputRow, currentModel, options) {
     const pkField = currentModel.entityIdField;
     const id = inputRow[pkField];
@@ -747,7 +876,7 @@ export default class DataModelUtils {
       }
     }
 
-    return dbRow;
+    return this._applyReadFieldsToRow(dbRow, currentModel, options);
   }
 
   /**
@@ -977,6 +1106,11 @@ export default class DataModelUtils {
   }
 
   async _handleReadOperation(jsonData, schemaConfig, options) {
+    const readOptions = {
+      ...(options || {}),
+      _readFieldsSelection: this._normalizeReadFieldsSelection(options?.fields),
+    };
+
     const resultData = {};
 
     for (const [tableName, rows] of Object.entries(jsonData)) {
@@ -988,7 +1122,11 @@ export default class DataModelUtils {
       const builtRows = [];
       for (const row of rows) {
         try {
-          const builtRow = await this._recursiveRead(row, targetModel, options);
+          const builtRow = await this._recursiveRead(
+            row,
+            targetModel,
+            readOptions,
+          );
           if (builtRow) {
             builtRows.push(builtRow);
           }
