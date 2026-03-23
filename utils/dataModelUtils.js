@@ -788,6 +788,58 @@ export default class DataModelUtils {
     return result;
   }
 
+  _canSkipHydration(inputRow, currentModel, options) {
+    if (options?.includeBase64) {
+      return false;
+    }
+
+    const selection = options?._readFieldsSelection;
+    if (!selection) {
+      return false;
+    }
+
+    const baseTable = this._getBaseTableName(currentModel.tableName);
+    const selectedFields = selection.fieldsByTable.get(baseTable);
+
+    // No direct fields selected for this table -> keep parent as container only.
+    if (!selectedFields) {
+      return true;
+    }
+
+    // Safe skip only when every selected field already exists in input row.
+    for (const fieldName of selectedFields) {
+      if (!Object.prototype.hasOwnProperty.call(inputRow, fieldName)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  _shouldTraverseChildren(currentModel, options) {
+    const selection = options?._readFieldsSelection;
+    if (!selection) {
+      return true;
+    }
+
+    return this._modelHasSelectedDescendant(currentModel, selection);
+  }
+
+  _shouldReadChildBranch(childModel, options) {
+    const selection = options?._readFieldsSelection;
+    if (!selection) {
+      return true;
+    }
+
+    const childBaseTable = this._getBaseTableName(childModel.tableName);
+    const childSelected = selection.fieldsByTable.has(childBaseTable);
+    if (childSelected) {
+      return true;
+    }
+
+    return this._modelHasSelectedDescendant(childModel, selection);
+  }
+
   async _recursiveRead(inputRow, currentModel, options) {
     const pkField = currentModel.entityIdField;
     const id = inputRow[pkField];
@@ -799,9 +851,14 @@ export default class DataModelUtils {
 
     let dbRow = inputRow;
     const isHydrated = Object.keys(inputRow).length > 1;
+    const skipHydration = this._canSkipHydration(
+      inputRow,
+      currentModel,
+      options,
+    );
 
     // 1. Hydrate if needed
-    if (!isHydrated) {
+    if (!isHydrated && !skipHydration) {
       try {
         dbRow = await currentModel.getById(id, {
           includeBase64: false,
@@ -830,10 +887,15 @@ export default class DataModelUtils {
     // 3. Process Children
     if (
       currentModel.childTableConfig &&
-      currentModel.childTableConfig.length > 0
+      currentModel.childTableConfig.length > 0 &&
+      this._shouldTraverseChildren(currentModel, options)
     ) {
       for (const childConfig of currentModel.childTableConfig) {
         const childModel = childConfig.model;
+        if (!this._shouldReadChildBranch(childModel, options)) {
+          continue;
+        }
+
         const childTableName = childModel.tableName;
 
         // --- Auto-Detect Foreign Key ---

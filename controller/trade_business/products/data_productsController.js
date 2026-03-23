@@ -1,6 +1,7 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import { toBool } from '../../../utils/booleanFn.js';
+import { getSafeSelectedFieldsForTable } from '../../../utils/readFieldSelection.js';
 import { getProductsSeedData } from '../../../utils/productsSource.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
 
@@ -26,11 +27,22 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
 
   const { includeBase64, iconOnly, compress, fields } = source;
 
-  const productIds = await productModel.executeQuery(
-    'SELECT id FROM products;',
+  const selectedProductFields = getSafeSelectedFieldsForTable(
+    fields,
+    'products',
+    {
+      ensureField: 'id',
+    },
   );
 
-  const data = { products: productIds };
+  const productRows =
+    selectedProductFields && !toBool(includeBase64)
+      ? await productModel.executeQuery(
+          `SELECT ${selectedProductFields.join(', ')} FROM products;`,
+        )
+      : await productModel.executeQuery('SELECT id FROM products;');
+
+  const data = { products: productRows };
   const structuredData = await productModel.processStructureDataOperation(
     data,
     'read',
