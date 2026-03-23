@@ -318,10 +318,28 @@ export default class DataModelUtils {
     }
 
     try {
-      const filePath = resolveStoredFilePathForRead(file[this.fileUrlField]);
-      if (!filePath) throw new AppError('File URL is not available', 400);
+      const rawFileUrl = file?.[this.fileUrlField];
 
-      await fs.access(filePath);
+      // Skip processing when DB has no file URL value.
+      // This avoids noisy errors like EISDIR when url is null/false/empty.
+      if (
+        rawFileUrl === undefined ||
+        rawFileUrl === null ||
+        rawFileUrl === false ||
+        (typeof rawFileUrl === 'string' && rawFileUrl.trim() === '')
+      ) {
+        return file;
+      }
+
+      const filePath = resolveStoredFilePathForRead(rawFileUrl);
+      if (!filePath) {
+        return file;
+      }
+
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) {
+        return file;
+      }
 
       const ext = path.extname(filePath).toLowerCase();
       let mimeType = 'application/octet-stream';
