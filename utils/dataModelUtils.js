@@ -889,9 +889,14 @@ export default class DataModelUtils {
     return this._modelHasSelectedDescendant(childModel, selection);
   }
 
-  async _recursiveRead(inputRow, currentModel, options) {
+  // Core Helper: Hydrates a single row if needed and processes Base64 content if required.
+  // Returns the fully hydrated and processed row, or null if hydration fails.
+  // Hydration is skipped if the input row already contains all selected fields based on the readFields selection.
+  // Base64 processing is performed if the model has file handling and includeBase64 option is true.
+  async _hydrateAndProcessRow(inputRow, currentModel, options) {
+    // If inputRow has more than just the PK field, we consider it already hydrated.
     const pkField = currentModel.entityIdField;
-    const id = inputRow[pkField];
+    const id = inputRow?.[pkField];
 
     if (!id) {
       console.error(`Missing primary key (${pkField}) in inputRow:`, inputRow);
@@ -933,50 +938,97 @@ export default class DataModelUtils {
       }
     }
 
-    // 3. Process Children
+    return dbRow;
+  }
+
+  // Core Recursive Read Helper: Reads a batch of rows, processes them, and recursively reads children if needed.
+  // Returns an array of fully processed rows with children attached as needed.
+  async _recursiveReadBatch(inputRows, currentModel, options) {
+    if (!Array.isArray(inputRows) || inputRows.length === 0) {
+      return [];
+    }
+
+    const hydratedRows = [];
+    for (const row of inputRows) {
+      const hydrated = await this._hydrateAndProcessRow(
+        row,
+        currentModel,
+        options,
+      );
+      if (hydrated) {
+        hydratedRows.push(hydrated);
+      }
+    }
+
+    if (hydratedRows.length === 0) {
+      return [];
+    }
+
     if (
       currentModel.childTableConfig &&
       currentModel.childTableConfig.length > 0 &&
       this._shouldTraverseChildren(currentModel, options)
     ) {
+      const parentPkField = currentModel.entityIdField;
+      const parentIds = [
+        ...new Set(
+          hydratedRows
+            .map((row) => row?.[parentPkField])
+            .filter((v) => v !== undefined && v !== null && v !== ''),
+        ),
+      ];
+
       for (const childConfig of currentModel.childTableConfig) {
         const childModel = childConfig.model;
         if (!this._shouldReadChildBranch(childModel, options)) {
           continue;
         }
 
-        const childTableName = childModel.tableName;
+        if (parentIds.length === 0) {
+          continue;
+        }
 
-        // --- Auto-Detect Foreign Key ---
+        const childTableName = childModel.tableName;
         const foreignKeyField = this._resolveForeignKey(
           currentModel,
           childConfig,
         );
 
-        // A. Fetch children
         try {
-          const childRows = await childModel.getAllByParentId(
-            id,
-            false,
-            {},
+          const childRows = await childModel.getAllByParentIds(
+            parentIds,
             foreignKeyField,
           );
 
-          // B. Recursively process each child
-          const processedChildren = [];
+          const byParentId = new Map();
           for (const childRow of childRows) {
-            const processedChild = await this._recursiveRead(
-              childRow,
+            const ownerId = childRow?.[foreignKeyField];
+            if (ownerId === undefined || ownerId === null || ownerId === '') {
+              continue;
+            }
+
+            if (!byParentId.has(ownerId)) {
+              byParentId.set(ownerId, []);
+            }
+            byParentId.get(ownerId).push(childRow);
+          }
+
+          for (const parentRow of hydratedRows) {
+            const parentId = parentRow?.[parentPkField];
+            const directChildren = byParentId.get(parentId) || [];
+            if (directChildren.length === 0) {
+              continue;
+            }
+
+            const processedChildren = await this._recursiveReadBatch(
+              directChildren,
               childModel,
               options,
             );
-            if (processedChild) {
-              processedChildren.push(processedChild);
-            }
-          }
 
-          if (processedChildren.length > 0) {
-            dbRow[childTableName] = processedChildren;
+            if (processedChildren.length > 0) {
+              parentRow[childTableName] = processedChildren;
+            }
           }
         } catch (err) {
           console.error(
@@ -987,7 +1039,25 @@ export default class DataModelUtils {
       }
     }
 
-    return this._applyReadFieldsToRow(dbRow, currentModel, options);
+    const result = [];
+    for (const row of hydratedRows) {
+      const filtered = this._applyReadFieldsToRow(row, currentModel, options);
+      if (filtered) {
+        result.push(filtered);
+      }
+    }
+
+    return result;
+  }
+
+  // Public Recursive Read Method: Starts the recursive read process for a single input row.
+  async _recursiveRead(inputRow, currentModel, options) {
+    const rows = await this._recursiveReadBatch(
+      [inputRow],
+      currentModel,
+      options,
+    );
+    return rows[0] || null;
   }
 
   /**
@@ -1162,8 +1232,13 @@ export default class DataModelUtils {
 
     // 4. Handle Primary Key Logic
     if (rowAction === 'create') {
-      // Always generate UUID for VARCHAR PKs on create
-      validEntry[pkField] = validEntry[pkField] || uuidv4();
+      // Generate UUID only when PK is non-numeric/non-auto-increment.
+      if (
+        !validEntry[pkField] &&
+        currentModel._shouldAutoGenerateUuid(pkField)
+      ) {
+        validEntry[pkField] = uuidv4();
+      }
     } else {
       // Update: Must have ID
       if (!validEntry[pkField]) {
@@ -1230,23 +1305,15 @@ export default class DataModelUtils {
       const targetModel = this._resolveTargetModel(tableName);
       if (!targetModel) continue;
 
-      const builtRows = [];
-      for (const row of rows) {
-        try {
-          const builtRow = await this._recursiveRead(
-            row,
-            targetModel,
-            readOptions,
-          );
-          if (builtRow) {
-            builtRows.push(builtRow);
-          }
-        } catch (error) {
-          console.error(
-            `Error processing row in table ${tableName}:`,
-            error.message,
-          );
-        }
+      let builtRows = [];
+      try {
+        builtRows = await this._recursiveReadBatch(
+          rows,
+          targetModel,
+          readOptions,
+        );
+      } catch (error) {
+        console.error(`Error processing table ${tableName}:`, error.message);
       }
       resultData[tableName] = builtRows;
     }
@@ -1378,7 +1445,7 @@ export default class DataModelUtils {
   async checkExists(value, fieldName) {
     if (!value) return false;
     const searchField = fieldName || this.entityIdField;
-    const sql = `SELECT 1 FROM ${this.tableName} WHERE ${searchField} = ? LIMIT 1`;
+    const sql = `SELECT 1 FROM ${this._escapeIdentifier(this.tableName)} WHERE ${this._escapeIdentifier(searchField)} = ? LIMIT 1`;
 
     try {
       const rows = await this.dbc.executeQuery(sql, [value]);
@@ -1604,6 +1671,45 @@ export default class DataModelUtils {
     }
   }
 
+  async getAllByParentIds(parentIds, foreignKeyField = null) {
+    try {
+      const searchField = this._inferForeignKeyField(foreignKeyField);
+
+      if (!searchField) {
+        throw new AppError(
+          `Cannot determine foreign key for ${this.tableName}. Please provide it explicitly.`,
+          500,
+        );
+      }
+
+      const normalizedParentIds = [
+        ...new Set(
+          (Array.isArray(parentIds) ? parentIds : [])
+            .map((v) => (typeof v === 'string' ? v.trim() : v))
+            .filter((v) => v !== undefined && v !== null && v !== ''),
+        ),
+      ];
+
+      if (normalizedParentIds.length === 0) {
+        return [];
+      }
+
+      const placeholders = normalizedParentIds.map(() => '?').join(', ');
+      const sql = `
+      SELECT * FROM ${this.tableName}
+      WHERE ${this._escapeIdentifier(searchField)} IN (${placeholders})
+      ORDER BY ${this._escapeIdentifier(searchField)}, ${this._escapeIdentifier(this.entityIdField)}
+    `;
+
+      return await this.dbc.executeQuery(sql, normalizedParentIds);
+    } catch (error) {
+      throw new AppError(
+        `Failed to get ${this.entityName}s by parent IDs: ${error.message}`,
+        error.statusCode || 500,
+      );
+    }
+  }
+
   async update(id, data) {
     try {
       this.validateData(data, true);
@@ -1819,6 +1925,43 @@ export default class DataModelUtils {
     }
 
     return {};
+  }
+
+  _getFieldDefinition(fieldName) {
+    const defs = this._getTableFieldDefinitions();
+    return defs?.[fieldName] || null;
+  }
+
+  _shouldAutoGenerateUuid(fieldName) {
+    const fieldDef = this._getFieldDefinition(fieldName);
+
+    // Backward compatibility: when schema detail is absent, preserve prior behavior.
+    if (!fieldDef) return true;
+
+    if (fieldDef.autoIncrement) return false;
+
+    const rawType = String(
+      fieldDef.type || fieldDef.dataType || '',
+    ).toLowerCase();
+    if (!rawType) return true;
+
+    const numericTypeHints = [
+      'int',
+      'integer',
+      'bigint',
+      'smallint',
+      'mediumint',
+      'tinyint',
+      'number',
+      'numeric',
+      'decimal',
+      'float',
+      'double',
+      'real',
+      'serial',
+    ];
+
+    return !numericTypeHints.some((hint) => rawType.includes(hint));
   }
 
   /**
