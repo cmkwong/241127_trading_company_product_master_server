@@ -8,6 +8,10 @@ import {
   resolveStoredFilePathForRead,
 } from './fileUpload.js';
 import { v4 as uuidv4 } from 'uuid';
+import ReadDataModel from './dataModelUtils/ReadDataModel.js';
+import WriteDataModel from './dataModelUtils/WriteDataModel.js';
+import UpdateDataModel from './dataModelUtils/UpdateDataModel.js';
+import DeleteDataModel from './dataModelUtils/DeleteDataModel.js';
 
 /**
  * Enhanced data model utility for standard database operations and file handling
@@ -39,6 +43,12 @@ export default class DataModelUtils {
       orderDirection: this.orderDirection,
     });
     // this.db = dbConn.createDbConnection(this.database);
+
+    // Split operation models
+    this.readModel = new ReadDataModel(this);
+    this.writeModel = new WriteDataModel(this);
+    this.updateModel = new UpdateDataModel(this);
+    this.deleteModel = new DeleteDataModel(this);
 
     // File handling configuration
     this.hasFileHandling = !!config.fileConfig;
@@ -1253,72 +1263,15 @@ export default class DataModelUtils {
   // 🟠 WRITE OPERATION (Create/Update) - HANDLER
   // ============================================================
   async _handleWriteOperation(jsonData, schemaConfig, actionType) {
-    // We use a transaction to ensure that if a child fails, the parent is rolled back.
-    return await this.withTransaction(async (connection) => {
-      const result = {
-        createData: {},
-        updateData: {},
-      };
-
-      // Set the root model to 'this' unconditionally
-      const rootModel = this;
-
-      for (const [tableName, tableRows] of Object.entries(jsonData)) {
-        if (!schemaConfig[tableName]) {
-          throw new AppError(`Table "${tableName}" not found in schema`, 400);
-        }
-
-        const targetModel = this._resolveTargetModel(tableName);
-        const modelToUse = targetModel || this;
-
-        // Start the recursive chain
-        await this._processWriteRecursive(
-          rootModel, // Pass the root model
-          null,
-          tableName,
-          tableRows,
-          null, // parentData
-          null, // parentTableName
-          modelToUse,
-          result,
-          schemaConfig,
-          actionType,
-          null, // parentAction
-        );
-      }
-
-      return result;
-    });
+    return this.writeModel.handleWriteOperation(
+      jsonData,
+      schemaConfig,
+      actionType,
+    );
   }
 
   async _handleReadOperation(jsonData, schemaConfig, options) {
-    const readOptions = {
-      ...(options || {}),
-      _readFieldsSelection: this._normalizeReadFieldsSelection(options?.fields),
-    };
-
-    const resultData = {};
-
-    for (const [tableName, rows] of Object.entries(jsonData)) {
-      if (!schemaConfig[tableName]) continue;
-
-      const targetModel = this._resolveTargetModel(tableName);
-      if (!targetModel) continue;
-
-      let builtRows = [];
-      try {
-        builtRows = await this._recursiveReadBatch(
-          rows,
-          targetModel,
-          readOptions,
-        );
-      } catch (error) {
-        console.error(`Error processing table ${tableName}:`, error.message);
-      }
-      resultData[tableName] = builtRows;
-    }
-
-    return { data: resultData };
+    return this.readModel.handleReadOperation(jsonData, schemaConfig, options);
   }
 
   // ============================================================
@@ -1326,57 +1279,7 @@ export default class DataModelUtils {
   // ============================================================
 
   async _handleDeleteOperation(jsonData, schemaConfig) {
-    const resultData = {};
-
-    for (const [tableName, rows] of Object.entries(jsonData)) {
-      // 1. Resolve Root Model
-      const targetModel = this._resolveTargetModel(tableName);
-
-      if (!targetModel) {
-        console.warn(`Cannot delete from '${tableName}'. Model not found.`);
-        continue;
-      }
-
-      // 2. Build Delete Queue (Identify Leafs)
-      const deleteQueue = [];
-      for (const row of rows) {
-        await this._collectDeleteQueue(row, targetModel, deleteQueue);
-      }
-
-      // 3. Execute Deletes
-      for (const item of deleteQueue) {
-        try {
-          const { model, id } = item;
-
-          // A. Database delete first, then file delete in the same DB transaction.
-          //    If file deletion fails, DB delete is rolled back.
-          const deleted = await this._deleteRowFirstThenFile(model, id, {
-            ignoreNotFound: true,
-          });
-
-          // C. Output Result
-          if (!resultData[model.tableName]) {
-            resultData[model.tableName] = [];
-          }
-          // Avoid duplicates in response
-          if (!resultData[model.tableName].some((r) => r.id === id)) {
-            resultData[model.tableName].push({
-              id: id,
-              status: deleted ? 'deleted' : 'not_found',
-            });
-          }
-        } catch (err) {
-          console.error(
-            `Delete failed for ${item.tableName} ID ${item.id}`,
-            err,
-          );
-          if (!resultData[item.tableName]) resultData[item.tableName] = [];
-          resultData[item.tableName].push({ id: item.id, error: err.message });
-        }
-      }
-    }
-
-    return { deleteData: resultData };
+    return this.deleteModel.handleDeleteOperation(jsonData, schemaConfig);
   }
 
   _resolveTargetModel(tableName) {
@@ -1551,80 +1454,15 @@ export default class DataModelUtils {
   }
 
   async creates(datas) {
-    try {
-      for (const data of datas) {
-        await this.create(data);
-      }
-      return {
-        message: `${this._capitalize(this.entityName)} created successfully`,
-      };
-    } catch (error) {
-      throw new AppError(
-        `Failed to create ${this.entityName}: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.updateModel.creates(datas);
   }
 
   async create(data) {
-    try {
-      this.validateData(data);
-
-      const result = await this.crudO.performCrud({
-        operation: 'create',
-        tableName: this.tableName,
-        data,
-      });
-
-      // Handle file upload if applicable
-      if (this.hasFileHandling) {
-        const fileType = data[this.fileTypeField];
-        data[this.fileUrlField] = await this._validateAndSaveFile(data, {
-          entityId: data[this.entityIdField],
-          fileType,
-        });
-      }
-
-      return {
-        message: `${this._capitalize(this.entityName)} created successfully`,
-        [this._camelCase(this.entityName)]: result.record,
-      };
-    } catch (error) {
-      throw new AppError(
-        `Failed to create ${this.entityName}: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.updateModel.create(data);
   }
 
   async getById(id, options = {}) {
-    try {
-      const result = await this.crudO.performCrud({
-        operation: 'read',
-        tableName: this.tableName,
-        id,
-      });
-
-      if (!result.record) {
-        throw new AppError(
-          `${this._capitalize(this.entityName)} not found`,
-          404,
-        );
-      }
-
-      const entity = result.record;
-      if (this.hasFileHandling && options.includeBase64) {
-        return this._processBase64Content(entity, options);
-      }
-
-      return entity;
-    } catch (error) {
-      console.error(
-        `Error in getById for ${this.entityName} (${id}):`,
-        error.message,
-      );
-      throw error;
-    }
+    return this.readModel.getById(id, options);
   }
 
   /**
@@ -1640,187 +1478,28 @@ export default class DataModelUtils {
     options = {},
     foreignKeyField = null,
   ) {
-    try {
-      const searchField = this._inferForeignKeyField(foreignKeyField);
-
-      if (!searchField) {
-        throw new AppError(
-          `Cannot determine foreign key for ${this.tableName}. Please provide it explicitly.`,
-          500,
-        );
-      }
-
-      const sql = `
-      SELECT * FROM ${this.tableName}
-      WHERE ${searchField} = ?
-      ORDER BY ${this.entityIdField}
-    `;
-
-      const results = await this.dbc.executeQuery(sql, [parentId]);
-
-      if (!includeBase64 || !this.hasFileHandling) return results;
-
-      return Promise.all(
-        results.map((file) => this._processBase64Content(file, options)),
-      );
-    } catch (error) {
-      throw new AppError(
-        `Failed to get ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.readModel.getAllByParentId(
+      parentId,
+      includeBase64,
+      options,
+      foreignKeyField,
+    );
   }
 
   async getAllByParentIds(parentIds, foreignKeyField = null) {
-    try {
-      const searchField = this._inferForeignKeyField(foreignKeyField);
-
-      if (!searchField) {
-        throw new AppError(
-          `Cannot determine foreign key for ${this.tableName}. Please provide it explicitly.`,
-          500,
-        );
-      }
-
-      const normalizedParentIds = [
-        ...new Set(
-          (Array.isArray(parentIds) ? parentIds : [])
-            .map((v) => (typeof v === 'string' ? v.trim() : v))
-            .filter((v) => v !== undefined && v !== null && v !== ''),
-        ),
-      ];
-
-      if (normalizedParentIds.length === 0) {
-        return [];
-      }
-
-      const placeholders = normalizedParentIds.map(() => '?').join(', ');
-      const sql = `
-      SELECT * FROM ${this.tableName}
-      WHERE ${this._escapeIdentifier(searchField)} IN (${placeholders})
-      ORDER BY ${this._escapeIdentifier(searchField)}, ${this._escapeIdentifier(this.entityIdField)}
-    `;
-
-      return await this.dbc.executeQuery(sql, normalizedParentIds);
-    } catch (error) {
-      throw new AppError(
-        `Failed to get ${this.entityName}s by parent IDs: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.readModel.getAllByParentIds(parentIds, foreignKeyField);
   }
 
   async update(id, data) {
-    try {
-      this.validateData(data, true);
-
-      const existing = await this.getById(id);
-      if (this.hasFileHandling) {
-        const fileType =
-          data[this.fileTypeField] || existing[this.fileTypeField];
-        data[this.fileUrlField] = await this._validateAndSaveFile(data, {
-          entityId: id,
-          fileType,
-        });
-
-        if (data[this.fileUrlField] && existing[this.fileUrlField]) {
-          this.imagesOnly
-            ? await deleteImage(existing[this.fileUrlField])
-            : await deleteFile(existing[this.fileUrlField]);
-        }
-      }
-
-      const result = await this.crudO.performCrud({
-        operation: 'update',
-        tableName: this.tableName,
-        id,
-        data,
-      });
-
-      return {
-        message: `${this._capitalize(this.entityName)} updated successfully`,
-        [this._camelCase(this.entityName)]: result.record,
-      };
-    } catch (error) {
-      throw new AppError(
-        `Failed to update ${this.entityName}: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.updateModel.update(id, data);
   }
 
   async delete(id) {
-    try {
-      await this._deleteRowFirstThenFile(this, id);
-
-      return {
-        message: `${this._capitalize(this.entityName)} deleted successfully`,
-        id,
-      };
-    } catch (error) {
-      throw new AppError(
-        `Failed to delete ${this.entityName}: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.deleteModel.delete(id);
   }
 
   async deleteAllByParentId(parentId) {
-    try {
-      // 1. Determine the Foreign Key column
-      const searchField = this._inferForeignKeyField();
-
-      if (!searchField) {
-        throw new AppError(
-          `Cannot determine foreign key for ${this.tableName} to perform delete.`,
-          500,
-        );
-      }
-
-      // Get all entities for this parent
-      const entities = await this.getAllByParentId(
-        parentId,
-        false,
-        {},
-        searchField,
-      );
-
-      if (entities.length === 0) {
-        return {
-          message: `No ${this.entityName}s found`,
-          count: 0,
-        };
-      }
-
-      await this.dbc.executeTransaction(async (connection) => {
-        // Delete rows first
-        const deleteSql = `DELETE FROM ${this._escapeIdentifier(this.tableName)} WHERE ${this._escapeIdentifier(searchField)} = ?`;
-        await this.dbc.executeQuery(deleteSql, [parentId], connection);
-
-        // Then delete files. Any failure throws and triggers transaction rollback.
-        if (this.hasFileHandling) {
-          for (const entity of entities) {
-            if (entity[this.fileUrlField]) {
-              if (this.imagesOnly) {
-                await deleteImage(entity[this.fileUrlField]);
-              } else {
-                await deleteFile(entity[this.fileUrlField]);
-              }
-            }
-          }
-        }
-      });
-
-      return {
-        message: `${this._capitalize(this.entityName)}s deleted successfully`,
-        count: entities.length,
-      };
-    } catch (error) {
-      throw new AppError(
-        `Failed to delete ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.deleteModel.deleteAllByParentId(parentId);
   }
 
   async withTransaction(fn) {
@@ -1835,59 +1514,11 @@ export default class DataModelUtils {
   }
 
   async reorderFiles(entityId, orderData) {
-    if (!this.hasFileHandling) {
-      throw new AppError('File handling is not configured for this model', 500);
-    }
-
-    try {
-      return await this.dbc.executeTransaction(async (connection) => {
-        for (const item of orderData) {
-          await this.crudO.performCrud({
-            operation: 'update',
-            tableName: this.tableName,
-            id: item.id,
-            data: { display_order: item.display_order },
-          });
-        }
-
-        const files = await this.getAllByParentId(entityId);
-
-        return {
-          message: `${this._capitalize(
-            this.entityName,
-          )}s reordered successfully`,
-          [this.entityIdField]: entityId,
-          [this._pluralize(this._camelCase(this.entityName))]: files,
-        };
-      });
-    } catch (error) {
-      throw new AppError(
-        `Failed to reorder ${this.entityName}s: ${error.message}`,
-        error.statusCode || 500,
-      );
-    }
+    return this.updateModel.reorderFiles(entityId, orderData);
   }
 
   async truncateTable() {
-    try {
-      return await this.withTransaction(async (connection) => {
-        await this.dbc.executeQuery('SET FOREIGN_KEY_CHECKS = 0');
-        await this.dbc.executeQuery(`TRUNCATE TABLE ${this.tableName}`);
-        await this.dbc.executeQuery('SET FOREIGN_KEY_CHECKS = 1');
-
-        return {
-          success: true,
-          message: `${this._capitalize(
-            this.entityName,
-          )}s table has been truncated successfully`,
-        };
-      });
-    } catch (error) {
-      throw new AppError(
-        `Failed to truncate ${this.entityName}s: ${error.message}`,
-        500,
-      );
-    }
+    return this.updateModel.truncateTable();
   }
 
   async executeQuery(stmt, args) {
