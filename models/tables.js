@@ -702,6 +702,11 @@ const TABLE_MASTER_RAW = {
         },
         description: 'Reference to master_product_name_types.id',
       },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
+      },
       created_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP',
@@ -994,6 +999,11 @@ const TABLE_MASTER_RAW = {
       link: {
         type: 'TEXT',
         description: 'URL to Alibaba product page',
+      },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Order for display purposes',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -1829,6 +1839,10 @@ const TABLE_MASTER_RAW = {
           onDelete: 'RESTRICT',
         },
         description: 'Reference to master_services.id',
+      },
+      link: {
+        type: 'TEXT',
+        description: 'URL link related to the service',
       },
       description: {
         type: 'TEXT',

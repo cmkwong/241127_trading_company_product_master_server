@@ -11,15 +11,17 @@ router.use(authController.protect);
 // Routes that don't require ID payload validation
 router
   .route('/')
-  .get(
-    authController.restrictTo('admin', 'manager', 'product-manager'),
-    supplierController.getAllSuppliers,
-  )
   .post(
     authController.restrictTo('admin', 'manager', 'product-manager'),
     supplierController.createSupplier,
     endController,
   );
+
+router.post(
+  '/list',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  supplierController.getAllSuppliers,
+);
 
 // defaults / samples
 router
