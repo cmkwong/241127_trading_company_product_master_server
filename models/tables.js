@@ -26,9 +26,48 @@ const TABLE_MASTER_RAW = {
         type: 'VARCHAR(255)',
         description: 'Index for ordering products',
       },
+      product_status_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_product_status',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_product_status.id',
+      },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the product',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  MASTER_PRODUCT_STATUS: {
+    name: 'master_product_status',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Product status name',
+      },
+      description: {
+        type: 'TEXT',
+        description: 'Product status description',
       },
       created_at: {
         type: 'TIMESTAMP',

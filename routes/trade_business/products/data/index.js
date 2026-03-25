@@ -24,6 +24,12 @@ router.post(
   productsController.getAllProducts,
 );
 
+router.post(
+  '/images/download',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  productsController.downloadProductImages,
+);
+
 // Truncate all product tables - ADMIN ONLY
 router.post(
   '/truncate',

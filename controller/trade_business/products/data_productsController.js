@@ -1,9 +1,11 @@
 import * as Products from '../../../models/trade_business/products/data_products.js';
+import AppError from '../../../utils/appError.js';
 import catchAsync from '../../../utils/catchAsync.js';
 import { toBool } from '../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../utils/readFieldSelection.js';
 import { getProductsSeedData } from '../../../utils/productsSource.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
+import { productImagesModel } from '../../../models/trade_business/products/data_product_images.js';
 
 /**
  * Create a new product
@@ -94,6 +96,49 @@ export const getProductById = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
+    structuredData,
+  });
+});
+
+/**
+ * Download product images by product_id and image_type_id
+ * @route POST /api/products/data/images/download
+ */
+export const downloadProductImages = catchAsync(async (req, res, next) => {
+  const source = {
+    ...(req.query || {}),
+    ...(req.body || {}),
+  };
+
+  const { product_id, image_type_id, id, compress } = source;
+
+  if (!product_id || !image_type_id) {
+    return next(new AppError('product_id and image_type_id are required', 400));
+  }
+
+  const imageRows = id
+    ? await productModel.executeQuery(
+        `SELECT id FROM ${productImagesModel.tableName} WHERE product_id = ? AND image_type_id = ? AND id = ? LIMIT 1`,
+        [product_id, image_type_id, id],
+      )
+    : await productModel.executeQuery(
+        `SELECT id FROM ${productImagesModel.tableName} WHERE product_id = ? AND image_type_id = ? ORDER BY created_at DESC`,
+        [product_id, image_type_id],
+      );
+
+  const structuredData = await productImagesModel.processStructureDataOperation(
+    { [productImagesModel.tableName]: imageRows },
+    'read',
+    {
+      includeBase64: true,
+      base64OnlyTable: [productImagesModel.tableName],
+      compress: toBool(compress),
+    },
+  );
+
+  res.status(200).json({
+    status: 'success',
+    count: imageRows.length,
     structuredData,
   });
 });
