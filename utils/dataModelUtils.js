@@ -1211,6 +1211,15 @@ export default class DataModelUtils {
 
     // 1. Copy Fields
     for (const field in rawRow) {
+      // fileUrlField is server-managed and must not be written from client payload.
+      if (
+        currentModel.hasFileHandling &&
+        currentModel.fileUrlField &&
+        field === currentModel.fileUrlField
+      ) {
+        continue;
+      }
+
       if (
         tableSchema[field] ||
         field === 'base64_image' ||

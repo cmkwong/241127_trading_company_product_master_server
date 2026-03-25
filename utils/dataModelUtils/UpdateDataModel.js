@@ -26,21 +26,33 @@ export default class UpdateDataModel {
     const host = this.host;
 
     try {
-      host.validateData(data);
+      const payload = { ...(data || {}) };
+
+      // fileUrlField is server-managed and must not be writable by client input.
+      if (host.hasFileHandling && host.fileUrlField) {
+        delete payload[host.fileUrlField];
+      }
+
+      host.validateData(payload);
+
+      const writeData = { ...payload };
+
+      if (host.hasFileHandling) {
+        const fileType = payload[host.fileTypeField];
+        writeData[host.fileUrlField] = await host._validateAndSaveFile(
+          payload,
+          {
+            entityId: payload[host.entityIdField],
+            fileType,
+          },
+        );
+      }
 
       const result = await host.crudO.performCrud({
         operation: 'create',
         tableName: host.tableName,
-        data,
+        data: writeData,
       });
-
-      if (host.hasFileHandling) {
-        const fileType = data[host.fileTypeField];
-        data[host.fileUrlField] = await host._validateAndSaveFile(data, {
-          entityId: data[host.entityIdField],
-          fileType,
-        });
-      }
 
       return {
         message: `${host._capitalize(host.entityName)} created successfully`,
@@ -55,18 +67,30 @@ export default class UpdateDataModel {
     const host = this.host;
 
     try {
-      host.validateData(data, true);
+      const payload = { ...(data || {}) };
+
+      // fileUrlField is server-managed and must not be writable by client input.
+      if (host.hasFileHandling && host.fileUrlField) {
+        delete payload[host.fileUrlField];
+      }
+
+      host.validateData(payload, true);
+
+      const writeData = { ...payload };
 
       const existing = await host.getById(id);
       if (host.hasFileHandling) {
         const fileType =
-          data[host.fileTypeField] || existing[host.fileTypeField];
-        data[host.fileUrlField] = await host._validateAndSaveFile(data, {
-          entityId: id,
-          fileType,
-        });
+          payload[host.fileTypeField] || existing[host.fileTypeField];
+        writeData[host.fileUrlField] = await host._validateAndSaveFile(
+          payload,
+          {
+            entityId: id,
+            fileType,
+          },
+        );
 
-        if (data[host.fileUrlField] && existing[host.fileUrlField]) {
+        if (writeData[host.fileUrlField] && existing[host.fileUrlField]) {
           host.imagesOnly
             ? await deleteImage(existing[host.fileUrlField])
             : await deleteFile(existing[host.fileUrlField]);
@@ -77,7 +101,7 @@ export default class UpdateDataModel {
         operation: 'update',
         tableName: host.tableName,
         id,
-        data,
+        data: writeData,
       });
 
       return {
