@@ -31,7 +31,11 @@ const _insertAllDefaults = async (tableName) => {
 
     try {
       const { model, data } = tableDataMap[tableName];
-      results[tableName] = await model.creates(data);
+      const rows = Array.isArray(data) ? data : [];
+      results[tableName] =
+        rows.length > 0
+          ? await model.creates(rows)
+          : { message: `No default rows configured for ${tableName}` };
     } catch (error) {
       results[tableName] = { error: error.message };
     }
@@ -42,7 +46,11 @@ const _insertAllDefaults = async (tableName) => {
   // If no tableName, insert all master data tables
   for (const [name, { model, data }] of Object.entries(tableDataMap)) {
     try {
-      results[name] = await model.creates(data);
+      const rows = Array.isArray(data) ? data : [];
+      results[name] =
+        rows.length > 0
+          ? await model.creates(rows)
+          : { message: `No default rows configured for ${name}` };
     } catch (error) {
       results[name] = { error: error.message };
     }

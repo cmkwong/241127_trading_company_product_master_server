@@ -2,6 +2,7 @@ import { default_master_data } from '../../datas/master.js';
 import * as master_packingTypesModel from '../trade_business/master/master_packingTypesModel.js';
 import * as master_packingReliabilityTypesModel from '../trade_business/master/master_packingReliabilityTypesModel.js';
 import * as master_productImagesModel from '../trade_business/master/master_productImagesTypeModel.js';
+import * as master_productStatusModel from '../trade_business/master/master_productStatusModel.js';
 import * as master_productNameTypesModel from '../trade_business/master/master_productNameTypesModel.js';
 import * as master_certificateTypesModel from '../trade_business/master/master_certificateTypesModel.js';
 import * as master_categoriesModel from '../trade_business/master/master_categoriesModel.js';
@@ -38,6 +39,10 @@ import { apInvoiceModel } from '../trade_business/ap/data_ap_invoices.js';
 // This file defines the default data mappings for both master and transactional data in the trade business domain. It provides functions to retrieve these mappings, which can be used for seeding the database with initial data or resetting to default values.
 export const getMasterDefaultMappings = () => {
   return {
+    master_product_status: {
+      model: master_productStatusModel.productStatusModel,
+      data: default_master_data.master_product_status || [],
+    },
     master_product_image_types: {
       model: master_productImagesModel.productImagesTypeModel,
       data: default_master_data.master_product_image_types,
