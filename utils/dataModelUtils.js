@@ -1173,28 +1173,31 @@ export default class DataModelUtils {
     globalActionType,
     parentAction,
   ) {
-    for (const [tableName, tableRows] of Object.entries(rawRow)) {
-      if (!Array.isArray(tableRows)) continue;
+    // IMPORTANT: write in configured childTableConfig order, not raw JSON key order.
+    // This guarantees dependent children (e.g. product_costs) are processed
+    // after their referenced variant tables.
+    for (const childConfig of currentModel.childTableConfig || []) {
+      if (!childConfig?.model) continue;
 
-      const childConfig = currentModel.childTableConfig.find(
-        (config) => config.model.tableName === tableName,
+      const tableName = childConfig.model.tableName;
+      const jsonKey = childConfig.jsonKey || tableName;
+      const tableRows = rawRow[jsonKey];
+
+      if (!Array.isArray(tableRows) || tableRows.length === 0) continue;
+
+      await this._processWriteRecursive(
+        rootModel, // Pass the root model
+        rootModelKeyValue,
+        tableName,
+        tableRows,
+        validEntry,
+        currentTableName,
+        childConfig.model,
+        result,
+        schemaConfig,
+        globalActionType,
+        parentAction,
       );
-
-      if (childConfig && childConfig.model) {
-        await this._processWriteRecursive(
-          rootModel, // Pass the root model
-          rootModelKeyValue,
-          tableName,
-          tableRows,
-          validEntry,
-          currentTableName,
-          childConfig.model,
-          result,
-          schemaConfig,
-          globalActionType,
-          parentAction,
-        );
-      }
     }
   }
 
