@@ -225,7 +225,12 @@ export default class DataModelUtils {
   // check if data has base64 data content
   _hasBase64Content = (validEntry) => {
     for (const [_field, _value] of Object.entries(validEntry)) {
-      if (_field === 'base64_image' || _field === 'base64_file') {
+      if (
+        (_field === 'base64_image' || _field === 'base64_file') &&
+        _value !== undefined &&
+        _value !== null &&
+        String(_value).trim() !== ''
+      ) {
         return true;
       }
     }
@@ -483,7 +488,7 @@ export default class DataModelUtils {
       let dbRecord = null;
       const hasFilePayload =
         currentModel.hasFileHandling &&
-        currentModel._hasBase64Content(validEntry);
+        currentModel._hasBase64Content(rawRow || {});
       let previousFileUrl = null;
 
       try {
@@ -497,6 +502,28 @@ export default class DataModelUtils {
           }
 
           crudData[currentModel.fileUrlField] = 'PENDING';
+        } else if (
+          rowAction === 'create' &&
+          currentModel.hasFileHandling &&
+          currentModel.fileUrlField
+        ) {
+          const fileUrlFieldDef = currentModel._getFieldDefinition(
+            currentModel.fileUrlField,
+          );
+          const fileUrlIsRequired =
+            !!fileUrlFieldDef?.notNull ||
+            currentModel.requiredFields.includes(currentModel.fileUrlField) ||
+            !!currentModel.validations?.[currentModel.fileUrlField]?.required;
+
+          if (fileUrlIsRequired) {
+            const expectedBase64Field = currentModel.imagesOnly
+              ? 'base64_image'
+              : 'base64_file';
+            throw new AppError(
+              `${expectedBase64Field} is required to create ${currentModel.tableName}`,
+              400,
+            );
+          }
         }
 
         // --- B. Perform CRUD first ---
