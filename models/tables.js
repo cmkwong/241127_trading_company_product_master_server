@@ -949,9 +949,14 @@ const TABLE_MASTER_RAW = {
         references: { table: 'products', field: 'id', onDelete: 'CASCADE' },
         description: 'Reference to products.id',
       },
+      name: {
+        type: 'VARCHAR(255)',
+        notNull: false,
+        description: 'Link name or description',
+      },
       link: {
         type: 'TEXT',
-        notNull: true,
+        notNull: false,
         description: 'URL link related to product',
       },
       remark: { type: 'TEXT', description: 'Additional notes about the link' },
