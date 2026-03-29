@@ -645,6 +645,12 @@ const TABLE_MASTER_RAW = {
         },
         description: 'Reference to master_product_image_types.id',
       },
+      image_row: {
+        type: 'VARCHAR(36)',
+        description:
+          'Reference to a specific row in another table that this image is associated with (e.g., a specific product variant)',
+        notNull: true,
+      },
       image_name: {
         type: 'VARCHAR(255)',
         notNull: true,
