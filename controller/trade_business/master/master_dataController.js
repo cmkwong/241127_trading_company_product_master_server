@@ -326,56 +326,155 @@ export const resetMasterDataByTable = catchAsync(async (req, res, next) => {
   next();
 });
 
-export const updateMasterData = catchAsync(async (req, res, next) => {
-  const { tableName, id: idFromParams } = req.params;
+const _extractRowsPayload = (requestData, tableDataMap, options = {}) => {
+  const { requireId = false } = options;
+
+  if (
+    !requestData ||
+    typeof requestData !== 'object' ||
+    Array.isArray(requestData)
+  ) {
+    throw new AppError('Invalid request body data', 400);
+  }
+
+  const tableNames = Object.keys(requestData);
+  if (tableNames.length !== 1) {
+    throw new AppError(
+      'Request body data must contain exactly one table key, e.g. { data: { master_keywords: [...] } }',
+      400,
+    );
+  }
+
+  const tableName = tableNames[0];
+  if (!tableDataMap[tableName]) {
+    throw new AppError(`Unknown table: ${tableName}`, 400);
+  }
+
+  const { model } = tableDataMap[tableName];
+  const pkField = model.entityIdField || 'id';
+
+  const rawRows = requestData[tableName];
+  const tableRows = Array.isArray(rawRows) ? rawRows : [rawRows];
+
+  if (tableRows.length === 0) {
+    throw new AppError(`No rows provided for table ${tableName}`, 400);
+  }
+
+  if (requireId) {
+    const invalidRow = tableRows.find(
+      (row) =>
+        !row ||
+        typeof row !== 'object' ||
+        row[pkField] === undefined ||
+        row[pkField] === null ||
+        row[pkField] === '',
+    );
+
+    if (invalidRow) {
+      throw new AppError(`Each row must include ${pkField}`, 400);
+    }
+  }
+
+  return { tableName, model, pkField, tableRows };
+};
+
+export const getMasterDataRows = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
+
+  const tableNameFromQuery = req.query?.tableName;
+  const tableNameFromBody = req.body?.data
+    ? Object.keys(req.body.data || {})[0]
+    : null;
+  const tableName = tableNameFromQuery || tableNameFromBody;
+
+  if (!tableName) {
+    return next(
+      new AppError('tableName is required (query or body.data key)', 400),
+    );
+  }
 
   if (!tableDataMap[tableName]) {
     return next(
-      new AppError(`Unknown table: ${tableName}. Cannot update data.`, 400),
+      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
     );
   }
 
   const { model } = tableDataMap[tableName];
+  const sql = `SELECT * FROM ${tableName}`;
+  const results = await model.executeQuery(sql);
+
+  res.prints = {
+    status: 'success',
+    tableName,
+    results,
+  };
+  next();
+});
+
+export const updateMasterData = catchAsync(async (req, res, next) => {
+  const tableDataMap = getTableDataMapping();
   const requestData = req.body?.data;
 
-  if (!requestData || typeof requestData !== 'object') {
-    return next(new AppError('Invalid request body data', 400));
-  }
-
-  let structuredPayload;
-
-  // Accept both shapes:
-  // 1) { data: { id, ...fields } }
-  // 2) { data: { [tableName]: [{ id, ...fields }] } }
-  if (requestData[tableName] !== undefined) {
-    const tableRows = requestData[tableName];
-    structuredPayload = {
-      [tableName]: Array.isArray(tableRows) ? tableRows : [tableRows],
-    };
-  } else {
-    const row = { ...requestData };
-    if (idFromParams && !row.id) {
-      row.id = idFromParams;
-    }
-
-    if (!row.id) {
-      return next(new AppError('Record id is required for update', 400));
-    }
-
-    structuredPayload = {
-      [tableName]: [row],
-    };
-  }
+  const { tableName, model, tableRows } = _extractRowsPayload(
+    requestData,
+    tableDataMap,
+  );
 
   const result = await model.processStructureDataOperation(
-    structuredPayload,
+    { [tableName]: tableRows },
     'update',
   );
 
   res.prints = {
     status: 'success',
-    message: `Master data for table ${tableName} has been updated successfully`,
+    message: `Master data for table ${tableName} has been upserted successfully`,
+    result,
+  };
+
+  next();
+});
+
+export const createMasterData = catchAsync(async (req, res, next) => {
+  const tableDataMap = getTableDataMapping();
+  const requestData = req.body?.data;
+
+  const { tableName, model, tableRows } = _extractRowsPayload(
+    requestData,
+    tableDataMap,
+  );
+
+  const result = await model.processStructureDataOperation(
+    { [tableName]: tableRows },
+    'create',
+  );
+
+  res.prints = {
+    status: 'success',
+    message: `Master data for table ${tableName} has been created successfully`,
+    result,
+  };
+
+  next();
+});
+
+export const deleteMasterData = catchAsync(async (req, res, next) => {
+  const tableDataMap = getTableDataMapping();
+  const requestData = req.body?.data;
+
+  const { tableName, model, tableRows } = _extractRowsPayload(
+    requestData,
+    tableDataMap,
+    { requireId: true },
+  );
+
+  const result = await model.processStructureDataOperation(
+    { [tableName]: tableRows },
+    'delete',
+  );
+
+  res.prints = {
+    status: 'success',
+    message: `Master data for table ${tableName} has been deleted successfully`,
     result,
   };
 
@@ -399,6 +498,46 @@ export const getMasterData = catchAsync(async (req, res, next) => {
   res.prints = {
     status: 'success',
     results,
+  };
+  next();
+});
+
+export const getMasterTableSchema = catchAsync(async (req, res, next) => {
+  const { tableName } = req.params;
+
+  const tableDefinitionsByName = Object.values(TABLE_MASTER).reduce(
+    (acc, tableDef) => {
+      acc[tableDef.name] = tableDef;
+      return acc;
+    },
+    {},
+  );
+
+  if (tableName) {
+    const schema = tableDefinitionsByName[tableName];
+
+    if (!schema) {
+      return next(
+        new AppError(
+          `Unknown table: ${tableName}. Valid tables: ${Object.keys(
+            tableDefinitionsByName,
+          ).join(', ')}`,
+          400,
+        ),
+      );
+    }
+
+    res.prints = {
+      status: 'success',
+      tableName,
+      schema,
+    };
+    return next();
+  }
+
+  res.prints = {
+    status: 'success',
+    schemas: tableDefinitionsByName,
   };
   next();
 });

@@ -22,16 +22,25 @@ router.post(
   masterDataController.resetMasterDataByTable,
   endController,
 );
+// ===== Individual Master Data Operations =====
+// Get all rows for a specific master table
+router.get('/rows', masterDataController.getMasterDataRows, endController);
 
-router.patch(
-  '/:tableName/:id?',
-  masterDataController.updateMasterData,
-  endController,
-);
+// Update / create rows for a specific master table
+router.post('/rows', masterDataController.updateMasterData, endController);
+
+// Delete rows for a specific master table
+router.delete('/rows', masterDataController.deleteMasterData, endController);
 
 router.get(
   '/statistics',
   masterDataController.getMasterDataStatistics,
+  endController,
+);
+
+router.get(
+  '/schema/:tableName?',
+  masterDataController.getMasterTableSchema,
   endController,
 );
 

@@ -1,7 +1,7 @@
 import DataModelUtils from '../../../utils/dataModelUtils.js';
-import AppError from '../../../utils/appError.js';
 import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
+import { masterServiceImageModel } from './master_serviceImagesModel.js';
 
 // Create DataModelUtils instance for master services
 export const masterServiceModel = new DataModelUtils({
@@ -13,4 +13,11 @@ export const masterServiceModel = new DataModelUtils({
   validations: {
     service_name: { required: true },
   },
+  childTableConfig: [
+    {
+      tableName: TABLE_MASTER['MASTER_SERVICE_IMAGES'].name,
+      connectedKeys: { id: 'service_id' }, // parent table -> child table
+      model: masterServiceImageModel,
+    },
+  ],
 });

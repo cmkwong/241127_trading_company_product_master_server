@@ -15,4 +15,9 @@ export const masterServiceImageModel = new DataModelUtils({
     image_name: { required: true },
     image_url: { required: true },
   },
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/master/services/{id}/images/',
+    imagesOnly: true,
+  },
 });
