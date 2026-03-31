@@ -4,10 +4,10 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Create a data model utility for product packing images
-export const packingImagesModel = new DataModelUtils({
+export const packingFilesModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['PRODUCT_PACKING_IMAGES'].name,
-  tableFields: TABLE_MASTER['PRODUCT_PACKING_IMAGES'].fields,
+  tableName: TABLE_MASTER['PRODUCT_PACKING_FILES'].name,
+  tableFields: TABLE_MASTER['PRODUCT_PACKING_FILES'].fields,
   entityName: 'product packing image',
   entityIdField: 'id',
   requiredFields: ['packing_id'],
@@ -18,8 +18,8 @@ export const packingImagesModel = new DataModelUtils({
     id: uuidv4,
   },
   fileConfig: {
-    fileUrlField: 'image_url',
+    fileUrlField: 'file_url',
     uploadDir: 'public/products/{id}/packings/',
-    imagesOnly: true,
+    imagesOnly: false,
   },
 });

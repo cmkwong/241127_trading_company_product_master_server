@@ -212,7 +212,7 @@ export const saveBase64File = async (base64Data, uploadDir, options = {}) => {
     const {
       filename = null,
       allowedTypes = ['IMAGE'],
-      maxSizeInMB = 10,
+      maxSizeInMB = 50,
     } = options;
 
     // Validate base64 data

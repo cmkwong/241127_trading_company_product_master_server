@@ -1217,8 +1217,8 @@ const TABLE_MASTER_RAW = {
     },
   },
 
-  PRODUCT_PACKING_IMAGES: {
-    name: 'product_packing_images',
+  PRODUCT_PACKING_FILES: {
+    name: 'product_packing_files',
     table_type: 'products-data',
     fields: {
       id: {
@@ -1236,15 +1236,15 @@ const TABLE_MASTER_RAW = {
         },
         description: 'Reference to product_packings.id',
       },
-      image_name: {
+      file_name: {
         type: 'VARCHAR(255)',
         notNull: true,
-        description: 'Image name',
+        description: 'File name',
       },
-      image_url: {
+      file_url: {
         type: 'TEXT',
         notNull: true,
-        description: 'URL to packing image',
+        description: 'URL to packing file',
       },
       display_order: {
         type: 'INT',
@@ -1894,7 +1894,7 @@ const TABLE_MASTER_RAW = {
         type: 'TEXT',
         description: 'URL link related to the service',
       },
-      description: {
+      remark: {
         type: 'TEXT',
         description: 'Description of the service provided by the supplier',
       },
