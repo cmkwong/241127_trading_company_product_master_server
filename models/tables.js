@@ -766,7 +766,7 @@ const TABLE_MASTER_RAW = {
     constraints: {
       unique_product_name_type: {
         type: 'UNIQUE',
-        fields: ['product_id', 'name_type_id'],
+        fields: ['product_id', 'name_type_id', 'name'],
       },
     },
   },
@@ -964,6 +964,11 @@ const TABLE_MASTER_RAW = {
         type: 'TEXT',
         notNull: false,
         description: 'URL link related to product',
+      },
+      scores: {
+        type: 'FLOAT',
+        description: 'Score related to the link, 1-10,',
+        default: 1.0,
       },
       remark: { type: 'TEXT', description: 'Additional notes about the link' },
       created_at: {
