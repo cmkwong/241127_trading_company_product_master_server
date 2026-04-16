@@ -965,7 +965,7 @@ const TABLE_MASTER_RAW = {
         notNull: false,
         description: 'URL link related to product',
       },
-      scores: {
+      score: {
         type: 'FLOAT',
         description: 'Score related to the link, 1-10,',
         default: 1.0,
@@ -1463,6 +1463,11 @@ const TABLE_MASTER_RAW = {
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the supplier',
+      },
+      score: {
+        type: 'FLOAT',
+        description: 'Score related to the supplier, 1-10,',
+        default: 1.0,
       },
       created_at: {
         type: 'TIMESTAMP',
