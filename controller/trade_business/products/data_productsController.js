@@ -7,6 +7,75 @@ import { getProductsSeedData } from '../../../utils/productsSource.js';
 import { productModel } from '../../../models/trade_business/products/data_products.js';
 import { productImagesModel } from '../../../models/trade_business/products/data_product_images.js';
 
+const ICON_COMPRESSION_DEFAULTS = {
+  maxWidth: 220,
+  maxHeight: 220,
+  quality: 0.45,
+};
+
+const toPositiveInt = (value, fallback) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+};
+
+const toQuality = (value, fallback) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(1, Math.max(0.1, parsed));
+};
+
+const buildReadOptions = (source = {}) => {
+  const {
+    includeBase64,
+    iconOnly,
+    compress,
+    fields,
+    iconCompress,
+    iconMaxWidth,
+    iconMaxHeight,
+    iconQuality,
+  } = source;
+
+  const normalizedIconOnly = toBool(iconOnly);
+  const normalizedCompress = toBool(compress);
+  const normalizedIncludeBase64 = toBool(includeBase64);
+  const iconCompressionEnabled =
+    normalizedIconOnly &&
+    normalizedCompress &&
+    (iconCompress === undefined ? true : toBool(iconCompress));
+
+  const readOptions = {
+    includeBase64: normalizedIncludeBase64,
+    base64OnlyTable: normalizedIconOnly ? ['products'] : null,
+    compress: normalizedCompress,
+    fields,
+  };
+
+  if (iconCompressionEnabled) {
+    readOptions.maxWidth = toPositiveInt(
+      iconMaxWidth,
+      ICON_COMPRESSION_DEFAULTS.maxWidth,
+    );
+    readOptions.maxHeight = toPositiveInt(
+      iconMaxHeight,
+      ICON_COMPRESSION_DEFAULTS.maxHeight,
+    );
+    readOptions.quality = toQuality(
+      iconQuality,
+      ICON_COMPRESSION_DEFAULTS.quality,
+    );
+  }
+
+  return readOptions;
+};
+
 /**
  * Create a new product
  * @route POST /api/products
@@ -27,7 +96,7 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
     ...(req.body || {}),
   };
 
-  const { includeBase64, iconOnly, compress, fields } = source;
+  const { includeBase64, fields } = source;
 
   const selectedProductFields = getSafeSelectedFieldsForTable(
     fields,
@@ -48,12 +117,7 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
   const structuredData = await productModel.processStructureDataOperation(
     data,
     'read',
-    {
-      includeBase64: toBool(includeBase64),
-      base64OnlyTable: toBool(iconOnly) ? ['products'] : null, // to control which tables should return only base64 data
-      compress: toBool(compress),
-      fields,
-    },
+    buildReadOptions(source),
   );
   res.status(200).json({
     status: 'success',
@@ -81,17 +145,12 @@ export const getProductComparisonKeys = catchAsync(async (req, res, next) => {
 export const getProductById = catchAsync(async (req, res, next) => {
   const source = req.body || {};
 
-  const { includeBase64, iconOnly, compress, fields, data } = source;
+  const { data } = source;
 
   const structuredData = await productModel.processStructureDataOperation(
     data,
     'read',
-    {
-      includeBase64: toBool(includeBase64),
-      base64OnlyTable: toBool(iconOnly) ? ['products'] : null, // to control which tables should return only base64 data
-      compress: toBool(compress),
-      fields,
-    },
+    buildReadOptions(source),
   );
 
   res.status(200).json({
