@@ -35,6 +35,14 @@ router
     endController,
   );
 
+router
+  .route('/comparison-keys')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    customerController.getCustomerComparisonKeys,
+    endController,
+  );
+
 router.post(
   '/truncate',
   authController.restrictTo('admin'),

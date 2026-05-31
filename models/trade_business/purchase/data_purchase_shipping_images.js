@@ -11,4 +11,9 @@ export const purchaseShippingImageModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['purchase_shipping_detail_id', 'image_url', 'image_name'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/purchase/{id}/shipping/',
+    imagesOnly: true,
+  },
 });

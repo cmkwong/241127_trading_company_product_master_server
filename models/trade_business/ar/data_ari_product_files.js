@@ -11,4 +11,11 @@ export const ariProductFileModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['ari_product_detail_id', 'file_name', 'file_url'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'file_url',
+    fileTypeField: 'file_type',
+    descriptionField: 'description',
+    uploadDir: 'public/ar/{id}/product/',
+    imagesOnly: false,
+  },
 });

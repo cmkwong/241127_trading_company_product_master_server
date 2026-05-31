@@ -11,4 +11,11 @@ export const apiShippingFileModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['api_shipping_detail_id', 'file_name', 'file_url'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'file_url',
+    fileTypeField: 'file_type',
+    descriptionField: 'description',
+    uploadDir: 'public/ap/{id}/shipping/',
+    imagesOnly: false,
+  },
 });

@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
-import * as SalesProductImageSelections from './data_sales_product_detail_image_selections.js';
+import * as SalesProductImages from './data_sales_product_detail_images.js';
 
 export const salesProductDetailModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -14,8 +14,8 @@ export const salesProductDetailModel = new DataModelUtils({
   defaults: { id: uuidv4 },
   childTableConfig: [
     {
-      tableName: TABLE_MASTER['SALES_PRODUCT_DETAIL_IMAGE_SELECTIONS'].name,
-      model: SalesProductImageSelections.salesProductDetailImageSelectionModel,
+      tableName: TABLE_MASTER['SALES_PRODUCT_DETAIL_IMAGES'].name,
+      model: SalesProductImages.salesProductDetailImageModel,
     },
   ],
 });

@@ -11,4 +11,9 @@ export const purchaseServiceImageModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['purchase_service_detail_id', 'image_url', 'image_name'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/purchase/{id}/service/',
+    imagesOnly: true,
+  },
 });

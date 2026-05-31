@@ -19,6 +19,12 @@ router
     endController,
   );
 
+router.post(
+  '/list',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  salesController.getAllSalesQuotations,
+);
+
 router
   .route('/defaults')
   .post(
@@ -42,11 +48,20 @@ router.post(
 );
 
 router
+  .route('/comparison-keys')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.getSalesComparisonKeys,
+    endController,
+  );
+
+router
   .route('/get/ids')
   .post(salesController.getSalesQuotationById, endController);
 
 router
   .route('/ids')
+  .post(salesController.getSalesQuotationById, endController)
   .patch(salesController.updateSalesQuotation, endController)
   .delete(salesController.deleteSalesQuotation, endController);
 

@@ -50,6 +50,17 @@ export const getAllCustomers = catchAsync(async (req, res, next) => {
   });
 });
 
+export const getCustomerComparisonKeys = catchAsync(async (req, res, next) => {
+  const comparisonKeyData = customerModel.getFirstLevelFieldNames();
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      firstLevelKeys: comparisonKeyData,
+    },
+  });
+});
+
 export const getCustomerById = catchAsync(async (req, res, next) => {
   const { includeBase64, iconOnly, compress } = req.query;
 

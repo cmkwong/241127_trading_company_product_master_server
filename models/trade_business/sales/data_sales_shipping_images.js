@@ -11,4 +11,9 @@ export const salesShippingImageModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['sales_shipping_detail_id', 'image_url', 'image_name'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'image_url',
+    uploadDir: 'public/quotations/{id}/shipping/',
+    imagesOnly: true,
+  },
 });

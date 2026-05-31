@@ -11,4 +11,11 @@ export const apiServiceFileModel = new DataModelUtils({
   entityIdField: 'id',
   requiredFields: ['api_service_detail_id', 'file_name', 'file_url'],
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'file_url',
+    fileTypeField: 'file_type',
+    descriptionField: 'description',
+    uploadDir: 'public/ap/{id}/service/',
+    imagesOnly: false,
+  },
 });

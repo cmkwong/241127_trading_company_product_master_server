@@ -2542,8 +2542,8 @@ const TABLE_MASTER_RAW = {
       },
     },
   },
-  SALES_PRODUCT_DETAIL_IMAGE_SELECTIONS: {
-    name: 'sales_product_detail_image_selections',
+  SALES_PRODUCT_DETAIL_IMAGES: {
+    name: 'sales_product_detail_images',
     table_type: 'sales-data',
     fields: {
       id: { type: 'VARCHAR(36)', primaryKey: true },
@@ -2556,25 +2556,13 @@ const TABLE_MASTER_RAW = {
           onDelete: 'CASCADE',
         },
       },
-      image_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'product_images',
-          field: 'id',
-          onDelete: 'RESTRICT',
-        },
-      },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      image_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-      },
-    },
-    constraints: {
-      unique_sales_product_image_selection: {
-        type: 'UNIQUE',
-        fields: ['sales_product_detail_id', 'image_id'],
       },
     },
   },
@@ -2623,8 +2611,8 @@ const TABLE_MASTER_RAW = {
       },
     },
   },
-  SALES_SERVICE_DETAIL_IMAGE_SELECTIONS: {
-    name: 'sales_service_detail_image_selections',
+  SALES_SERVICE_DETAIL_IMAGES: {
+    name: 'sales_service_detail_images',
     table_type: 'sales-data',
     fields: {
       id: { type: 'VARCHAR(36)', primaryKey: true },
@@ -2637,25 +2625,13 @@ const TABLE_MASTER_RAW = {
           onDelete: 'CASCADE',
         },
       },
-      image_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'supplier_service_images',
-          field: 'id',
-          onDelete: 'RESTRICT',
-        },
-      },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      image_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-      },
-    },
-    constraints: {
-      unique_sales_service_image_selection: {
-        type: 'UNIQUE',
-        fields: ['sales_service_detail_id', 'image_id'],
       },
     },
   },
