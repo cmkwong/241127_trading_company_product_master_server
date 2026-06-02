@@ -378,6 +378,54 @@ const _extractRowsPayload = (requestData, tableDataMap, options = {}) => {
   return { tableName, model, pkField, tableRows };
 };
 
+const isMissingTableError = (error) => {
+  const message = String(error?.message || '');
+  const errorCode = String(error?.code || '');
+
+  return (
+    errorCode === 'ER_NO_SUCH_TABLE' ||
+    /ER_NO_SUCH_TABLE/i.test(message) ||
+    /doesn't\s+exist/i.test(message)
+  );
+};
+
+const readRowsSafely = async (model, tableName, orderBy = '') => {
+  const suffix = orderBy ? ` ${orderBy}` : '';
+
+  try {
+    return await model.executeQuery(`SELECT * FROM ${tableName}${suffix}`);
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      return [];
+    }
+    throw error;
+  }
+};
+
+const ensureMasterTableExists = async (model, tableName) => {
+  try {
+    await model.executeQuery(`SHOW COLUMNS FROM ${tableName}`);
+    return;
+  } catch (error) {
+    if (!isMissingTableError(error)) {
+      throw error;
+    }
+  }
+
+  const tableDefinition = Object.values(TABLE_MASTER).find(
+    (table) => table?.name === tableName,
+  );
+
+  if (!tableDefinition) {
+    throw new AppError(
+      `Table definition for ${tableName} not found in TABLE_MASTER`,
+      500,
+    );
+  }
+
+  await model.executeQuery(generateCreateTableSQL(tableDefinition));
+};
+
 export const getMasterDataRows = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
 
@@ -400,8 +448,28 @@ export const getMasterDataRows = catchAsync(async (req, res, next) => {
   }
 
   const { model } = tableDataMap[tableName];
-  const sql = `SELECT * FROM ${tableName}`;
-  const results = await model.executeQuery(sql);
+  const results = await readRowsSafely(model, tableName);
+
+  res.prints = {
+    status: 'success',
+    tableName,
+    results,
+  };
+  next();
+});
+
+export const getMasterIncoterms = catchAsync(async (req, res, next) => {
+  const tableName = 'master_incoterms';
+  const tableDataMap = getTableDataMapping();
+
+  if (!tableDataMap[tableName]) {
+    return next(
+      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
+    );
+  }
+
+  const { model } = tableDataMap[tableName];
+  const results = await readRowsSafely(model, tableName, 'ORDER BY code ASC');
 
   res.prints = {
     status: 'success',
@@ -419,6 +487,8 @@ export const updateMasterData = catchAsync(async (req, res, next) => {
     requestData,
     tableDataMap,
   );
+
+  await ensureMasterTableExists(model, tableName);
 
   const result = await model.processStructureDataOperation(
     { [tableName]: tableRows },
@@ -442,6 +512,8 @@ export const createMasterData = catchAsync(async (req, res, next) => {
     requestData,
     tableDataMap,
   );
+
+  await ensureMasterTableExists(model, tableName);
 
   const result = await model.processStructureDataOperation(
     { [tableName]: tableRows },
@@ -491,9 +563,7 @@ export const getMasterData = catchAsync(async (req, res, next) => {
   }
   const { model } = tableDataMap[tableName];
 
-  const sql = `SELECT * FROM ${tableName}`;
-
-  const results = await model.executeQuery(sql);
+  const results = await readRowsSafely(model, tableName);
 
   res.prints = {
     status: 'success',

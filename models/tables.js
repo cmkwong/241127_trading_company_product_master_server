@@ -119,6 +119,44 @@ const TABLE_MASTER_RAW = {
       unique_currency_code: { type: 'UNIQUE', fields: ['code'] },
     },
   },
+  MASTER_INCOTERMS: {
+    name: 'master_incoterms',
+    table_type: 'sales-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      code: {
+        type: 'VARCHAR(20)',
+        notNull: true,
+        description: 'Incoterm code (e.g., EXW, FOB, CIF)',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Incoterm display name',
+      },
+      description: {
+        type: 'TEXT',
+        description: 'Incoterm description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_incoterm_code: { type: 'UNIQUE', fields: ['code'] },
+    },
+  },
   MASTER_SIZE_TYPES: {
     name: 'master_size_types',
     table_type: 'products-master',
@@ -2385,7 +2423,6 @@ const TABLE_MASTER_RAW = {
       remark: { type: 'TEXT', description: 'Remark' },
       customer_id: {
         type: 'VARCHAR(36)',
-        notNull: true,
         references: { table: 'customers', field: 'id', onDelete: 'RESTRICT' },
         description: 'Reference to customers.id',
       },
@@ -2458,7 +2495,10 @@ const TABLE_MASTER_RAW = {
         type: 'VARCHAR(36)',
         references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
       },
-      incoterms: { type: 'VARCHAR(50)' },
+      incoterms: {
+        type: 'VARCHAR(50)',
+        description: 'Incoterm code selected from master_incoterms.code',
+      },
       currency_id: {
         type: 'VARCHAR(36)',
         references: {

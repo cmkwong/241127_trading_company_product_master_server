@@ -17,6 +17,7 @@ import * as master_contactTypesModel from '../trade_business/master/master_conta
 import * as master_servicesModel from '../trade_business/master/master_servicesModel.js';
 import * as master_serviceImagesModel from '../trade_business/master/master_serviceImagesModel.js';
 import * as master_currenciesModel from '../trade_business/master/master_currenciesModel.js';
+import * as master_incotermsModel from '../trade_business/master/master_incotermsModel.js';
 import * as master_sizeTypesModel from '../trade_business/master/master_sizeTypesModel.js';
 import * as master_capacityTypesModel from '../trade_business/master/master_capacityTypesModel.js';
 import * as master_colorTypesModel from '../trade_business/master/master_colorTypesModel.js';
@@ -110,6 +111,10 @@ export const getMasterDefaultMappings = () => {
     master_currencies: {
       model: master_currenciesModel.currencyModel,
       data: default_master_data.master_currencies,
+    },
+    master_incoterms: {
+      model: master_incotermsModel.incotermModel,
+      data: default_master_data.master_incoterms || [],
     },
     master_size_types: {
       model: master_sizeTypesModel.sizeTypeModel,

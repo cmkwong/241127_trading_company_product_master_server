@@ -12,7 +12,7 @@ export const salesQuotationModel = new DataModelUtils({
   tableFields: TABLE_MASTER['SALES_QUOTATIONS'].fields,
   entityName: 'sales quotation',
   entityIdField: 'id',
-  requiredFields: ['customer_id'],
+  requiredFields: [],
   defaults: { id: uuidv4 },
   childTableConfig: [
     {

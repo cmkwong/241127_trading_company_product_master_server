@@ -44,6 +44,12 @@ router.get(
   endController,
 );
 
+router.get(
+  '/incoterms',
+  masterDataController.getMasterIncoterms,
+  endController,
+);
+
 router.get('/:tableName', masterDataController.getMasterData, endController);
 
 // Add new combined operations for truncate and reset
