@@ -426,6 +426,29 @@ const ensureMasterTableExists = async (model, tableName) => {
   await model.executeQuery(generateCreateTableSQL(tableDefinition));
 };
 
+const ensureMasterTableWithDefaults = async (tableName, mappingEntry) => {
+  const model = mappingEntry?.model;
+  const defaultRows = Array.isArray(mappingEntry?.data)
+    ? mappingEntry.data
+    : [];
+
+  if (!model) {
+    return;
+  }
+
+  await ensureMasterTableExists(model, tableName);
+
+  const existingRows = await readRowsSafely(model, tableName);
+  if (existingRows.length > 0 || defaultRows.length === 0) {
+    return;
+  }
+
+  await model.processStructureDataOperation(
+    { [tableName]: defaultRows },
+    'create',
+  );
+};
+
 export const getMasterDataRows = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
 
@@ -445,6 +468,10 @@ export const getMasterDataRows = catchAsync(async (req, res, next) => {
     return next(
       new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
     );
+  }
+
+  if (tableName === 'master_shipping_method') {
+    await ensureMasterTableWithDefaults(tableName, tableDataMap[tableName]);
   }
 
   const { model } = tableDataMap[tableName];
@@ -470,6 +497,31 @@ export const getMasterIncoterms = catchAsync(async (req, res, next) => {
 
   const { model } = tableDataMap[tableName];
   const results = await readRowsSafely(model, tableName, 'ORDER BY code ASC');
+
+  res.prints = {
+    status: 'success',
+    tableName,
+    results,
+  };
+  next();
+});
+
+export const getMasterExchangeRateHkd = catchAsync(async (req, res, next) => {
+  const tableName = 'master_exchange_rate_hkd';
+  const tableDataMap = getTableDataMapping();
+
+  if (!tableDataMap[tableName]) {
+    return next(
+      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
+    );
+  }
+
+  const { model } = tableDataMap[tableName];
+  const results = await readRowsSafely(
+    model,
+    tableName,
+    'ORDER BY `Date` DESC',
+  );
 
   res.prints = {
     status: 'success',
@@ -561,6 +613,11 @@ export const getMasterData = catchAsync(async (req, res, next) => {
       new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
     );
   }
+
+  if (tableName === 'master_shipping_method') {
+    await ensureMasterTableWithDefaults(tableName, tableDataMap[tableName]);
+  }
+
   const { model } = tableDataMap[tableName];
 
   const results = await readRowsSafely(model, tableName);

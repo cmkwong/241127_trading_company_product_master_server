@@ -43,14 +43,44 @@ const normalizeType = (v) => {
 const normalizeNullable = (fieldDef) =>
   fieldDef.notNull === true || fieldDef.primaryKey === true ? 'NO' : 'YES';
 
+const normalizeNumericLiteral = (value) => {
+  if (!/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return value;
+  }
+
+  let normalized = value;
+  const isNegative = normalized.startsWith('-');
+
+  if (isNegative) {
+    normalized = normalized.slice(1);
+  }
+
+  normalized = normalized.replace(/^0+(?=\d)/, '');
+
+  if (normalized.includes('.')) {
+    normalized = normalized
+      .replace(/(\.\d*?[1-9])0+$/, '$1')
+      .replace(/\.0+$/, '');
+  }
+
+  if (!normalized) {
+    normalized = '0';
+  }
+
+  const signed = isNegative ? `-${normalized}` : normalized;
+  return signed === '-0' ? '0' : signed;
+};
+
 const normalizeDefault = (v) => {
   if (v === undefined || v === null) return '__no_default__';
   if (typeof v === 'boolean') return v ? '1' : '0';
-  return String(v)
+  const normalized = String(v)
     .replace(/\(\)/g, '')
     .replace(/\s+/g, '')
     .replace(/^'(.*)'$/, '$1')
     .toLowerCase();
+
+  return normalizeNumericLiteral(normalized);
 };
 
 const getTargetDefaultMeta = (fieldDef) => {

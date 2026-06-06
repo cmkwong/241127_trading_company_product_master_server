@@ -157,6 +157,94 @@ const TABLE_MASTER_RAW = {
       unique_incoterm_code: { type: 'UNIQUE', fields: ['code'] },
     },
   },
+  MASTER_SHIPPING_METHOD: {
+    name: 'master_shipping_method',
+    table_type: 'sales-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(150)',
+        notNull: true,
+        description: 'Shipping method name',
+      },
+      description: {
+        type: 'TEXT',
+        description: 'Shipping method description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_shipping_method_name: { type: 'UNIQUE', fields: ['name'] },
+    },
+  },
+  MASTER_EXCHANGE_RATE_HKD: {
+    name: 'master_exchange_rate_hkd',
+    table_type: 'sales-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      HKD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        default: 1,
+        description: 'HKD base rate',
+      },
+      USD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'USD per HKD',
+      },
+      CNY: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'CNY per HKD',
+      },
+      EUR: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'EUR per HKD',
+      },
+      GBP: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'GBP per HKD',
+      },
+      Date: {
+        type: 'DATE',
+        notNull: true,
+        description: 'Exchange rate effective date',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_exchange_rate_hkd_date: { type: 'UNIQUE', fields: ['Date'] },
+    },
+  },
   MASTER_SIZE_TYPES: {
     name: 'master_size_types',
     table_type: 'products-master',
@@ -2470,6 +2558,7 @@ const TABLE_MASTER_RAW = {
       qty: { type: 'INT', default: 0 },
       weight: { type: 'DECIMAL(10,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
@@ -2495,6 +2584,15 @@ const TABLE_MASTER_RAW = {
         type: 'VARCHAR(36)',
         references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
       },
+      shipping_method_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_shipping_method',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Reference to master_shipping_method.id',
+      },
       incoterms: {
         type: 'VARCHAR(50)',
         description: 'Incoterm code selected from master_incoterms.code',
@@ -2507,8 +2605,26 @@ const TABLE_MASTER_RAW = {
           onDelete: 'RESTRICT',
         },
       },
+      cost_currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
       price: { type: 'DECIMAL(12,2)' },
+      cost_price: { type: 'DECIMAL(12,2)' },
+      delivery_lead_time_from: {
+        type: 'INT',
+        description: 'Delivery lead-time lower bound in days',
+      },
+      delivery_lead_time_to: {
+        type: 'INT',
+        description: 'Delivery lead-time upper bound in days',
+      },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       selected: {
         type: 'BOOLEAN',
         default: false,
@@ -2573,8 +2689,23 @@ const TABLE_MASTER_RAW = {
           onDelete: 'RESTRICT',
         },
       },
+      cost_currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
       price: { type: 'DECIMAL(12,2)' },
+      cost_price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
+      selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Selected option for product detail',
+      },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
@@ -2642,8 +2773,23 @@ const TABLE_MASTER_RAW = {
           onDelete: 'RESTRICT',
         },
       },
+      cost_currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
       price: { type: 'DECIMAL(12,2)' },
+      cost_price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
+      selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Selected option for service detail',
+      },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
