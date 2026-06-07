@@ -119,6 +119,48 @@ const TABLE_MASTER_RAW = {
       unique_currency_code: { type: 'UNIQUE', fields: ['code'] },
     },
   },
+  MASTER_COMPANY_INFO: {
+    name: 'master_company_info',
+    table_type: 'sales-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      logo_icon_url: {
+        type: 'TEXT',
+        description: 'Company logo icon URL',
+      },
+      logo_icon_name: {
+        type: 'VARCHAR(255)',
+        description: 'Company logo icon file name',
+      },
+      company_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Company display name',
+      },
+      company_address: {
+        type: 'TEXT',
+        description: 'Company address shown on quotation',
+      },
+      contact_person: {
+        type: 'VARCHAR(255)',
+        description: 'Primary contact person name',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
   MASTER_INCOTERMS: {
     name: 'master_incoterms',
     table_type: 'sales-master',
@@ -2661,6 +2703,78 @@ const TABLE_MASTER_RAW = {
       },
     },
   },
+  SALES_SHIPPING_INTERNAL_IMAGES: {
+    name: 'sales_shipping_internal_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_PRICE_IMAGES: {
+    name: 'sales_shipping_price_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_shipping_price_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_prices',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_PRICE_INTERNAL_IMAGES: {
+    name: 'sales_shipping_price_internal_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true, description: 'UUID' },
+      sales_shipping_price_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_prices',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_url: { type: 'TEXT', notNull: true },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
   SALES_PRODUCT_DETAILS: {
     name: 'sales_product_details',
     table_type: 'sales-data',
@@ -2737,6 +2851,30 @@ const TABLE_MASTER_RAW = {
       },
     },
   },
+  SALES_PRODUCT_DETAIL_INTERNAL_IMAGES: {
+    name: 'sales_product_detail_internal_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_product_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_product_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      image_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
   SALES_SERVICE_DETAILS: {
     name: 'sales_service_details',
     table_type: 'sales-data',
@@ -2790,6 +2928,30 @@ const TABLE_MASTER_RAW = {
         default: true,
         description: 'Selected option for service detail',
       },
+      created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SERVICE_DETAIL_INTERNAL_IMAGES: {
+    name: 'sales_service_detail_internal_images',
+    table_type: 'sales-data',
+    fields: {
+      id: { type: 'VARCHAR(36)', primaryKey: true },
+      sales_service_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_service_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      image_name: { type: 'VARCHAR(255)', notNull: true },
+      image_url: { type: 'TEXT', notNull: true },
+      display_order: { type: 'INT', default: 0 },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',

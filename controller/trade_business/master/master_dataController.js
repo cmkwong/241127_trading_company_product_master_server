@@ -449,6 +449,11 @@ const ensureMasterTableWithDefaults = async (tableName, mappingEntry) => {
   );
 };
 
+const TABLES_WITH_AUTO_DEFAULTS_ON_READ = new Set([
+  'master_shipping_method',
+  'master_company_info',
+]);
+
 export const getMasterDataRows = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
 
@@ -470,7 +475,7 @@ export const getMasterDataRows = catchAsync(async (req, res, next) => {
     );
   }
 
-  if (tableName === 'master_shipping_method') {
+  if (TABLES_WITH_AUTO_DEFAULTS_ON_READ.has(tableName)) {
     await ensureMasterTableWithDefaults(tableName, tableDataMap[tableName]);
   }
 
@@ -614,7 +619,7 @@ export const getMasterData = catchAsync(async (req, res, next) => {
     );
   }
 
-  if (tableName === 'master_shipping_method') {
+  if (TABLES_WITH_AUTO_DEFAULTS_ON_READ.has(tableName)) {
     await ensureMasterTableWithDefaults(tableName, tableDataMap[tableName]);
   }
 
