@@ -4,12 +4,10 @@ import { TABLE_MASTER, generateCreateTableSQL } from '../../tables.js';
 
 const AP_TABLE_KEYS = [
   'AP_INVOICES',
-  'API_SHIPPING_DETAILS',
-  'API_SHIPPING_FILES',
-  'API_PRODUCT_DETAILS',
-  'API_PRODUCT_FILES',
-  'API_SERVICE_DETAILS',
-  'API_SERVICE_FILES',
+  'MASTER_INVOICE_TYPES',
+  'AP_INVOICE_ROW_DETAILS',
+  'AP_INVOICE_ROW_DETAIL_IMAGES',
+  'AP_INVOICE_ROW_DETAIL_FILES',
 ];
 
 const createTable = async (tableKey) => {

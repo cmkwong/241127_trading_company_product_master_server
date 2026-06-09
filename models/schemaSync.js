@@ -251,6 +251,7 @@ const getCurrentDbSchema = async () => {
 
 const getTargetTableUniqueConstraints = (tableDefinition) => {
   const constraints = tableDefinition?.constraints || {};
+  const fields = tableDefinition?.fields || {};
   const uniqueConstraints = new Map();
 
   for (const [constraintName, constraintDef] of Object.entries(constraints)) {
@@ -262,6 +263,21 @@ const getTargetTableUniqueConstraints = (tableDefinition) => {
       type: 'UNIQUE',
       fields: Array.isArray(constraintDef.fields) ? constraintDef.fields : [],
     });
+  }
+
+  // Support field-level unique definitions (e.g. { code: { unique: true } })
+  // so diff behavior matches CREATE TABLE generation in tables.js.
+  for (const [fieldName, fieldDef] of Object.entries(fields)) {
+    if (!fieldDef?.unique) {
+      continue;
+    }
+
+    if (!uniqueConstraints.has(fieldName)) {
+      uniqueConstraints.set(fieldName, {
+        type: 'UNIQUE',
+        fields: [fieldName],
+      });
+    }
   }
 
   return uniqueConstraints;

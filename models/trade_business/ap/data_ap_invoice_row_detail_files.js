@@ -3,19 +3,19 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 
-export const apiProductFileModel = new DataModelUtils({
+export const apInvoiceRowDetailFileModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
-  tableName: TABLE_MASTER['API_PRODUCT_FILES'].name,
-  tableFields: TABLE_MASTER['API_PRODUCT_FILES'].fields,
-  entityName: 'api product file',
+  tableName: TABLE_MASTER['AP_INVOICE_ROW_DETAIL_FILES'].name,
+  tableFields: TABLE_MASTER['AP_INVOICE_ROW_DETAIL_FILES'].fields,
+  entityName: 'ap invoice row detail file',
   entityIdField: 'id',
-  requiredFields: ['api_product_detail_id', 'file_name', 'file_url'],
+  requiredFields: ['ap_invoice_row_detail_id', 'file_name', 'file_url'],
   defaults: { id: uuidv4 },
   fileConfig: {
     fileUrlField: 'file_url',
     fileTypeField: 'file_type',
     descriptionField: 'description',
-    uploadDir: 'public/ap/{id}/product/',
+    uploadDir: 'public/ap/{id}/row-details/files/',
     imagesOnly: false,
   },
 });
