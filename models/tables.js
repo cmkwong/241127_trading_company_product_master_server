@@ -3217,20 +3217,31 @@ const TABLE_MASTER_RAW = {
           onDelete: 'CASCADE',
         },
       },
-      supplier_address_id: {
+      sales_shipping_detail_id: {
         type: 'VARCHAR(36)',
         references: {
-          table: 'supplier_addresses',
+          table: 'sales_shipping_details',
           field: 'id',
           onDelete: 'SET NULL',
         },
       },
+      address_text: { type: 'TEXT' },
       length: { type: 'DECIMAL(10,2)' },
       width: { type: 'DECIMAL(10,2)' },
       height: { type: 'DECIMAL(10,2)' },
       quantity: { type: 'INT', default: 0 },
       weight: { type: 'DECIMAL(10,2)' },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+      },
+      price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
@@ -3276,6 +3287,14 @@ const TABLE_MASTER_RAW = {
           onDelete: 'CASCADE',
         },
       },
+      sales_product_detail_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'sales_product_details',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
       product_id: {
         type: 'VARCHAR(36)',
         notNull: true,
@@ -3292,6 +3311,7 @@ const TABLE_MASTER_RAW = {
       },
       price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
@@ -3341,6 +3361,14 @@ const TABLE_MASTER_RAW = {
         type: 'VARCHAR(36)',
         references: { table: 'suppliers', field: 'id', onDelete: 'SET NULL' },
       },
+      sales_service_detail_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'sales_service_details',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+      },
       service_id: {
         type: 'VARCHAR(36)',
         notNull: true,
@@ -3361,6 +3389,7 @@ const TABLE_MASTER_RAW = {
       },
       price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
+      remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
         type: 'TIMESTAMP',
