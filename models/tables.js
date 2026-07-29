@@ -1790,12 +1790,7 @@ const TABLE_MASTER_RAW = {
         description: 'Last update timestamp',
       },
     },
-    constraints: {
-      unique_supplier_address: {
-        type: 'UNIQUE',
-        fields: ['supplier_id', 'address_type_id'],
-      },
-    },
+    constraints: {},
   },
   MASTER_CONTACT_TYPES: {
     name: 'master_contact_types',
@@ -2599,6 +2594,16 @@ const TABLE_MASTER_RAW = {
       height: { type: 'DECIMAL(10,2)' },
       qty: { type: 'INT', default: 0 },
       weight: { type: 'DECIMAL(10,2)' },
+      chargeable_divisor: {
+        type: 'DECIMAL(12,2)',
+        default: 6000,
+        description: 'Volumetric divisor for chargeable weight calculation',
+      },
+      min_chargeable_weight: {
+        type: 'DECIMAL(10,2)',
+        default: 12,
+        description: 'Minimum chargeable weight per carton in kg',
+      },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
@@ -2656,6 +2661,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      discount_percent: {
+        type: 'DECIMAL(5,2)',
+        default: 0,
+        description: 'Discount percentage applied to sales price',
+      },
       cost_price: { type: 'DECIMAL(12,2)' },
       delivery_lead_time_from: {
         type: 'INT',
@@ -2671,6 +2681,11 @@ const TABLE_MASTER_RAW = {
         type: 'BOOLEAN',
         default: false,
         description: 'Selected option for shipping',
+      },
+      ari_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Selected for AR invoice printing',
       },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
@@ -2812,6 +2827,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      discount_percent: {
+        type: 'DECIMAL(5,2)',
+        default: 0,
+        description: 'Discount percentage applied to sales price',
+      },
       cost_price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
@@ -2819,6 +2839,11 @@ const TABLE_MASTER_RAW = {
         type: 'BOOLEAN',
         default: true,
         description: 'Selected option for product detail',
+      },
+      ari_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Selected for AR invoice printing',
       },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
@@ -2920,6 +2945,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      discount_percent: {
+        type: 'DECIMAL(5,2)',
+        default: 0,
+        description: 'Discount percentage applied to sales price',
+      },
       cost_price: { type: 'DECIMAL(12,2)' },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
@@ -2927,6 +2957,11 @@ const TABLE_MASTER_RAW = {
         type: 'BOOLEAN',
         default: true,
         description: 'Selected option for service detail',
+      },
+      ari_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Selected for AR invoice printing',
       },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
       updated_at: {
@@ -3240,6 +3275,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      api_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Whether this row is selected for AP invoice layout',
+      },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
@@ -3310,6 +3350,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      api_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Whether this row is selected for AP invoice layout',
+      },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },
@@ -3388,6 +3433,11 @@ const TABLE_MASTER_RAW = {
         },
       },
       price: { type: 'DECIMAL(12,2)' },
+      api_selected: {
+        type: 'BOOLEAN',
+        default: true,
+        description: 'Whether this row is selected for AP invoice layout',
+      },
       details: { type: 'TEXT' },
       remark: { type: 'TEXT', description: 'Internal remark (not for print)' },
       created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' },

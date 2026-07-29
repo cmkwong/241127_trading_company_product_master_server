@@ -14,6 +14,6 @@ export const purchaseProductImageModel = new DataModelUtils({
   fileConfig: {
     fileUrlField: 'image_url',
     uploadDir: 'public/purchase/{id}/product/',
-    imagesOnly: true,
+    imagesOnly: false,
   },
 });

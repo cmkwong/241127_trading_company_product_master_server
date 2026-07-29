@@ -1208,7 +1208,109 @@ export default class DataModelUtils {
 
       const tableName = childConfig.model.tableName;
       const jsonKey = childConfig.jsonKey || tableName;
-      const tableRows = rawRow[jsonKey];
+      const hasExplicitChildPayload = Object.prototype.hasOwnProperty.call(
+        rawRow || {},
+        jsonKey,
+      );
+
+      // Backward compatible: when child key is omitted, leave existing children unchanged.
+      if (!hasExplicitChildPayload) continue;
+
+      const tableRows = Array.isArray(rawRow[jsonKey]) ? rawRow[jsonKey] : [];
+
+      // Update sync behavior (opt-in only):
+      // By default PATCH payloads are partial diffs, so omitted child rows must be preserved.
+      // Enable replacement mode only when explicitly requested.
+      const shouldSyncChildrenOnUpdate =
+        parentAction === 'update' &&
+        (childConfig?.syncOnUpdate === true || rawRow?._sync_children === true);
+
+      if (shouldSyncChildrenOnUpdate) {
+        const parentPkField = currentModel.entityIdField || 'id';
+        const parentId =
+          validEntry?.[parentPkField] || validEntry?.id || rawRow?.id;
+
+        if (parentId) {
+          const childModel = childConfig.model;
+          const childPkField = childModel.entityIdField || 'id';
+          const normalizeId = (value) => String(value ?? '').trim();
+
+          const payloadIds = new Set(
+            tableRows
+              .map((row) => normalizeId(row?.[childPkField] || row?.id))
+              .filter(Boolean),
+          );
+
+          const foreignKeyField = this._resolveForeignKey(
+            currentModel,
+            childConfig,
+          );
+
+          const existingRows = await childModel.getAllByParentId(
+            parentId,
+            false,
+            {},
+            foreignKeyField,
+          );
+
+          const deleteQueue = [];
+          for (const existingRow of existingRows || []) {
+            const existingId = normalizeId(
+              existingRow?.[childPkField] || existingRow?.id,
+            );
+
+            if (!existingId || payloadIds.has(existingId)) continue;
+
+            await this._collectDeleteQueue(
+              {
+                ...existingRow,
+                [childPkField]: existingId,
+                id: existingId,
+              },
+              childModel,
+              deleteQueue,
+            );
+          }
+
+          for (const item of deleteQueue) {
+            try {
+              const deleted = await this._deleteRowFirstThenFile(
+                item.model,
+                item.id,
+                { ignoreNotFound: true },
+              );
+
+              result.deleteData = result.deleteData || {};
+              result.deleteData[item.model.tableName] =
+                result.deleteData[item.model.tableName] || [];
+
+              if (
+                !result.deleteData[item.model.tableName].some(
+                  (row) => row.id === item.id,
+                )
+              ) {
+                result.deleteData[item.model.tableName].push({
+                  id: item.id,
+                  status: deleted ? 'deleted' : 'not_found',
+                });
+              }
+            } catch (err) {
+              console.error(
+                `Failed to sync-delete ${item.tableName} (${item.id}):`,
+                err?.message || err,
+              );
+
+              result.deleteData = result.deleteData || {};
+              result.deleteData[item.tableName] =
+                result.deleteData[item.tableName] || [];
+              result.deleteData[item.tableName].push({
+                id: item.id,
+                error: err?.message || 'delete failed',
+              });
+            }
+          }
+        }
+      }
 
       if (!Array.isArray(tableRows) || tableRows.length === 0) continue;
 
