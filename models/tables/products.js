@@ -34,102 +34,41 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         },
         description: 'Reference to master_product_status.id',
       },
-      origin_id: {
+      selling_unit_type_id: {
         type: 'VARCHAR(36)',
         references: {
-          table: 'master_countries',
+          table: 'master_selling_unit_types',
           field: 'id',
           onDelete: 'RESTRICT',
         },
-        description: 'Reference to master_countries.id',
+        description: 'Reference to master_selling_unit_types.id',
+      },
+      selling_by_mode: {
+        type: 'VARCHAR(255)',
+        description:
+          'Description of how the product is sold (e.g., by quantity, by variants). If by_qty, the product price is stored in PRODUCT_SALE_PRICES_BY_QTY. If by_variants, the product price is stored in PRODUCT_COSTS table. This field is used to determine which pricing table to use for the product.',
         notNull: true,
+        default: 'by_qty',
+        constraints: {
+          check_selling_by: {
+            expression: "selling_by_mode IN ('by_qty', 'by_variants')",
+          },
+        },
+      },
+      sampling_service_available: {
+        type: 'BOOLEAN',
+        default: false,
+        description:
+          'Indicates if sampling service is available for the product. The sample price will be displayed in product cost table if this is true.',
+      },
+      max_qty_sample: {
+        type: 'INT',
+        description:
+          'Maximum quantity available for sampling in a single transaction',
       },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the product',
-      },
-      created_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP',
-        description: 'Creation timestamp',
-      },
-      updated_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        description: 'Last update timestamp',
-      },
-    },
-  },
-  PRODUCT_MADEOF: {
-    name: 'product_madeof',
-    table_type: 'products-data',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'UUID primary key',
-      },
-      product_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'products',
-          field: 'id',
-          onDelete: 'CASCADE',
-        },
-        description: 'Reference to products.id',
-      },
-      madeof_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'master_madeof_types',
-          field: 'id',
-          onDelete: 'RESTRICT',
-        },
-        description: 'Reference to master_madeof_types.id',
-      },
-      created_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP',
-        description: 'Creation timestamp',
-      },
-      updated_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        description: 'Last update timestamp',
-      },
-    },
-  },
-
-  PRODUCT_SUITABLE_PETS: {
-    name: 'product_suitable_pets',
-    table_type: 'products-data',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'UUID primary key',
-      },
-      product_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'products',
-          field: 'id',
-          onDelete: 'CASCADE',
-        },
-        description: 'Reference to products.id',
-      },
-      pet_type_id: {
-        type: 'VARCHAR(36)',
-        notNull: true,
-        references: {
-          table: 'master_pet_types',
-          field: 'id',
-          onDelete: 'RESTRICT',
-        },
-        description: 'Reference to master_pet_types.id',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -383,6 +322,37 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         default: 1,
         description: 'Minimum order quantity for this variant combination',
       },
+      sales_currency_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description:
+          'Reference to master_currencies.id for the sales price currency',
+      },
+      sales_price: {
+        type: 'DECIMAL(10,2)',
+        description: 'Sales price for the size-color variant combination',
+        notNull: true,
+      },
+      sample_currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description:
+          'Reference to master_currencies.id for the sample price currency',
+      },
+      sample_price: {
+        type: 'DECIMAL(10,2)',
+        description:
+          'Sample price of single unit for the size-color variant combination',
+      },
       stock_qty: {
         type: 'INT',
         default: 0,
@@ -412,6 +382,64 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
           'product_varient_color_id',
           'product_varient_capacity_id',
         ],
+      },
+    },
+  },
+  PRODUCT_SALE_PRICES_BY_QTY: {
+    name: 'product_sale_prices_by_qty',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'products',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to products.id',
+      },
+      min_order_qty: {
+        type: 'INT',
+        notNull: true,
+        description: 'Minimum quantity for the sale price',
+      },
+      currency_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description:
+          'Reference to master_currencies.id for the sale price currency',
+      },
+      sale_price: {
+        type: 'DECIMAL(10,2)',
+        notNull: true,
+        description: 'Sale price for the product',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_product_sale_price: {
+        type: 'UNIQUE',
+        fields: ['product_id', 'currency_id'],
       },
     },
   },
@@ -1081,6 +1109,47 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
       description: {
         type: 'VARCHAR(255)',
         description: 'Description of the certificate file',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  DELIVERY_DATES: {
+    name: 'delivery_dates',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'products',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to products.id',
+      },
+      min_order_qty: {
+        type: 'INT',
+        notNull: true,
+        description: 'Minimum order quantity for this delivery date',
+      },
+      delivery_day: {
+        type: 'DATE',
+        notNull: true,
+        description: 'delivery day for the product',
       },
       created_at: {
         type: 'TIMESTAMP',

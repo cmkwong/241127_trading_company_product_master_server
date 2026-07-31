@@ -403,6 +403,43 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
+  // eg: Forty-foot container, 20-foot container, 40-foot high cube container, kg, g, lb, oz, tons, gross, pallet, watts, meters, liters, gallons, etc.
+  MASTER_SELLING_UNIT_TYPES: {
+    name: 'master_selling_unit_types',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Unit type name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Unit type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_unit_type_name: {
+        type: 'UNIQUE',
+        fields: ['name'],
+      },
+    },
+  },
   MASTER_COLOR_TYPES: {
     name: 'master_color_types',
     table_type: 'products-master',
@@ -1327,8 +1364,9 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
-  MASTER_MADEOF_TYPES: {
-    name: 'master_madeof_types',
+  // as like as Alibaba logistics attributes, eg: electronic, liquid
+  MASTER_PRODUCT_LOGISTICS_ATTRIBUTES: {
+    name: 'master_product_logistics_attributes',
     table_type: 'products-master',
     fields: {
       id: {
@@ -1339,11 +1377,20 @@ export const MASTER_TABLE_DEFINITIONS = {
       name: {
         type: 'VARCHAR(100)',
         notNull: true,
-        description: 'Made of type name',
+        description: 'Product logistics attribute name',
+      },
+      parent_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_product_logistics_attributes',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Parent logistics attribute ID for hierarchical structure',
       },
       description: {
         type: 'VARCHAR(255)',
-        description: 'Made of type description',
+        description: 'Product logistics attribute description',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -1357,7 +1404,7 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
     constraints: {
-      unique_madeof_type_name: {
+      unique_product_logistics_attribute_name: {
         type: 'UNIQUE',
         fields: ['name'],
       },
