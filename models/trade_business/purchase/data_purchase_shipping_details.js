@@ -3,6 +3,7 @@ import DataModelUtils from '../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import * as PurchaseShippingImages from './data_purchase_shipping_images.js';
+import * as PurchaseShippingFiles from './data_purchase_shipping_files.js';
 
 export const purchaseShippingDetailModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -16,6 +17,10 @@ export const purchaseShippingDetailModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['PURCHASE_SHIPPING_IMAGES'].name,
       model: PurchaseShippingImages.purchaseShippingImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['PURCHASE_SHIPPING_FILES'].name,
+      model: PurchaseShippingFiles.purchaseShippingFileModel,
     },
   ],
 });

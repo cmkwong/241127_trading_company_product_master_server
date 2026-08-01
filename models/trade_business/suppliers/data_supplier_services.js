@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TABLE_MASTER } from '../../tables.js';
 import DataModelUtils from '../../../utils/dataModelUtils.js';
 import * as SupplierServiceImages from './data_supplier_service_images.js';
+import * as SupplierServiceFiles from './data_supplier_service_files.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 
 // Create a data model utility for supplier services
@@ -23,6 +24,10 @@ export const supplierServiceModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['SUPPLIER_SERVICE_IMAGES'].name,
       model: SupplierServiceImages.supplierServiceImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['SUPPLIER_SERVICE_FILES'].name,
+      model: SupplierServiceFiles.supplierServiceFileModel,
     },
   ],
 });

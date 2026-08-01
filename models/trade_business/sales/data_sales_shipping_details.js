@@ -5,6 +5,7 @@ import { tradeBusinessDbc } from '../../dbModel.js';
 import * as SalesShippingPrices from './data_sales_shipping_prices.js';
 import * as SalesShippingImages from './data_sales_shipping_images.js';
 import * as SalesShippingInternalImages from './data_sales_shipping_internal_images.js';
+import * as SalesShippingInternalFiles from './data_sales_shipping_internal_files.js';
 
 export const salesShippingDetailModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -26,6 +27,10 @@ export const salesShippingDetailModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['SALES_SHIPPING_INTERNAL_IMAGES'].name,
       model: SalesShippingInternalImages.salesShippingInternalImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_INTERNAL_FILES'].name,
+      model: SalesShippingInternalFiles.salesShippingInternalFileModel,
     },
   ],
 });

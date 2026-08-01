@@ -16,6 +16,7 @@ const SUPPLIER_TABLE_KEYS = [
   'MASTER_SERVICE_IMAGES',
   'SUPPLIER_SERVICES',
   'SUPPLIER_SERVICE_IMAGES',
+  'SUPPLIER_SERVICE_FILES',
 ];
 
 const createTable = async (tableKey) => {

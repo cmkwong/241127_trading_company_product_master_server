@@ -4,6 +4,7 @@ import { TABLE_MASTER } from '../../tables.js';
 import { tradeBusinessDbc } from '../../dbModel.js';
 import * as SalesProductImages from './data_sales_product_detail_images.js';
 import * as SalesProductInternalImages from './data_sales_product_detail_internal_images.js';
+import * as SalesProductInternalFiles from './data_sales_product_detail_internal_files.js';
 
 export const salesProductDetailModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -21,6 +22,10 @@ export const salesProductDetailModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['SALES_PRODUCT_DETAIL_INTERNAL_IMAGES'].name,
       model: SalesProductInternalImages.salesProductDetailInternalImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_PRODUCT_DETAIL_INTERNAL_FILES'].name,
+      model: SalesProductInternalFiles.salesProductDetailInternalFileModel,
     },
   ],
 });
