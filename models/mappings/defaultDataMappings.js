@@ -25,6 +25,9 @@ import * as master_exchangeRateHkdModel from '../trade_business/master/master_ex
 import * as master_sizeTypesModel from '../trade_business/master/master_sizeTypesModel.js';
 import * as master_capacityTypesModel from '../trade_business/master/master_capacityTypesModel.js';
 import * as master_colorTypesModel from '../trade_business/master/master_colorTypesModel.js';
+import * as master_productAttributesModel from '../trade_business/master/master_product_attributes_model.js';
+import * as master_productAttributeDropdownModel from '../trade_business/master/master_product_attribute_dropdown_model.js';
+import * as master_productCategoryAttributeAssignModel from '../trade_business/master/master_product_category_attribute_assign_model.js';
 
 import { getProductsSeedData } from '../../utils/productsSource.js';
 import { defaultSuppliers } from '../../datas/suppliers.js';
@@ -147,6 +150,20 @@ export const getMasterDefaultMappings = () => {
     master_color_types: {
       model: master_colorTypesModel.colorTypeModel,
       data: default_master_data.master_color_types,
+    },
+    master_product_attributes: {
+      model: master_productAttributesModel.masterProductAttributesModel,
+      data: default_master_data.master_product_attributes || [],
+    },
+    master_product_attribute_dropdown: {
+      model:
+        master_productAttributeDropdownModel.masterProductAttributeDropdownModel,
+      data: default_master_data.master_product_attribute_dropdown || [],
+    },
+    master_product_category_attribute_assign: {
+      model:
+        master_productCategoryAttributeAssignModel.masterProductCategoryAttributeAssignModel,
+      data: default_master_data.master_product_category_attribute_assign || [],
     },
   };
 };

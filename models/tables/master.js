@@ -1410,4 +1410,143 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
+  MASTER_PRODUCT_ATTRIBUTES: {
+    name: 'master_product_attributes',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Product attribute name',
+      },
+      multiple_selection: {
+        type: 'BOOLEAN',
+        default: false,
+        description:
+          'Indicates if multiple selections are allowed for this attribute',
+      },
+      label: {
+        type: 'VARCHAR(100)',
+        description: 'Label for the product attribute',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Product attribute description',
+      },
+      dropdown_reference: {
+        type: 'VARCHAR(200)',
+        description: 'Reference to a dropdown list for this attribute',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_product_attribute_name: {
+        type: 'UNIQUE',
+        fields: ['name'],
+      },
+    },
+  },
+  MASTER_PRODUCT_ATTRIBUTE_DROPDOWN: {
+    name: 'master_product_attribute_dropdown',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      attribute_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_product_attributes',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to the product attribute',
+      },
+      value: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Dropdown value for the product attribute',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_product_attribute_dropdown_value: {
+        type: 'UNIQUE',
+        fields: ['attribute_id', 'value'],
+      },
+    },
+  },
+  MASTER_PRODUCT_CATEGORY_ATTRIBUTE_ASSIGN: {
+    name: 'master_product_category_attribute_assign',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      category_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_categories',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to the product category',
+      },
+      attribute_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_product_attributes',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to the product attribute',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_category_attribute_assign: {
+        type: 'UNIQUE',
+        fields: ['category_id', 'attribute_id'],
+      },
+    },
+  }
 };
