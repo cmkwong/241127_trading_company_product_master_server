@@ -366,6 +366,21 @@ export const createProductCertificateFilesTable = catchAsync(
 );
 
 /**
+ * Create product attribute values table
+ * @route POST /api/products/table/create/attribute-values
+ */
+export const createProductAttributeValuesTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createProductAttributeValuesTable();
+
+    res.status(201).json({
+      status: 'success',
+      message: result.message,
+    });
+  },
+);
+
+/**
  * Drop all product tables
  * @route DELETE /api/products/table/drop-all
  */

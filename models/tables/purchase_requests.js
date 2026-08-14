@@ -12,6 +12,10 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
         type: 'BOOLEAN',
         default: false,
       },
+      status: {
+        type: 'VARCHAR(50)',
+        default: 'draft',
+      },
       remark: {
         type: 'TEXT',
       },

@@ -51,9 +51,32 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         default: 'by_qty',
         constraints: {
           check_selling_by: {
-            expression: "selling_by_mode IN ('by_qty', 'by_variants')",
+            expression:
+              "selling_by_mode IN ('by_qty', 'by_variants', 'by_single_price')",
           },
         },
+      },
+      min_order_qty: {
+        type: 'INT',
+        default: 1,
+        description: 'Minimum order quantity for this variant combination',
+      },
+      sale_single_price_currency_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_currencies.id',
+      },
+      sale_single_price_min: {
+        type: 'DECIMAL(10,2)',
+        description: 'Minimum single price for the product',
+      },
+      sale_single_price_max: {
+        type: 'DECIMAL(10,2)',
+        description: 'Maximum single price for the product',
       },
       sampling_service_available: {
         type: 'BOOLEAN',
@@ -65,6 +88,15 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         type: 'INT',
         description:
           'Maximum quantity available for sampling in a single transaction',
+      },
+      product_logistics_attributes_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_product_logistics_attributes',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Reference to master_product_logistics_attributes.id',
       },
       remark: {
         type: 'TEXT',
@@ -317,11 +349,6 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         notNull: true,
         description: 'Unit cost for the size-color variant combination',
       },
-      min_order_qty: {
-        type: 'INT',
-        default: 1,
-        description: 'Minimum order quantity for this variant combination',
-      },
       sales_currency_id: {
         type: 'VARCHAR(36)',
         notNull: true,
@@ -352,6 +379,11 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         type: 'DECIMAL(10,2)',
         description:
           'Sample price of single unit for the size-color variant combination',
+      },
+      sku: {
+        type: 'VARCHAR(255)',
+        description:
+          'Stock Keeping Unit for the size-color variant combination',
       },
       stock_qty: {
         type: 'INT',
@@ -1122,8 +1154,8 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
       },
     },
   },
-  DELIVERY_DATES: {
-    name: 'delivery_dates',
+  PRODUCT_DELIVERY_DATES: {
+    name: 'product_delivery_dates',
     table_type: 'products-data',
     fields: {
       id: {
@@ -1147,9 +1179,55 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description: 'Minimum order quantity for this delivery date',
       },
       delivery_day: {
-        type: 'DATE',
+        type: 'INT',
         notNull: true,
         description: 'delivery day for the product',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+  },
+  PRODUCT_ATTRIBUTE_VALUES: {
+    name: 'product_attribute_values',
+    table_type: 'products-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'Auto-incremented primary key',
+      },
+      product_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'products',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to products.id',
+      },
+      attribute_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_product_attributes',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to master_product_attributes.id',
+      },
+      value: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Value of the attribute for the product',
       },
       created_at: {
         type: 'TIMESTAMP',

@@ -260,6 +260,14 @@ export const createProductCertificateFilesTable = async () => {
 };
 
 /**
+ * Creates the product_attribute_values table
+ * @returns {Promise} Promise that resolves when the table is created
+ */
+export const createProductAttributeValuesTable = async () => {
+  return createTable('PRODUCT_ATTRIBUTE_VALUES');
+};
+
+/**
  * Get the table creation order from TABLE_MASTER
  * @returns {string[]} Array of table keys in the correct creation order
  */

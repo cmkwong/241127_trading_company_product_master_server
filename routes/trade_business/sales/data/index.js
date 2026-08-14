@@ -60,6 +60,14 @@ router
   .post(salesController.getSalesQuotationById, endController);
 
 router
+  .route('/:sales_quotation_id/purchase-costs')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.getSalesQuotationPurchaseCosts,
+    endController,
+  );
+
+router
   .route('/ids')
   .post(salesController.getSalesQuotationById, endController)
   .patch(salesController.updateSalesQuotation, endController)

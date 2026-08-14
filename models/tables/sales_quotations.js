@@ -9,10 +9,15 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         primaryKey: true,
         description: 'UUID',
       },
-      to_order: {
-        type: 'BOOLEAN',
-        default: false,
-        description: 'Indicates if this quotation is ordered',
+      // to_order: {
+      //   type: 'BOOLEAN',
+      //   default: false,
+      //   description: 'Indicates if this quotation is ordered',
+      // },
+      status: {
+        type: 'VARCHAR(50)',
+        default: 'draft',
+        description: 'Status of the sales quotation',
       },
       remark: {
         type: 'TEXT',

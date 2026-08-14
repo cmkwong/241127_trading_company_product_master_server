@@ -44,20 +44,6 @@ router.get(
   endController,
 );
 
-router.get(
-  '/incoterms',
-  masterDataController.getMasterIncoterms,
-  endController,
-);
-
-router.get(
-  '/exchange_rate_hkd',
-  masterDataController.getMasterExchangeRateHkd,
-  endController,
-);
-
-router.get('/:tableName', masterDataController.getMasterData, endController);
-
 // Add new combined operations for truncate and reset
 router.post(
   '/truncate/all',

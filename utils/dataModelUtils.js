@@ -138,17 +138,17 @@ export default class DataModelUtils {
   }
 
   // Helper to capitalize entity names for error messages
-  async _deleteRowFirstThenFile(model, id, options = {}) {
+  async _deleteRowFirstThenFile(model, id, options = {}, connection = null) {
     const { ignoreNotFound = false } = options;
     const pkField = model.entityIdField || 'id';
     const fileUrlField = model.fileUrlField;
 
-    return await model.dbc.executeTransaction(async (connection) => {
+    const runDelete = async (conn) => {
       let fileUrl = null;
 
       if (model.hasFileHandling && fileUrlField) {
         const selectSql = `SELECT ${model._escapeIdentifier(fileUrlField)} AS file_url FROM ${model._escapeIdentifier(model.tableName)} WHERE ${model._escapeIdentifier(pkField)} = ? LIMIT 1`;
-        const rows = await model.dbc.executeQuery(selectSql, [id], connection);
+        const rows = await model.dbc.executeQuery(selectSql, [id], conn);
 
         if (!Array.isArray(rows) || rows.length === 0) {
           if (ignoreNotFound) {
@@ -165,11 +165,7 @@ export default class DataModelUtils {
       }
 
       const deleteSql = `DELETE FROM ${model._escapeIdentifier(model.tableName)} WHERE ${model._escapeIdentifier(pkField)} = ?`;
-      const deleteResult = await model.dbc.executeQuery(
-        deleteSql,
-        [id],
-        connection,
-      );
+      const deleteResult = await model.dbc.executeQuery(deleteSql, [id], conn);
 
       if (!deleteResult?.affectedRows) {
         if (ignoreNotFound) {
@@ -191,7 +187,13 @@ export default class DataModelUtils {
       }
 
       return true;
-    });
+    };
+
+    if (connection) {
+      return runDelete(connection);
+    }
+
+    return await model.dbc.executeTransaction(runDelete);
   }
 
   /**
@@ -236,6 +238,31 @@ export default class DataModelUtils {
     }
     return false;
   };
+
+  /**
+   * Deletes files that were saved during a transaction when the transaction fails.
+   * Each tracked entry holds the stored URL and whether it is image-only.
+   * Cleanup failures are logged and do not mask the original transaction error.
+   */
+  async _rollbackSavedFiles(savedFiles) {
+    if (!Array.isArray(savedFiles) || savedFiles.length === 0) return;
+
+    for (const entry of savedFiles) {
+      if (!entry?.fileUrl) continue;
+
+      try {
+        if (entry.imagesOnly) {
+          await deleteImage(entry.fileUrl);
+        } else {
+          await deleteFile(entry.fileUrl);
+        }
+      } catch (cleanupErr) {
+        console.warn(
+          `Failed to rollback saved file ${entry.fileUrl}: ${cleanupErr.message}`,
+        );
+      }
+    }
+  }
 
   // ============================================================
   // 📂 FILE HANDLING
@@ -428,6 +455,7 @@ export default class DataModelUtils {
     currentModel,
     tableSchema,
     parentAction,
+    connection = null,
   ) {
     if (parentAction === 'create') return 'create';
     if (globalActionType === 'create') return 'create';
@@ -437,7 +465,7 @@ export default class DataModelUtils {
 
     if (!pkValue) return 'create';
 
-    const exists = await currentModel.checkExists(pkValue, pkField);
+    const exists = await currentModel.checkExists(pkValue, pkField, connection);
     return exists ? 'update' : 'create'; // TODO: if update, return a root key
   }
 
@@ -456,6 +484,8 @@ export default class DataModelUtils {
     schemaConfig,
     globalActionType,
     parentAction = null,
+    connection = null,
+    savedFiles = null,
   ) {
     const tableSchema = schemaConfig[tableName];
     const pkField = currentModel.entityIdField;
@@ -468,6 +498,7 @@ export default class DataModelUtils {
         currentModel,
         tableSchema,
         parentAction,
+        connection,
       );
 
       // 2. Prepare Data (Validation, Defaults, Link Parent)
@@ -497,7 +528,11 @@ export default class DataModelUtils {
         if (hasFilePayload) {
           // Keep previous URL for rollback and post-success cleanup
           if (rowAction === 'update') {
-            const existingRow = await currentModel.getById(validEntry[pkField]);
+            const existingRow = await currentModel.getById(
+              validEntry[pkField],
+              { includeBase64: false },
+              connection,
+            );
             previousFileUrl = existingRow?.[currentModel.fileUrlField] || null;
           }
 
@@ -533,6 +568,7 @@ export default class DataModelUtils {
           tableName: currentModel.tableName,
           id: rowAction === 'update' ? validEntry[pkField] : undefined,
           data: crudData,
+          connection,
         });
 
         // --- C. Capture Result & ID ---
@@ -555,6 +591,13 @@ export default class DataModelUtils {
           });
 
           if (fileUrl) {
+            if (Array.isArray(savedFiles)) {
+              savedFiles.push({
+                fileUrl,
+                imagesOnly: currentModel.imagesOnly,
+              });
+            }
+
             // Update the record with the file URL
             validEntry[currentModel.fileUrlField] = fileUrl;
             await this.crudO.performCrud({
@@ -562,6 +605,7 @@ export default class DataModelUtils {
               tableName: currentModel.tableName,
               id: validEntry[pkField],
               data: { [currentModel.fileUrlField]: fileUrl },
+              connection,
             });
 
             // Delete old file only after new file is saved and DB URL is updated
@@ -588,6 +632,7 @@ export default class DataModelUtils {
                 operation: 'delete',
                 tableName: currentModel.tableName,
                 id: validEntry[pkField],
+                connection,
               });
             } else if (rowAction === 'update' && previousFileUrl) {
               // Restore previous URL for updates
@@ -596,6 +641,7 @@ export default class DataModelUtils {
                 tableName: currentModel.tableName,
                 id: validEntry[pkField],
                 data: { [currentModel.fileUrlField]: previousFileUrl },
+                connection,
               });
             }
           } catch (rollbackErr) {
@@ -633,6 +679,8 @@ export default class DataModelUtils {
         schemaConfig,
         globalActionType,
         rowAction,
+        connection,
+        savedFiles,
       );
     }
   }
@@ -1102,7 +1150,7 @@ export default class DataModelUtils {
    * - If a row has children present in the JSON -> It is a PATH (Do not delete).
    * - If a row has NO children in the JSON -> It is a LEAF (Delete it).
    */
-  async _collectDeleteQueue(dataRow, currentModel, queue) {
+  async _collectDeleteQueue(dataRow, currentModel, queue, connection = null) {
     const pk = currentModel.entityIdField;
 
     // FIX: Try configured PK first, then fallback to 'id'
@@ -1137,7 +1185,12 @@ export default class DataModelUtils {
     if (isPathToChild) {
       for (const { childConfig, childRows } of providedChildren) {
         for (const childRow of childRows) {
-          await this._collectDeleteQueue(childRow, childConfig.model, queue);
+          await this._collectDeleteQueue(
+            childRow,
+            childConfig.model,
+            queue,
+            connection,
+          );
         }
       }
       return;
@@ -1157,10 +1210,16 @@ export default class DataModelUtils {
             false,
             {},
             foreignKeyField,
+            connection,
           );
 
           for (const childRow of childRows) {
-            await this._collectDeleteQueue(childRow, childConfig.model, queue);
+            await this._collectDeleteQueue(
+              childRow,
+              childConfig.model,
+              queue,
+              connection,
+            );
           }
         } catch (err) {
           console.error(
@@ -1199,6 +1258,8 @@ export default class DataModelUtils {
     schemaConfig,
     globalActionType,
     parentAction,
+    connection = null,
+    savedFiles = null,
   ) {
     // IMPORTANT: write in configured childTableConfig order, not raw JSON key order.
     // This guarantees dependent children (e.g. product_costs) are processed
@@ -1251,6 +1312,7 @@ export default class DataModelUtils {
             false,
             {},
             foreignKeyField,
+            connection,
           );
 
           const deleteQueue = [];
@@ -1269,6 +1331,7 @@ export default class DataModelUtils {
               },
               childModel,
               deleteQueue,
+              connection,
             );
           }
 
@@ -1278,6 +1341,7 @@ export default class DataModelUtils {
                 item.model,
                 item.id,
                 { ignoreNotFound: true },
+                connection,
               );
 
               result.deleteData = result.deleteData || {};
@@ -1326,6 +1390,8 @@ export default class DataModelUtils {
         schemaConfig,
         globalActionType,
         parentAction,
+        connection,
+        savedFiles,
       );
     }
   }
@@ -1486,13 +1552,13 @@ export default class DataModelUtils {
     }
   }
 
-  async checkExists(value, fieldName) {
+  async checkExists(value, fieldName, connection = null) {
     if (!value) return false;
     const searchField = fieldName || this.entityIdField;
     const sql = `SELECT 1 FROM ${this._escapeIdentifier(this.tableName)} WHERE ${this._escapeIdentifier(searchField)} = ? LIMIT 1`;
 
     try {
-      const rows = await this.dbc.executeQuery(sql, [value]);
+      const rows = await this.dbc.executeQuery(sql, [value], connection);
       return Array.isArray(rows) && rows.length > 0;
     } catch (error) {
       console.error(`Error checking existence in ${this.tableName}:`, error);
@@ -1602,8 +1668,8 @@ export default class DataModelUtils {
     return this.updateModel.create(data);
   }
 
-  async getById(id, options = {}) {
-    return this.readModel.getById(id, options);
+  async getById(id, options = {}, connection = null) {
+    return this.readModel.getById(id, options, connection);
   }
 
   /**
@@ -1618,12 +1684,14 @@ export default class DataModelUtils {
     includeBase64 = false,
     options = {},
     foreignKeyField = null,
+    connection = null,
   ) {
     return this.readModel.getAllByParentId(
       parentId,
       includeBase64,
       options,
       foreignKeyField,
+      connection,
     );
   }
 

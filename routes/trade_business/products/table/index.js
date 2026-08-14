@@ -140,6 +140,11 @@ router.post(
   tableController.createProductCertificateFilesTable,
   endController,
 );
+router.post(
+  '/create/attribute-values',
+  tableController.createProductAttributeValuesTable,
+  endController,
+);
 
 // Route for dropping all product tables
 router.delete('/drop-all', tableController.dropAllTables, endController);

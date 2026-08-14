@@ -8,35 +8,43 @@ export default class WriteDataModel {
   async handleWriteOperation(jsonData, schemaConfig, actionType) {
     const host = this.host;
 
-    return await host.withTransaction(async () => {
+    return await host.withTransaction(async (connection) => {
       const result = {
         createData: {},
         updateData: {},
       };
 
       const rootModel = host;
+      const savedFiles = [];
 
-      for (const [tableName, tableRows] of Object.entries(jsonData)) {
-        if (!schemaConfig[tableName]) {
-          throw new AppError(`Table "${tableName}" not found in schema`, 400);
+      try {
+        for (const [tableName, tableRows] of Object.entries(jsonData)) {
+          if (!schemaConfig[tableName]) {
+            throw new AppError(`Table "${tableName}" not found in schema`, 400);
+          }
+
+          const targetModel = host._resolveTargetModel(tableName);
+          const modelToUse = targetModel || host;
+
+          await host._processWriteRecursive(
+            rootModel,
+            null,
+            tableName,
+            tableRows,
+            null,
+            null,
+            modelToUse,
+            result,
+            schemaConfig,
+            actionType,
+            null,
+            connection,
+            savedFiles,
+          );
         }
-
-        const targetModel = host._resolveTargetModel(tableName);
-        const modelToUse = targetModel || host;
-
-        await host._processWriteRecursive(
-          rootModel,
-          null,
-          tableName,
-          tableRows,
-          null,
-          null,
-          modelToUse,
-          result,
-          schemaConfig,
-          actionType,
-          null,
-        );
+      } catch (err) {
+        await host._rollbackSavedFiles(savedFiles);
+        throw err;
       }
 
       return result;

@@ -28,6 +28,9 @@ import * as master_colorTypesModel from '../trade_business/master/master_colorTy
 import * as master_productAttributesModel from '../trade_business/master/master_product_attributes_model.js';
 import * as master_productAttributeDropdownModel from '../trade_business/master/master_product_attribute_dropdown_model.js';
 import * as master_productCategoryAttributeAssignModel from '../trade_business/master/master_product_category_attribute_assign_model.js';
+import * as master_sellingUnitTypesModel from '../trade_business/master/master_sellingUnitTypesModel.js';
+import * as master_productLogisticsAttributesModel from '../trade_business/master/master_productLogisticsAttributesModel.js';
+import * as master_productCustomizationOptionsModel from '../trade_business/master/master_productCustomizationOptionsModel.js';
 
 import { getProductsSeedData } from '../../utils/productsSource.js';
 import { defaultSuppliers } from '../../datas/suppliers.js';
@@ -164,6 +167,20 @@ export const getMasterDefaultMappings = () => {
       model:
         master_productCategoryAttributeAssignModel.masterProductCategoryAttributeAssignModel,
       data: default_master_data.master_product_category_attribute_assign || [],
+    },
+    master_selling_unit_types: {
+      model: master_sellingUnitTypesModel.masterSellingUnitTypesModel,
+      data: default_master_data.master_selling_unit_types || [],
+    },
+    master_product_logistics_attributes: {
+      model:
+        master_productLogisticsAttributesModel.masterProductLogisticsAttributesModel,
+      data: default_master_data.master_product_logistics_attributes || [],
+    },
+    master_product_customization_options: {
+      model:
+        master_productCustomizationOptionsModel.masterProductCustomizationOptionsModel,
+      data: default_master_data.master_product_customization_options || [],
     },
   };
 };

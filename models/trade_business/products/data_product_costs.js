@@ -27,6 +27,5 @@ export const productCostModel = new DataModelUtils({
   },
   defaults: {
     id: uuidv4,
-    min_order_qty: 1,
   },
 });

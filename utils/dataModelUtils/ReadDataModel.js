@@ -38,7 +38,7 @@ export default class ReadDataModel {
     return { data: resultData };
   }
 
-  async getById(id, options = {}) {
+  async getById(id, options = {}, connection = null) {
     const host = this.host;
 
     try {
@@ -46,6 +46,7 @@ export default class ReadDataModel {
         operation: 'read',
         tableName: host.tableName,
         id,
+        connection,
       });
 
       if (!result.record) {
@@ -75,6 +76,7 @@ export default class ReadDataModel {
     includeBase64 = false,
     options = {},
     foreignKeyField = null,
+    connection = null,
   ) {
     const host = this.host;
 
@@ -94,7 +96,7 @@ export default class ReadDataModel {
       ORDER BY ${host.entityIdField}
     `;
 
-      const results = await host.dbc.executeQuery(sql, [parentId]);
+      const results = await host.dbc.executeQuery(sql, [parentId], connection);
 
       if (!includeBase64 || !host.hasFileHandling) return results;
 

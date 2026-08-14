@@ -14,6 +14,9 @@ import * as ProductCategories from './data_product_categories.js';
 import * as ProductAlibabaIds from './data_product_alibaba_ids.js';
 import * as ProductCertificates from './data_product_certificates.js';
 import * as ProductKeywords from './data_product_keywords.js';
+import * as ProductAttributeValues from './data_product_attribute_values.js';
+import * as ProductSalePricesByQty from './data_product_sale_prices_by_qty.js';
+import * as ProductDeliveryDates from './data_product_delivery_dates.js';
 import * as ProductVarientSizes from './data_product_varient_sizes.js';
 import * as ProductVarientCapacities from './data_product_varient_capacities.js';
 import * as ProductVarientColors from './data_product_varient_colors.js';
@@ -106,6 +109,21 @@ export const productModel = new DataModelUtils({
       tableName: TABLE_MASTER['PRODUCT_COSTS'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductCosts.productCostModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_ATTRIBUTE_VALUES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductAttributeValues.productAttributeValueModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_SALE_PRICES_BY_QTY'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductSalePricesByQty.productSalePricesByQtyModel,
+    },
+    {
+      tableName: TABLE_MASTER['PRODUCT_DELIVERY_DATES'].name,
+      connectedKeys: { id: 'productId' }, // parent table -> child table
+      model: ProductDeliveryDates.productDeliveryDatesModel,
     },
   ],
 });

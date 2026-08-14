@@ -454,6 +454,11 @@ const TABLES_WITH_AUTO_DEFAULTS_ON_READ = new Set([
   'master_company_info',
 ]);
 
+const MASTER_TABLE_DEFAULT_ORDER = {
+  master_incoterms: 'ORDER BY code ASC',
+  master_exchange_rate_hkd: 'ORDER BY `Date` DESC',
+};
+
 export const getMasterDataRows = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
 
@@ -480,52 +485,10 @@ export const getMasterDataRows = catchAsync(async (req, res, next) => {
   }
 
   const { model } = tableDataMap[tableName];
-  const results = await readRowsSafely(model, tableName);
-
-  res.prints = {
-    status: 'success',
-    tableName,
-    results,
-  };
-  next();
-});
-
-export const getMasterIncoterms = catchAsync(async (req, res, next) => {
-  const tableName = 'master_incoterms';
-  const tableDataMap = getTableDataMapping();
-
-  if (!tableDataMap[tableName]) {
-    return next(
-      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
-    );
-  }
-
-  const { model } = tableDataMap[tableName];
-  const results = await readRowsSafely(model, tableName, 'ORDER BY code ASC');
-
-  res.prints = {
-    status: 'success',
-    tableName,
-    results,
-  };
-  next();
-});
-
-export const getMasterExchangeRateHkd = catchAsync(async (req, res, next) => {
-  const tableName = 'master_exchange_rate_hkd';
-  const tableDataMap = getTableDataMapping();
-
-  if (!tableDataMap[tableName]) {
-    return next(
-      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
-    );
-  }
-
-  const { model } = tableDataMap[tableName];
   const results = await readRowsSafely(
     model,
     tableName,
-    'ORDER BY `Date` DESC',
+    MASTER_TABLE_DEFAULT_ORDER[tableName] || '',
   );
 
   res.prints = {
@@ -607,30 +570,6 @@ export const deleteMasterData = catchAsync(async (req, res, next) => {
     result,
   };
 
-  next();
-});
-
-export const getMasterData = catchAsync(async (req, res, next) => {
-  const tableName = req.params.tableName;
-  const tableDataMap = getTableDataMapping();
-  if (!tableDataMap[tableName]) {
-    return next(
-      new AppError(`Unknown table: ${tableName}. Cannot get data.`, 400),
-    );
-  }
-
-  if (TABLES_WITH_AUTO_DEFAULTS_ON_READ.has(tableName)) {
-    await ensureMasterTableWithDefaults(tableName, tableDataMap[tableName]);
-  }
-
-  const { model } = tableDataMap[tableName];
-
-  const results = await readRowsSafely(model, tableName);
-
-  res.prints = {
-    status: 'success',
-    results,
-  };
   next();
 });
 

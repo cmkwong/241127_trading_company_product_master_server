@@ -102,42 +102,6 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
-  MASTER_PET_TYPES: {
-    name: 'master_pet_types',
-    table_type: 'products-master',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'UUID primary key',
-      },
-      name: {
-        type: 'VARCHAR(255)',
-        notNull: true,
-        description: 'Pet type name',
-      },
-      description: {
-        type: 'TEXT',
-        description: 'Pet type description',
-      },
-      created_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP',
-        description: 'Creation timestamp',
-      },
-      updated_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        description: 'Last update timestamp',
-      },
-    },
-    constraints: {
-      unique_pet_type_name: {
-        type: 'UNIQUE',
-        fields: ['name'],
-      },
-    },
-  },
   MASTER_COMPANY_INFO: {
     name: 'master_company_info',
     table_type: 'sales-master',
@@ -1548,5 +1512,41 @@ export const MASTER_TABLE_DEFINITIONS = {
         fields: ['category_id', 'attribute_id'],
       },
     },
-  }
+  },
+  MASTER_PRODUCT_CUSTOMIZATION_OPTIONS: {
+    name: 'master_product_customization_options',
+    table_type: 'products-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Customization option name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Customization option description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_customization_option_name: {
+        type: 'UNIQUE',
+        fields: ['name'],
+      },
+    },
+  },
 };

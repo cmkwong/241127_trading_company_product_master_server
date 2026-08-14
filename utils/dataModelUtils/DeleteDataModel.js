@@ -10,48 +10,61 @@ export default class DeleteDataModel {
     const host = this.host;
     const resultData = {};
 
-    for (const [tableName, rows] of Object.entries(jsonData)) {
-      const targetModel = host._resolveTargetModel(tableName);
+    return await host.withTransaction(async (connection) => {
+      for (const [tableName, rows] of Object.entries(jsonData)) {
+        const targetModel = host._resolveTargetModel(tableName);
 
-      if (!targetModel) {
-        console.warn(`Cannot delete from '${tableName}'. Model not found.`);
-        continue;
-      }
+        if (!targetModel) {
+          console.warn(`Cannot delete from '${tableName}'. Model not found.`);
+          continue;
+        }
 
-      const deleteQueue = [];
-      for (const row of rows) {
-        await host._collectDeleteQueue(row, targetModel, deleteQueue);
-      }
+        const deleteQueue = [];
+        for (const row of rows) {
+          await host._collectDeleteQueue(
+            row,
+            targetModel,
+            deleteQueue,
+            connection,
+          );
+        }
 
-      for (const item of deleteQueue) {
-        try {
-          const { model, id } = item;
-          const deleted = await host._deleteRowFirstThenFile(model, id, {
-            ignoreNotFound: true,
-          });
+        for (const item of deleteQueue) {
+          try {
+            const { model, id } = item;
+            const deleted = await host._deleteRowFirstThenFile(
+              model,
+              id,
+              { ignoreNotFound: true },
+              connection,
+            );
 
-          if (!resultData[model.tableName]) {
-            resultData[model.tableName] = [];
-          }
+            if (!resultData[model.tableName]) {
+              resultData[model.tableName] = [];
+            }
 
-          if (!resultData[model.tableName].some((r) => r.id === id)) {
-            resultData[model.tableName].push({
-              id: id,
-              status: deleted ? 'deleted' : 'not_found',
+            if (!resultData[model.tableName].some((r) => r.id === id)) {
+              resultData[model.tableName].push({
+                id: id,
+                status: deleted ? 'deleted' : 'not_found',
+              });
+            }
+          } catch (err) {
+            console.error(
+              `Delete failed for ${item.tableName} ID ${item.id}`,
+              err,
+            );
+            if (!resultData[item.tableName]) resultData[item.tableName] = [];
+            resultData[item.tableName].push({
+              id: item.id,
+              error: err.message,
             });
           }
-        } catch (err) {
-          console.error(
-            `Delete failed for ${item.tableName} ID ${item.id}`,
-            err,
-          );
-          if (!resultData[item.tableName]) resultData[item.tableName] = [];
-          resultData[item.tableName].push({ id: item.id, error: err.message });
         }
       }
-    }
 
-    return { deleteData: resultData };
+      return { deleteData: resultData };
+    });
   }
 
   async delete(id) {

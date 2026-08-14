@@ -32,14 +32,14 @@ class DatabaseConnection {
   /**
    * Helper: Gets table metadata (columns, types, keys)
    */
-  async getTableSchema(tableName) {
+  async getTableSchema(tableName, connection = null) {
     const schemaSQL = `
       SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, EXTRA
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
       ORDER BY ORDINAL_POSITION
     `;
-    return await this.executeQuery(schemaSQL, [tableName]);
+    return await this.executeQuery(schemaSQL, [tableName], connection);
   }
 
   /**

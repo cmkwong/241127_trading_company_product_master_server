@@ -36,6 +36,7 @@ class CrudOperations {
         orderBy,
         returnSchema = false,
         softDelete = false,
+        connection = null,
       } = options;
 
       if (!this.dbc) {
@@ -49,7 +50,7 @@ class CrudOperations {
       // 🔍 SCHEMA VALIDATION
       // =========================================================
       // Fetch table metadata to ensure we only try to write to columns that exist.
-      const schema = await this.dbc.getTableSchema(tableName);
+      const schema = await this.dbc.getTableSchema(tableName, connection);
 
       if (schema.length === 0) {
         throw new AppError(
@@ -89,6 +90,7 @@ class CrudOperations {
             data,
             hasCreatedAt,
             hasUpdatedAt,
+            connection,
           );
           break;
 
@@ -100,7 +102,9 @@ class CrudOperations {
             conditions,
             fields,
             orderBy,
+            'ASC',
             hasDeletedAt,
+            connection,
           );
           break;
 
@@ -111,6 +115,7 @@ class CrudOperations {
             id,
             data,
             hasUpdatedAt,
+            connection,
           );
           break;
 
@@ -121,6 +126,7 @@ class CrudOperations {
             id,
             softDelete,
             hasDeletedAt,
+            connection,
           );
           break;
 
@@ -145,7 +151,14 @@ class CrudOperations {
    * 🟢 CREATE (Single)
    * Handles UUID generation for string IDs and auto-timestamps.
    */
-  async createRecord(tableName, schema, data, hasCreatedAt, hasUpdatedAt) {
+  async createRecord(
+    tableName,
+    schema,
+    data,
+    hasCreatedAt,
+    hasUpdatedAt,
+    connection = null,
+  ) {
     if (!data) {
       throw new AppError('No data provided for create operation', 400);
     }
@@ -194,11 +207,21 @@ class CrudOperations {
       VALUES (${placeholders.join(', ')})
     `;
 
-    const result = await this.dbc.executeQuery(sql, values);
+    const result = await this.dbc.executeQuery(sql, values, connection);
 
     // 4. Return the full created object
     const insertId = result.insertId || recordData[idColumn.COLUMN_NAME];
-    const createdRecord = await this.readRecords(tableName, schema, insertId);
+    const createdRecord = await this.readRecords(
+      tableName,
+      schema,
+      insertId,
+      undefined,
+      undefined,
+      undefined,
+      'ASC',
+      false,
+      connection,
+    );
 
     return {
       message: `Record created successfully in ${tableName}`,
@@ -220,6 +243,7 @@ class CrudOperations {
     orderBy,
     orderDirection = 'ASC',
     hasDeletedAt = false,
+    connection = null,
   ) {
     const selectFields = fields && fields.length > 0 ? fields.join(', ') : '*';
     let whereClause = '';
@@ -331,7 +355,11 @@ class CrudOperations {
         FROM ${tableName}
         ${whereClause ? `WHERE ${whereClause}` : ''}
       `;
-      const countResult = await this.dbc.executeQuery(countSQL, whereParams);
+      const countResult = await this.dbc.executeQuery(
+        countSQL,
+        whereParams,
+        connection,
+      );
       total = countResult[0].total;
     }
 
@@ -349,7 +377,7 @@ class CrudOperations {
       ${limitClause}
     `;
 
-    const results = await this.dbc.executeQuery(sql, whereParams);
+    const results = await this.dbc.executeQuery(sql, whereParams, connection);
 
     // Return format depends on whether we asked for a single ID or a list
     if (id && !Array.isArray(id)) {
@@ -370,7 +398,14 @@ class CrudOperations {
   /**
    * 🟠 UPDATE (Single)
    */
-  async updateRecord(tableName, schema, id, data, hasUpdatedAt) {
+  async updateRecord(
+    tableName,
+    schema,
+    id,
+    data,
+    hasUpdatedAt,
+    connection = null,
+  ) {
     if (!id) throw new AppError('No ID provided for update operation', 400);
     if (!data || Object.keys(data).length === 0) {
       throw new AppError('No data provided for update operation', 400);
@@ -410,9 +445,19 @@ class CrudOperations {
       WHERE ${primaryKeyColumn} = ?
     `;
 
-    await this.dbc.executeQuery(sql, values);
+    await this.dbc.executeQuery(sql, values, connection);
 
-    const updatedRecord = await this.readRecords(tableName, schema, id);
+    const updatedRecord = await this.readRecords(
+      tableName,
+      schema,
+      id,
+      undefined,
+      undefined,
+      undefined,
+      'ASC',
+      false,
+      connection,
+    );
 
     return {
       message: `Record updated successfully in ${tableName}`,
@@ -425,7 +470,14 @@ class CrudOperations {
    * 🔴 DELETE (Single)
    * Supports both Soft Delete (flagging) and Hard Delete (removal).
    */
-  async deleteRecord(tableName, schema, id, softDelete, hasDeletedAt) {
+  async deleteRecord(
+    tableName,
+    schema,
+    id,
+    softDelete,
+    hasDeletedAt,
+    connection = null,
+  ) {
     if (!id) throw new AppError('No ID provided for delete operation', 400);
 
     const primaryKeyColumns = schema
@@ -437,7 +489,17 @@ class CrudOperations {
     }
 
     // Verify existence before delete
-    const recordToDelete = await this.readRecords(tableName, schema, id);
+    const recordToDelete = await this.readRecords(
+      tableName,
+      schema,
+      id,
+      undefined,
+      undefined,
+      undefined,
+      'ASC',
+      false,
+      connection,
+    );
 
     if (!recordToDelete.record) {
       throw new AppError(
@@ -475,7 +537,11 @@ class CrudOperations {
       SET deleted_at = ?
       WHERE ${whereClause}
     `;
-      await this.dbc.executeQuery(sql, [getTimezoneDate(), ...whereParams]);
+      await this.dbc.executeQuery(
+        sql,
+        [getTimezoneDate(), ...whereParams],
+        connection,
+      );
       return {
         message: `Record soft deleted successfully from ${tableName}`,
         id,
@@ -487,7 +553,7 @@ class CrudOperations {
       DELETE FROM ${tableName}
       WHERE ${whereClause}
     `;
-      await this.dbc.executeQuery(sql, whereParams);
+      await this.dbc.executeQuery(sql, whereParams, connection);
       return {
         message: `Record deleted successfully from ${tableName}`,
         id,
