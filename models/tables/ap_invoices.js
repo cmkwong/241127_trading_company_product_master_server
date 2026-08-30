@@ -78,7 +78,7 @@ export const AP_INVOICES_TABLE_DEFINITIONS = {
       },
       "ap_invoice_type": {
         "type": "VARCHAR(50)",
-        "description": "Type of the invoice row, e.g., 'product', 'service', 'shipping', etc.",
+        "description": "Type of the invoice row, e.g., 'products', 'service', 'shipping', etc.",
         "references": {
           "table": "master_invoice_types",
           "field": "code",

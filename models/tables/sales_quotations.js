@@ -521,6 +521,10 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       details: {
         type: 'TEXT',
       },
+      override_product_name: {
+        type: 'VARCHAR(255)',
+        description: 'Override product name used in quotation printout',
+      },
       remark: {
         type: 'TEXT',
         description: 'Internal remark (not for print)',

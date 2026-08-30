@@ -27,7 +27,7 @@ export const productModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
   tableName: TABLE_MASTER['PRODUCTS'].name,
   tableFields: TABLE_MASTER['PRODUCTS'].fields,
-  entityName: 'product',
+  entityName: 'products',
   entityIdField: 'id',
   requiredFields: ['product_id'],
   validations: {

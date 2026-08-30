@@ -333,10 +333,11 @@ export default class DataModelUtils {
   async _processBase64Content(file, options = {}) {
     let {
       compress = false,
-      maxWidth = 800,
-      maxHeight = 800,
+      maxWidth = null,
+      maxHeight = null,
       quality = 0.7,
       base64OnlyTable,
+      resolutionScale = 0.25,
     } = options;
 
     if (
@@ -389,25 +390,46 @@ export default class DataModelUtils {
       if (['.jpg', '.jpeg'].includes(ext)) mimeType = 'image/jpeg';
       else if (ext === '.png') mimeType = 'image/png';
       else if (ext === '.gif') mimeType = 'image/gif';
+      else if (ext === '.webp') mimeType = 'image/webp';
       else if (ext === '.pdf') mimeType = 'application/pdf';
 
       const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
 
       if (isImage && compress && sharp) {
         const imageBuffer = await fs.readFile(filePath);
+        const metadata = await sharp(imageBuffer).metadata();
+
+        const scale =
+          Number.isFinite(resolutionScale) && resolutionScale > 0
+            ? resolutionScale
+            : 0.25;
+
+        let targetWidth = Math.max(
+          1,
+          Math.round((metadata.width || 1) * scale),
+        );
+        let targetHeight = Math.max(
+          1,
+          Math.round((metadata.height || 1) * scale),
+        );
+
+        // Keep any explicit caps working (e.g. icons at 220x220).
+        if (maxWidth) targetWidth = Math.min(targetWidth, maxWidth);
+        if (maxHeight) targetHeight = Math.min(targetHeight, maxHeight);
+
         const compressedBuffer = await sharp(imageBuffer)
           .resize({
-            width: maxWidth,
-            height: maxHeight,
+            width: targetWidth,
+            height: targetHeight,
             fit: 'inside',
             withoutEnlargement: true,
           })
-          .jpeg({ quality: quality * 100 })
+          .webp({ quality: quality * 100 })
           .toBuffer();
 
         const base64Content = compressedBuffer.toString('base64');
         file[this.imagesOnly ? 'base64_image' : 'base64_file'] =
-          `data:image/jpeg;base64,${base64Content}`;
+          `data:image/webp;base64,${base64Content}`;
         file.is_compressed = true;
       } else {
         const fileBuffer = await fs.readFile(filePath);
