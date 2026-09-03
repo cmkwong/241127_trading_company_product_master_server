@@ -197,6 +197,10 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       details: {
         type: 'TEXT',
       },
+      override_shipping_method_name: {
+        type: 'VARCHAR(255)',
+        description: 'Override shipping method name used in quotation printout',
+      },
       remark: {
         type: 'TEXT',
         description: 'Internal remark (not for print)',
@@ -733,6 +737,10 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       },
       details: {
         type: 'TEXT',
+      },
+      override_service_name: {
+        type: 'VARCHAR(255)',
+        description: 'Override service name used in quotation printout',
       },
       remark: {
         type: 'TEXT',

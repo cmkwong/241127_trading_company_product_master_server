@@ -1,11 +1,19 @@
 import express from 'express';
 import * as tradeBusinessController from '../../controller/general/trade_business_controller.js';
+import * as fileBanksController from '../../controller/general/file_banks_controller.js';
 import { protect, restrictTo } from '../../middleware/authController.js';
 import endController from '../../middleware/endController.js';
 
 const router = express.Router();
 
 router.use(protect);
+
+// File bank endpoints are available to any authenticated user.
+router.get('/file-banks/tree', fileBanksController.getFileBankTree, endController);
+router.get('/file-banks/contents', fileBanksController.getFileBankContents, endController);
+router.get('/file-banks/thumbnail', fileBanksController.getFileThumbnail);
+router.get('/file-banks/image', fileBanksController.getFileImagePreview);
+
 router.use(restrictTo('admin', 'system-admin', 'developer'));
 
 router.post(

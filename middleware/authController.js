@@ -17,7 +17,7 @@ export const signToken = (payload) => {
     process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN, // Expiry time
-    }
+    },
   );
 };
 
@@ -28,7 +28,7 @@ export const getUser = async (username, password) => {
   // Find the matched user with name and password
   const matched = results.filter(
     (result) =>
-      result['username'] === username && result['password'] === password
+      result['username'] === username && result['password'] === password,
   );
   return matched;
 };
@@ -54,9 +54,11 @@ export const getToken = catchAsync(async (req, res, next) => {
   } else {
     const [currentDate, currentTime] = time.getCurrentTimeStr();
     const token = signToken(
-      `${username};${payload};${currentDate} ${currentTime}`
+      `${username};${payload};${currentDate} ${currentTime}`,
     );
     res.prints = {
+      username: username,
+      role: matched[0].role,
       token,
     };
     next();
@@ -139,7 +141,7 @@ export const restrictTo = (...roles) => {
     // Check if user object exists
     if (!req.user) {
       return next(
-        new AppError('User authentication required for this operation', 401)
+        new AppError('User authentication required for this operation', 401),
       );
     }
 
@@ -152,19 +154,22 @@ export const restrictTo = (...roles) => {
     if (Array.isArray(req.user.role)) {
       // Check if any of the user's roles are allowed
       const hasPermission = req.user.role.some((userRole) =>
-        roles.includes(userRole)
+        roles.includes(userRole),
       );
 
       if (!hasPermission) {
         return next(
-          new AppError('You do not have permission to perform this action', 403)
+          new AppError(
+            'You do not have permission to perform this action',
+            403,
+          ),
         );
       }
     }
     // If user has a single role (as a string)
     else if (!roles.includes(req.user.role)) {
       return next(
-        new AppError('You do not have permission to perform this action', 403)
+        new AppError('You do not have permission to perform this action', 403),
       );
     }
 

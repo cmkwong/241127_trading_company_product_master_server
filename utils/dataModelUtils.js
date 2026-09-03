@@ -1,3 +1,4 @@
+import fs from 'fs';
 import AppError from './appError.js';
 import CrudOperations from './crud.js';
 import {
@@ -572,7 +573,25 @@ export default class DataModelUtils {
             currentModel.requiredFields.includes(currentModel.fileUrlField) ||
             !!currentModel.validations?.[currentModel.fileUrlField]?.required;
 
-          if (fileUrlIsRequired) {
+          // A create may reuse an already-stored file (e.g. duplicated quotation
+          // child rows are copied with the same stored image URL). Only treat it as
+          // a reuse when the referenced file actually exists on the server; an
+          // empty/gone path still requires a base64 upload.
+          let reuseExistingFile = false;
+          const storedUrl = rawRow[currentModel.fileUrlField];
+          if (typeof storedUrl === 'string' && storedUrl.trim() !== '') {
+            try {
+              const existingFilePath = resolveStoredFilePathForRead(storedUrl);
+              reuseExistingFile =
+                !!existingFilePath &&
+                fs.existsSync(existingFilePath) &&
+                fs.statSync(existingFilePath).isFile();
+            } catch {
+              reuseExistingFile = false;
+            }
+          }
+
+          if (fileUrlIsRequired && !reuseExistingFile) {
             const expectedBase64Field = currentModel.imagesOnly
               ? 'base64_image'
               : 'base64_file';
@@ -1431,13 +1450,22 @@ export default class DataModelUtils {
 
     // 1. Copy Fields
     for (const field in rawRow) {
-      // fileUrlField is server-managed and must not be written from client payload.
-      if (
+      const isManagedFileUrl =
         currentModel.hasFileHandling &&
         currentModel.fileUrlField &&
-        field === currentModel.fileUrlField
-      ) {
-        continue;
+        field === currentModel.fileUrlField;
+
+      if (isManagedFileUrl) {
+        // The file URL is normally server-managed (generated from a base64
+        // upload). However a CREATE that reuses an already-stored file (e.g.
+        // duplicating a parent record and copying its image child rows) supplies
+        // the URL directly, so allow it through to persist the existing file
+        // reference. It stays stripped for updates and base64-driven creates.
+        const reusesExistingFile =
+          rowAction === 'create' && !currentModel._hasBase64Content(rawRow);
+        if (!reusesExistingFile) {
+          continue;
+        }
       }
 
       if (
