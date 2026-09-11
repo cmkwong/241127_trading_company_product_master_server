@@ -71,11 +71,11 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description: 'Reference to master_currencies.id',
       },
       sale_single_price_min: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         description: 'Minimum single price for the product',
       },
       sale_single_price_max: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         description: 'Maximum single price for the product',
       },
       sampling_service_available: {
@@ -345,7 +345,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description: 'Reference to master_currencies.id for the cost currency',
       },
       unit_cost: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: true,
         description: 'Unit cost for the size-color variant combination',
       },
@@ -361,7 +361,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
           'Reference to master_currencies.id for the sales price currency',
       },
       sales_price: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         description: 'Sales price for the size-color variant combination',
         notNull: true,
       },
@@ -376,7 +376,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
           'Reference to master_currencies.id for the sample price currency',
       },
       sample_price: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         description:
           'Sample price of single unit for the size-color variant combination',
       },
@@ -453,7 +453,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
           'Reference to master_currencies.id for the sale price currency',
       },
       sale_price: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: true,
         description: 'Sale price for the product',
       },
@@ -968,17 +968,17 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description: 'Packing name or identifier',
       },
       length: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: false,
         description: 'Length dimension',
       },
       width: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: false,
         description: 'Width dimension',
       },
       height: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: false,
         description: 'Height dimension',
       },
@@ -989,7 +989,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description: 'Quantity in this packing',
       },
       weight: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         notNull: false,
         description: 'Weight of the packing',
       },

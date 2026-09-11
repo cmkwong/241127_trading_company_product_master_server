@@ -83,20 +83,20 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
         type: 'TEXT',
       },
       length: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       width: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       height: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       quantity: {
         type: 'INT',
         default: 0,
       },
       weight: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       currency_id: {
         type: 'VARCHAR(36)',
@@ -107,7 +107,7 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       api_selected: {
         type: 'BOOLEAN',
@@ -256,7 +256,7 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       api_selected: {
         type: 'BOOLEAN',
@@ -413,7 +413,7 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       api_selected: {
         type: 'BOOLEAN',

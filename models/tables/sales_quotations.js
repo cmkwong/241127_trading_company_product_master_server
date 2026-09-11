@@ -78,28 +78,28 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
       },
       length: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       width: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       height: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       qty: {
         type: 'INT',
         default: 0,
       },
       weight: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
       },
       chargeable_divisor: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
         default: 6000,
         description: 'Volumetric divisor for chargeable weight calculation',
       },
       min_chargeable_weight: {
-        type: 'DECIMAL(10,2)',
+        type: 'DECIMAL(10,3)',
         default: 12,
         description: 'Minimum chargeable weight per carton in kg',
       },
@@ -176,7 +176,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       discount_percent: {
         type: 'DECIMAL(5,2)',
@@ -184,7 +184,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         description: 'Discount percentage applied to sales price',
       },
       cost_price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       delivery_lead_time_from: {
         type: 'INT',
@@ -512,7 +512,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       discount_percent: {
         type: 'DECIMAL(5,2)',
@@ -520,7 +520,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         description: 'Discount percentage applied to sales price',
       },
       cost_price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       details: {
         type: 'TEXT',
@@ -725,7 +725,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
       },
       price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       discount_percent: {
         type: 'DECIMAL(5,2)',
@@ -733,7 +733,7 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         description: 'Discount percentage applied to sales price',
       },
       cost_price: {
-        type: 'DECIMAL(12,2)',
+        type: 'DECIMAL(12,3)',
       },
       details: {
         type: 'TEXT',
