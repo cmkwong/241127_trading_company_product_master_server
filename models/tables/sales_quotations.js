@@ -9,11 +9,26 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         primaryKey: true,
         description: 'UUID',
       },
-      // to_order: {
-      //   type: 'BOOLEAN',
-      //   default: false,
-      //   description: 'Indicates if this quotation is ordered',
-      // },
+      doc_type: {
+        type: 'VARCHAR(50)',
+        description: 'Document type, e.g., sales_quotation',
+      },
+      base_type: {
+        type: 'VARCHAR(50)',
+        description: 'Base document type, e.g., sales_quotation',
+      },
+      base_entry: {
+        type: 'VARCHAR(36)',
+        description: 'Reference to the base document entry (if any)',
+      },
+      base_line_type: {
+        type: 'VARCHAR(50)',
+        description: 'Base line type, e.g., sales_quotation',
+      },
+      base_line: {
+        type: 'VARCHAR(36)',
+        description: 'Reference to the base line (if any)',
+      },
       status: {
         type: 'VARCHAR(50)',
         default: 'draft',

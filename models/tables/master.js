@@ -1549,4 +1549,128 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
+  MASTER_MEMBERSHIP_TIERS: {
+    name: 'master_membership_tiers',
+    table_type: 'master-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Membership tier name',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Membership tier description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last modification timestamp',
+      },
+    },
+    constraints: {
+      unique_membership_tier_name: {
+        type: 'UNIQUE',
+        fields: ['name'],
+      },
+    },
+  },
+  MASTER_DOCTYPE: {
+    name: 'master_doctype',
+    table_type: 'master-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Document type name',
+      },
+      category: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Document type category',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        description: 'Document type description',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last modification timestamp',
+      },
+    },
+    constraints: {
+      unique_doctype_name: {
+        type: 'UNIQUE',
+        fields: ['name'],
+      },
+    },
+  },
+  MASTER_DOCTYPE_BASE_RELATIONSHIP: {
+    name: 'master_doctype_base_relationship',
+    table_type: 'master-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      doctype_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_doctype',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to the document type',
+      },
+      base_doctype_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'master_doctype',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to the base document type',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last modification timestamp',
+      },
+    },
+    constraints: {
+      unique_doctype_base_relationship: {
+        type: 'UNIQUE',
+        fields: ['doctype_id', 'base_doctype_id'],
+      },
+    },
+  },
 };

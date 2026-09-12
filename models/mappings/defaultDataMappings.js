@@ -32,6 +32,9 @@ import * as master_productCategoryAttributeAssignModel from '../trade_business/m
 import * as master_sellingUnitTypesModel from '../trade_business/master/master_sellingUnitTypesModel.js';
 import * as master_productLogisticsAttributesModel from '../trade_business/master/master_productLogisticsAttributesModel.js';
 import * as master_productCustomizationOptionsModel from '../trade_business/master/master_productCustomizationOptionsModel.js';
+import * as master_membershipTiersModel from '../trade_business/master/master_membershipTiersModel.js';
+import * as master_doctypeModel from '../trade_business/master/master_doctypeModel.js';
+import * as master_doctypeBaseRelationshipModel from '../trade_business/master/master_doctypeBaseRelationshipModel.js';
 
 import { getProductsSeedData } from '../../utils/productsSource.js';
 import { defaultSuppliers } from '../../datas/suppliers.js';
@@ -186,6 +189,19 @@ export const getMasterDefaultMappings = () => {
       model:
         master_productCustomizationOptionsModel.masterProductCustomizationOptionsModel,
       data: default_master_data.master_product_customization_options || [],
+    },
+    master_membership_tiers: {
+      model: master_membershipTiersModel.membershipTierModel,
+      data: default_master_data.master_membership_tiers || [],
+    },
+    master_doctype: {
+      model: master_doctypeModel.doctypeModel,
+      data: default_master_data.master_doctype || [],
+    },
+    master_doctype_base_relationship: {
+      model:
+        master_doctypeBaseRelationshipModel.doctypeBaseRelationshipModel,
+      data: default_master_data.master_doctype_base_relationship || [],
     },
   };
 };
