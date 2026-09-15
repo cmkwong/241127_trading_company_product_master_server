@@ -1,5 +1,5 @@
 import express from 'express';
-import * as salesController from '../../../../controller/trade_business/sales/data_sales_quotationsController.js';
+import * as salesController from '../../../..//MVC/controller/trade_business/panel/sales/data_sales_quotationsController.js';
 import * as authController from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

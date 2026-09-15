@@ -1,5 +1,5 @@
 import express from 'express';
-import * as masterDataController from '../../../controller/trade_business/master/master_dataController.js';
+import * as masterDataController from '../../../MVC/controller/trade_business/panel/master/master_dataController.js';
 import endController from '../../../middleware/endController.js';
 
 const router = express.Router();

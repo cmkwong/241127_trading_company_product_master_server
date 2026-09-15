@@ -1,6 +1,6 @@
 import express from 'express';
 // import customizationRouter from './customization/index.js';
-import * as productsController from '../../../../controller/trade_business/products/data_productsController.js';
+import * as productsController from '../../../../MVC/controller/trade_business/panel/products/data_productsController.js';
 import * as authController from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as customerController from '../../../../controller/trade_business/customers/data_customersController.js';
+import * as customerController from '../../../../MVC/controller/trade_business/panel/customers/data_customersController.js';
 import * as authController from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as supplierController from '../../../../controller/trade_business/suppliers/data_suppliersController.js';
+import * as supplierController from '../../../../MVC/controller/trade_business/panel/suppliers/data_suppliersController.js';
 import * as authController from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

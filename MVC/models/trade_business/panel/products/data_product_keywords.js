@@ -1,0 +1,22 @@
+import { v4 as uuidv4 } from 'uuid';
+import { TABLE_MASTER } from '../../../tables.js';
+import DataModelUtils from '../../../../../utils/dataModelUtils.js';
+import { tradeBusinessDbc } from '../../../dbModel.js';
+
+// Create a data model utility for product names
+export const productKeywordModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
+  tableName: TABLE_MASTER['PRODUCT_KEYWORDS'].name,
+  tableFields: TABLE_MASTER['PRODUCT_KEYWORDS'].fields,
+  entityName: 'product keyword',
+  entityIdField: 'id',
+  requiredFields: ['product_id', 'name', 'keyword_id'],
+  validations: {
+    product_id: { required: true },
+    name: { required: true },
+    keyword_id: { required: true },
+  },
+  defaults: {
+    id: uuidv4,
+  },
+});

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as tableController from '../../../../controller/trade_business/ap/tableController.js';
+import * as tableController from '../../../../MVC/controller/trade_business/panel/ap/tableController.js';
 import { protect, restrictTo } from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

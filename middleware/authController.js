@@ -1,7 +1,7 @@
 import { promisify } from 'util';
 import jwt from 'jsonwebtoken';
 
-import { authDbc } from '../models/dbModel.js'; // Use the singleton instance for the auth database
+import { authDbc } from '../MVC/models/dbModel.js'; // Use the singleton instance for the auth database
 import * as time from '../utils/time.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as arController from '../../../../controller/trade_business/ar/data_ar_invoicesController.js';
+import * as arController from '../../../../MVC/controller/trade_business/panel/ar/data_ar_invoicesController.js';
 import * as authController from '../../../../middleware/authController.js';
 import endController from '../../../../middleware/endController.js';
 

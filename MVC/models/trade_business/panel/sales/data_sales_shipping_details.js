@@ -1,0 +1,46 @@
+import { v4 as uuidv4 } from 'uuid';
+import DataModelUtils from '../../../../../utils/dataModelUtils.js';
+import { TABLE_MASTER } from '../../../tables.js';
+import { tradeBusinessDbc } from '../../../dbModel.js';
+import * as SalesShippingPrices from './data_sales_shipping_prices.js';
+import * as SalesShippingImages from './data_sales_shipping_images.js';
+import * as SalesShippingInternalImages from './data_sales_shipping_internal_images.js';
+import * as SalesShippingInternalFiles from './data_sales_shipping_internal_files.js';
+
+export const salesShippingDetailModel = new DataModelUtils({
+  dbc: tradeBusinessDbc,
+  tableName: TABLE_MASTER['SALES_SHIPPING_DETAILS'].name,
+  tableFields: TABLE_MASTER['SALES_SHIPPING_DETAILS'].fields,
+  entityName: 'sales shipping detail',
+  entityIdField: 'id',
+  requiredFields: ['sales_quotation_id'],
+  defaults: { id: uuidv4 },
+  validations: {
+    base_line_type: {
+      validate: (value) =>
+        value === null ||
+        value === '' ||
+        ['product', 'shipping', 'service'].includes(value)
+          ? true
+          : "base_line_type must be one of 'product', 'shipping', 'service'",
+    },
+  },
+  childTableConfig: [
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_PRICES'].name,
+      model: SalesShippingPrices.salesShippingPriceModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_IMAGES'].name,
+      model: SalesShippingImages.salesShippingImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_INTERNAL_IMAGES'].name,
+      model: SalesShippingInternalImages.salesShippingInternalImageModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_INTERNAL_FILES'].name,
+      model: SalesShippingInternalFiles.salesShippingInternalFileModel,
+    },
+  ],
+});
