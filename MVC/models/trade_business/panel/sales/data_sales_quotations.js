@@ -6,6 +6,7 @@ import * as SalesShippingDetails from './data_sales_shipping_details.js';
 import * as SalesProductDetails from './data_sales_product_details.js';
 import * as SalesServiceDetails from './data_sales_service_details.js';
 import * as SalesDocs from './data_sales_docs.js';
+import * as SalesPackingList from './data_sales_packing_list.js';
 
 export const salesQuotationModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -31,6 +32,10 @@ export const salesQuotationModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['SALES_SERVICE_DETAILS'].name,
       model: SalesServiceDetails.salesServiceDetailModel,
+    },
+    {
+      tableName: TABLE_MASTER['SALES_PACKING_ITEMS'].name,
+      model: SalesPackingList.salesPackingListModel,
     },
   ],
 });

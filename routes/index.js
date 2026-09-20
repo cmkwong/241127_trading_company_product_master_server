@@ -1,27 +1,33 @@
 import express from 'express';
-import authRoutes from './trade_business/auths/index.js';
-import productRoutes from './trade_business/products/index.js';
-import supplierRoutes from './trade_business/suppliers/index.js';
-import customerRoutes from './trade_business/customers/index.js';
-import masterRoutes from './trade_business/master/index.js';
-import salesRoutes from './trade_business/sales/index.js';
-import arRoutes from './trade_business/ar/index.js';
-import purchaseRoutes from './trade_business/purchase/index.js';
-import apRoutes from './trade_business/ap/index.js';
+import authRoutes from './trade_business/panel/auths/index.js';
+import productRoutes from './trade_business/panel/products/index.js';
+import supplierRoutes from './trade_business/panel/suppliers/index.js';
+import customerRoutes from './trade_business/panel/customers/index.js';
+import masterRoutes from './trade_business/panel/master/index.js';
+import salesRoutes from './trade_business/panel/sales/index.js';
+import arRoutes from './trade_business/panel/ar/index.js';
+import purchaseRoutes from './trade_business/panel/purchase/index.js';
+import apRoutes from './trade_business/panel/ap/index.js';
 import generalRoutes from './general/index.js';
+import homeRoutes from './trade_business/home_page/index.js';
 
 const router = express.Router();
 
-// Mount domain-specific routes
-router.use('/trade_business/auth', authRoutes);
-router.use('/trade_business/master', masterRoutes);
-router.use('/trade_business/products', productRoutes);
-router.use('/trade_business/suppliers', supplierRoutes);
-router.use('/trade_business/customers', customerRoutes);
-router.use('/trade_business/sales', salesRoutes);
-router.use('/trade_business/ar', arRoutes);
-router.use('/trade_business/purchase', purchaseRoutes);
-router.use('/trade_business/ap', apRoutes);
+// trade business panel routes
+router.use('/trade_business/panel/auth', authRoutes);
+router.use('/trade_business/panel/master', masterRoutes);
+router.use('/trade_business/panel/products', productRoutes);
+router.use('/trade_business/panel/suppliers', supplierRoutes);
+router.use('/trade_business/panel/customers', customerRoutes);
+router.use('/trade_business/panel/sales', salesRoutes);
+router.use('/trade_business/panel/ar', arRoutes);
+router.use('/trade_business/panel/purchase', purchaseRoutes);
+router.use('/trade_business/panel/ap', apRoutes);
+
+// trade business home-page routes
+router.use('/trade_business/home_page', homeRoutes);
+
+// general
 router.use('/general', generalRoutes);
 
 export default router;

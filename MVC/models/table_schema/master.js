@@ -581,6 +581,10 @@ export const MASTER_TABLE_DEFINITIONS = {
         type: 'VARCHAR(255)',
         description: 'Category description',
       },
+      description_trad_chinese: {
+        type: 'VARCHAR(255)',
+        description: 'Category description in Chinese',
+      },
       parent_id: {
         type: 'VARCHAR(36)',
         references: {

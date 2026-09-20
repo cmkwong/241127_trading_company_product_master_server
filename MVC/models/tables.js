@@ -3,8 +3,8 @@
 import { PRODUCTS_TABLE_DEFINITIONS } from './table_schema/products.js';
 import { SUPPLIERS_TABLE_DEFINITIONS } from './table_schema/suppliers.js';
 import { CUSTOMERS_TABLE_DEFINITIONS } from './table_schema/customers.js';
-import { SALES_QUOTATIONS_TABLE_DEFINITIONS } from './table_schema/sales_quotations.js';
-import { PURCHASE_REQUESTS_TABLE_DEFINITIONS } from './table_schema/purchase_requests.js';
+import { SALES_QUOTATIONS_TABLE_DEFINITIONS } from './table_schema/sales.js';
+import { PURCHASE_REQUESTS_TABLE_DEFINITIONS } from './table_schema/purchases.js';
 import { AP_INVOICES_TABLE_DEFINITIONS } from './table_schema/ap_invoices.js';
 import { AR_INVOICES_TABLE_DEFINITIONS } from './table_schema/ar_invoices.js';
 import { MASTER_TABLE_DEFINITIONS } from './table_schema/master.js';

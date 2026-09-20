@@ -1,0 +1,76 @@
+import express from 'express';
+import * as salesController from '../../../../../MVC/controller/trade_business/panel/sales/data_sales_quotationsController.js';
+import * as authController from '../../../../../middleware/authController.js';
+import endController from '../../../../../middleware/endController.js';
+
+const router = express.Router();
+
+router.use(authController.protect);
+
+router
+  .route('/')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.getAllSalesQuotations,
+  )
+  .post(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.createSalesQuotation,
+    endController,
+  );
+
+router.post(
+  '/list',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  salesController.getAllSalesQuotations,
+);
+
+router
+  .route('/defaults')
+  .post(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.importDefaultSalesQuotations,
+    endController,
+  );
+
+router
+  .route('/samples')
+  .post(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.importDefaultSalesQuotations,
+    endController,
+  );
+
+router.post(
+  '/truncate',
+  authController.restrictTo('admin'),
+  salesController.truncateSalesTables,
+);
+
+router
+  .route('/comparison-keys')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.getSalesComparisonKeys,
+    endController,
+  );
+
+router
+  .route('/get/ids')
+  .post(salesController.getSalesQuotationById, endController);
+
+router
+  .route('/:sales_quotation_id/purchase-costs')
+  .get(
+    authController.restrictTo('admin', 'manager', 'product-manager'),
+    salesController.getSalesQuotationPurchaseCosts,
+    endController,
+  );
+
+router
+  .route('/ids')
+  .post(salesController.getSalesQuotationById, endController)
+  .patch(salesController.updateSalesQuotation, endController)
+  .delete(salesController.deleteSalesQuotation, endController);
+
+export default router;

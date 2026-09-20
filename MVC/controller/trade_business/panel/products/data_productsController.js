@@ -127,7 +127,7 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
 
 /**
  * Get first-level product comparison keys for front-end
- * @route GET /api/v1/trade_business/products/data/comparison-keys
+ * @route GET /api/v1/trade_business/panel/products/data/comparison-keys
  */
 export const getProductComparisonKeys = catchAsync(async (req, res, next) => {
   const comparisonKeyData = productModel.getFirstLevelFieldNames();

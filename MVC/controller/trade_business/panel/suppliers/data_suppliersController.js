@@ -82,7 +82,7 @@ export const getAllSuppliers = catchAsync(async (req, res, next) => {
 
 /**
  * Get first-level supplier comparison keys for front-end
- * @route GET /api/v1/trade_business/suppliers/data/comparison-keys
+ * @route GET /api/v1/trade_business/panel/suppliers/data/comparison-keys
  */
 export const getSupplierComparisonKeys = catchAsync(async (req, res, next) => {
   const comparisonKeyData = supplierModel.getFirstLevelFieldNames();
