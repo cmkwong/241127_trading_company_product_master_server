@@ -30,6 +30,19 @@ router.post(
   productsController.downloadProductImages,
 );
 
+// AI (NanoBanana) image editing — background job + status polling
+router.post(
+  '/images/ai-generate',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  productsController.handleGenerateProductImagesAi,
+);
+
+router.get(
+  '/images/ai-generate/:jobId',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  productsController.getGenerateProductImagesAiStatus,
+);
+
 // Truncate all product tables - ADMIN ONLY
 router.post(
   '/truncate',

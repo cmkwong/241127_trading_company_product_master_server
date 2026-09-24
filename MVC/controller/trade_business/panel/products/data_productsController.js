@@ -5,7 +5,11 @@ import { toBool } from '../../../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSelection.js';
 import { getProductsSeedData } from '../../../../../utils/productsSource.js';
 import { productModel } from '../../../../models/trade_business/panel/products/data_products.js';
-import { productImagesModel } from '../../../../models/trade_business/panel/products/data_product_images.js';
+import {
+  productImagesModel,
+  startAiImageEditJob,
+  getAiImageEditJob,
+} from '../../../../models/trade_business/panel/products/data_product_images.js';
 
 const ICON_COMPRESSION_DEFAULTS = {
   maxWidth: 220,
@@ -280,3 +284,65 @@ export const truncateProductTables = catchAsync(async (req, res, next) => {
     status: 'success',
   });
 });
+
+/**
+ * Start an AI (NanoBanana) image-editing job for product images.
+ * @route POST /api/v1/trade_business/panel/products/data/images/ai-generate
+ *
+ * Accepts either explicit `ids` (or `id`) or `product_id` + `image_type_id`
+ * (with optional `image_row`), plus a required `prompt`. Returns 202 with a
+ * `jobId` immediately; the pipeline runs in the background and updates the
+ * product_images records when done.
+ */
+export const handleGenerateProductImagesAi = catchAsync(
+  async (req, res, next) => {
+    const source = { ...(req.query || {}), ...(req.body || {}) };
+    const { ids, id, product_id, image_type_id, image_row, prompt } = source;
+
+    const normalizedIds = [
+      ...new Set(
+        (Array.isArray(ids) ? ids : ids ? [ids] : id ? [id] : [])
+          .map((value) => String(value).trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    if (!prompt) {
+      return next(new AppError('prompt is required', 400));
+    }
+
+    const job = await startAiImageEditJob({
+      ids: normalizedIds,
+      productId: product_id,
+      imageTypeId: image_type_id,
+      imageRow: image_row,
+      prompt,
+      options: source.options || {},
+    });
+
+    res.status(202).json({
+      status: 'success',
+      jobId: job.id,
+    });
+  },
+);
+
+/**
+ * Get the status of an AI image-editing job.
+ * @route GET /api/v1/trade_business/panel/products/data/images/ai-generate/:jobId
+ */
+export const getGenerateProductImagesAiStatus = catchAsync(
+  async (req, res, next) => {
+    const job = getAiImageEditJob(req.params.jobId);
+
+    if (!job) {
+      return next(new AppError('AI image job not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      job,
+    });
+  },
+);
+
