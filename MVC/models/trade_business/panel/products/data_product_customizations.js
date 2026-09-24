@@ -14,7 +14,6 @@ export const customizationModel = new DataModelUtils({
   requiredFields: ['product_id', 'name'],
   validations: {
     name: { required: true },
-    code: { required: false },
     remark: { required: false },
   },
   defaults: {

@@ -716,9 +716,26 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         notNull: true,
         description: 'Customization name',
       },
-      code: {
-        type: 'VARCHAR(50)',
-        description: 'Customization code',
+      value: {
+        type: 'VARCHAR(255)',
+        description: 'Customization value',
+      },
+      MOQ: {
+        type: 'INT',
+        description: 'Minimum order quantity',
+      },
+      price_arise_per_pcs: {
+        type: 'DECIMAL(10,4)',
+        description: 'Price increase per piece for the customization',
+      },
+      price_arise_currency: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'master_currencies',
+          field: 'id',
+          onDelete: 'RESTRICT',
+        },
+        description: 'Currency for the price increase per piece',
       },
       remark: {
         type: 'TEXT',

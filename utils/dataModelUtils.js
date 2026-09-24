@@ -1473,7 +1473,22 @@ export default class DataModelUtils {
         field === 'base64_image' ||
         field === 'base64_file'
       ) {
-        validEntry[field] = rawRow[field];
+        const fieldConfig = tableSchema[field];
+        let value = rawRow[field];
+
+        // Empty string is only valid for free-text columns. For numeric
+        // columns (DECIMAL/INT/...) MySQL strict mode rejects '', and for
+        // nullable foreign keys '' violates the FK constraint. Normalize an
+        // explicit empty string to NULL so clearing a value actually persists.
+        if (value === '' && fieldConfig) {
+          if (this._isNumericFieldType(fieldConfig.type)) {
+            value = null;
+          } else if (fieldConfig.references && !fieldConfig.notNull) {
+            value = null;
+          }
+        }
+
+        validEntry[field] = value;
       }
     }
 
@@ -1822,18 +1837,9 @@ export default class DataModelUtils {
     return defs?.[fieldName] || null;
   }
 
-  _shouldAutoGenerateUuid(fieldName) {
-    const fieldDef = this._getFieldDefinition(fieldName);
-
-    // Backward compatibility: when schema detail is absent, preserve prior behavior.
-    if (!fieldDef) return true;
-
-    if (fieldDef.autoIncrement) return false;
-
-    const rawType = String(
-      fieldDef.type || fieldDef.dataType || '',
-    ).toLowerCase();
-    if (!rawType) return true;
+  _isNumericFieldType(rawType) {
+    const type = String(rawType || '').toLowerCase();
+    if (!type) return false;
 
     const numericTypeHints = [
       'int',
@@ -1851,7 +1857,23 @@ export default class DataModelUtils {
       'serial',
     ];
 
-    return !numericTypeHints.some((hint) => rawType.includes(hint));
+    return numericTypeHints.some((hint) => type.includes(hint));
+  }
+
+  _shouldAutoGenerateUuid(fieldName) {
+    const fieldDef = this._getFieldDefinition(fieldName);
+
+    // Backward compatibility: when schema detail is absent, preserve prior behavior.
+    if (!fieldDef) return true;
+
+    if (fieldDef.autoIncrement) return false;
+
+    const rawType = String(
+      fieldDef.type || fieldDef.dataType || '',
+    ).toLowerCase();
+    if (!rawType) return true;
+
+    return !this._isNumericFieldType(rawType);
   }
 
   /**
