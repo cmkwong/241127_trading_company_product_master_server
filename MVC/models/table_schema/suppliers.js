@@ -19,6 +19,12 @@ export const SUPPLIERS_TABLE_DEFINITIONS = {
         notNull: true,
         description: 'Supplier name',
       },
+      status: {
+        type: 'VARCHAR(50)',
+        notNull: true,
+        description: 'Status of the supplier, default is active',
+        default: 'active',
+      },
       remark: {
         type: 'TEXT',
         description: 'Additional notes about the supplier',

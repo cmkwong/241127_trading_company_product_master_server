@@ -35,6 +35,15 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
         description: 'Reference to customers.id',
       },
+      customer_name_id: {
+        type: 'VARCHAR(36)',
+        references: {
+          table: 'customer_names',
+          field: 'id',
+          onDelete: 'SET NULL',
+        },
+        description: 'Reference to customer_names.id',
+      },
       customer_address_id: {
         type: 'VARCHAR(36)',
         references: {
