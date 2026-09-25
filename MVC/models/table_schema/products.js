@@ -304,35 +304,35 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         },
         description: 'Reference to products.id',
       },
-      product_varient_size_id: {
+      size_type_id: {
         type: 'VARCHAR(36)',
         notNull: false,
         references: {
-          table: 'product_varient_sizes',
+          table: 'master_size_types',
           field: 'id',
-          onDelete: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
-        description: 'Reference to product_varient_sizes.id',
+        description: 'Reference to master_size_types.id',
       },
-      product_varient_color_id: {
+      color_type_id: {
         type: 'VARCHAR(36)',
         notNull: false,
         references: {
-          table: 'product_varient_colors',
+          table: 'master_color_types',
           field: 'id',
-          onDelete: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
-        description: 'Reference to product_varient_colors.id',
+        description: 'Reference to master_color_types.id',
       },
-      product_varient_capacity_id: {
+      capacity_type_id: {
         type: 'VARCHAR(36)',
         notNull: false,
         references: {
-          table: 'product_varient_capacities',
+          table: 'master_capacity_types',
           field: 'id',
-          onDelete: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
-        description: 'Reference to product_varient_capacities.id',
+        description: 'Reference to master_capacity_types.id',
       },
       currency_id: {
         type: 'VARCHAR(36)',
@@ -346,7 +346,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
       },
       unit_cost: {
         type: 'DECIMAL(10,3)',
-        notNull: true,
+        notNull: false,
         description: 'Unit cost for the size-color variant combination',
       },
       sales_currency_id: {
@@ -413,9 +413,9 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         type: 'UNIQUE',
         fields: [
           'product_id',
-          'product_varient_size_id',
-          'product_varient_color_id',
-          'product_varient_capacity_id',
+          'size_type_id',
+          'color_type_id',
+          'capacity_type_id',
         ],
       },
     },
