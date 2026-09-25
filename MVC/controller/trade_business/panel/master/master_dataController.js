@@ -499,6 +499,50 @@ export const getMasterDataRows = catchAsync(async (req, res, next) => {
   next();
 });
 
+const EXCHANGE_RATE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Get the exchange rate row effective on (or just before) a given date.
+ * Falls back to the latest available row when no date is supplied.
+ */
+export const getExchangeRateByDate = catchAsync(async (req, res, next) => {
+  const tableDataMap = getTableDataMapping();
+  const model = tableDataMap['master_exchange_rate_hkd']?.model;
+
+  if (!model) {
+    return next(
+      new AppError('master_exchange_rate_hkd model not configured', 500),
+    );
+  }
+
+  const { date } = req.query;
+
+  let rows;
+  if (date) {
+    if (!EXCHANGE_RATE_DATE_PATTERN.test(String(date))) {
+      return next(
+        new AppError('Invalid date format. Expected YYYY-MM-DD', 400),
+      );
+    }
+
+    rows = await model.executeQuery(
+      'SELECT * FROM master_exchange_rate_hkd WHERE `Date` <= ? ORDER BY `Date` DESC LIMIT 1',
+      [String(date)],
+    );
+  } else {
+    rows = await model.executeQuery(
+      'SELECT * FROM master_exchange_rate_hkd ORDER BY `Date` DESC LIMIT 1',
+    );
+  }
+
+  res.prints = {
+    status: 'success',
+    date: date || null,
+    exchangeRate: Array.isArray(rows) && rows.length > 0 ? rows[0] : null,
+  };
+  next();
+});
+
 export const updateMasterData = catchAsync(async (req, res, next) => {
   const tableDataMap = getTableDataMapping();
   const requestData = req.body?.data;

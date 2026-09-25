@@ -26,6 +26,13 @@ router.post(
 // Get all rows for a specific master table
 router.get('/rows', masterDataController.getMasterDataRows, endController);
 
+// Get the exchange rate effective on (or just before) a given date
+router.get(
+  '/exchange-rate',
+  masterDataController.getExchangeRateByDate,
+  endController,
+);
+
 // Update / create rows for a specific master table
 router.post('/rows', masterDataController.updateMasterData, endController);
 

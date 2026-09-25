@@ -58,7 +58,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
       },
       min_order_qty: {
         type: 'INT',
-        default: 1,
+        default: 10,
         description: 'Minimum order quantity for this variant combination',
       },
       sale_single_price_currency_id: {
@@ -351,7 +351,6 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
       },
       sales_currency_id: {
         type: 'VARCHAR(36)',
-        notNull: true,
         references: {
           table: 'master_currencies',
           field: 'id',
@@ -360,10 +359,14 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description:
           'Reference to master_currencies.id for the sales price currency',
       },
+      sales_multiplier: {
+        type: 'DECIMAL(10,3)',
+        description: 'Sales multiplier for the size-color variant combination',
+        default: 1.0,
+      },
       sales_price: {
         type: 'DECIMAL(10,3)',
         description: 'Sales price for the size-color variant combination',
-        notNull: true,
       },
       sample_currency_id: {
         type: 'VARCHAR(36)',
@@ -452,6 +455,11 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         description:
           'Reference to master_currencies.id for the sale price currency',
       },
+      sales_multiplier: {
+        type: 'DECIMAL(10,3)',
+        description: 'Sales multiplier for the size-color variant combination',
+        default: 1.0,
+      },
       sale_price: {
         type: 'DECIMAL(10,3)',
         notNull: true,
@@ -471,7 +479,7 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
     constraints: {
       unique_product_sale_price: {
         type: 'UNIQUE',
-        fields: ['product_id', 'currency_id'],
+        fields: ['product_id', 'min_order_qty', 'currency_id'],
       },
     },
   },
