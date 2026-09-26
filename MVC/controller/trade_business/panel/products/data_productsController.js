@@ -6,10 +6,10 @@ import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSel
 import { getProductsSeedData } from '../../../../../utils/productsSource.js';
 import { productModel } from '../../../../models/trade_business/panel/products/data_products.js';
 import {
-  productImagesModel,
   startAiImageEditJob,
   getAiImageEditJob,
-} from '../../../../models/trade_business/panel/products/data_product_images.js';
+} from '../../../../models/trade_business/AI/product_images.js';
+import { productImagesModel } from '../../../../models/trade_business/panel/products/data_product_images.js';
 
 const ICON_COMPRESSION_DEFAULTS = {
   maxWidth: 220,
@@ -345,4 +345,3 @@ export const getGenerateProductImagesAiStatus = catchAsync(
     });
   },
 );
-
