@@ -53,6 +53,10 @@ export const MASTER_TABLE_DEFINITIONS = {
         type: 'VARCHAR(10)',
         description: 'Currency symbol (e.g., $, €)',
       },
+      detailed_symbol: {
+        type: 'VARCHAR(10)',
+        description: 'Detailed currency symbol (e.g., US$, CA$)',
+      },
       updated_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
@@ -255,6 +259,31 @@ export const MASTER_TABLE_DEFINITIONS = {
         type: 'DECIMAL(16,8)',
         notNull: true,
         description: 'GBP per HKD',
+      },
+      AUD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'AUD per HKD',
+      },
+      CAD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'CAD per HKD',
+      },
+      JPY: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'JPY per HKD',
+      },
+      SGD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'SGD per HKD',
+      },
+      TWD: {
+        type: 'DECIMAL(16,8)',
+        notNull: true,
+        description: 'TWD per HKD',
       },
       Date: {
         type: 'DATE',

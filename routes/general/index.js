@@ -19,6 +19,11 @@ router.get(
   fileBanksController.getFileBankContents,
   endController,
 );
+router.get(
+  '/file-banks/upload-dirs',
+  fileBanksController.getFileBankUploadDirs,
+  endController,
+);
 router.get('/file-banks/thumbnail', fileBanksController.getFileThumbnail);
 router.get('/file-banks/image', fileBanksController.getFileImagePreview);
 

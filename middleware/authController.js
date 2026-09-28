@@ -177,3 +177,36 @@ export const restrictTo = (...roles) => {
     next();
   };
 };
+
+// Soft authentication for public routes (e.g. the home page).
+// Attaches req.user when a valid Bearer/cookie token is present, but never
+// blocks the request: anonymous visitors proceed as guests.
+export const optionalAuth = catchAsync(async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies && req.cookies.jwt) {
+    token = req.cookies.jwt;
+  }
+
+  if (!token) {
+    return next(); // guest
+  }
+
+  try {
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+    const { payload } = decoded;
+    if (payload) {
+      const [currentUser] = payload.split(';');
+      req.user = { name: currentUser };
+    }
+  } catch (error) {
+    // Invalid or expired token: treat the visitor as a guest instead of
+    // failing the public page.
+  }
+
+  next();
+});

@@ -3,6 +3,12 @@ import path from 'path';
 import catchAsync from '../../../utils/catchAsync.js';
 import AppError from '../../../utils/appError.js';
 import { getConfiguredPublicRoot } from '../../../utils/fileUpload.js';
+import {
+  getFileBankRoots,
+  getFileBankStorageMeta,
+  getUploadDirRegistry,
+  lookupFileBankDisplayNames,
+} from '../../models/trade_business/files/file_bank_model.js';
 
 const IMAGE_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.ico', '.avif', '.tiff', '.tif', '.svg',
@@ -78,6 +84,13 @@ const statEntry = (absolutePath, configuredRoot) => {
   };
 };
 
+// Windows-explorer style type label, e.g. "File folder", "JPG File", "PDF File".
+const getTypeLabel = (entry) => {
+  if (!entry || entry.type === 'folder') return 'File folder';
+  const ext = String(entry.extension || '').replace('.', '').toUpperCase();
+  return ext ? `${ext} File` : 'File';
+};
+
 const buildTree = (absolutePath, configuredRoot, depth, maxDepth) => {
   const entry = statEntry(absolutePath, configuredRoot);
   if (entry.type === 'file') return entry;
@@ -115,7 +128,11 @@ export const getFileBankTree = catchAsync(async (req, res, next) => {
       : Number.parseInt(maxDepthParam, 10);
 
   const tree = buildTree(configuredRoot, configuredRoot, 0, maxDepth);
-  res.prints = { fileBanks: tree };
+  res.prints = {
+    storage: getFileBankStorageMeta(),
+    roots: getFileBankRoots(),
+    fileBanks: tree,
+  };
   next();
 });
 
@@ -130,7 +147,19 @@ export const getFileBankContents = catchAsync(async (req, res, next) => {
   }
 
   const configuredRoot = path.resolve(getConfiguredPublicRoot());
-  const entries = fs
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
+
+  // Optional filters (query params).
+  const imagesOnly = String(req.query.imagesOnly || '') === 'true';
+  const extensions = String(req.query.extensions || '')
+    .split(',')
+    .map((ext) => ext.trim().toLowerCase())
+    .filter(Boolean);
+  const search = String(req.query.search || '').trim().toLowerCase();
+  const limitParam = Number.parseInt(req.query.limit || '', 10);
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : null;
+
+  let entries = fs
     .readdirSync(absolutePath, { withFileTypes: true })
     .filter((dirent) => !dirent.name.startsWith('.'))
     .map((dirent) => {
@@ -142,13 +171,81 @@ export const getFileBankContents = catchAsync(async (req, res, next) => {
     })
     .filter(Boolean);
 
+  entries = entries.map((entry) => ({
+    ...entry,
+    url: `${requestOrigin}${entry.path}`,
+    mimeType:
+      entry.type === 'file'
+        ? MIME_BY_EXT[entry.extension] || 'application/octet-stream'
+        : null,
+    typeLabel: getTypeLabel(entry),
+  }));
+
+  if (imagesOnly) {
+    entries = entries.filter(
+      (entry) => entry.type === 'folder' || entry.isImage,
+    );
+  }
+  if (extensions.length > 0) {
+    entries = entries.filter(
+      (entry) =>
+        entry.type === 'folder' ||
+        extensions.includes(String(entry.extension || '').toLowerCase()),
+    );
+  }
+
+  // Enrich files with their DB display name (image_name / file_name /
+  // icon_name) so the picker can show human names instead of UUID filenames.
+  // Folders have no display name. This must run before the `search` filter so
+  // users can also search by the human name.
+  const fileEntries = entries.filter((entry) => entry.type === 'file');
+  if (fileEntries.length > 0) {
+    const displayNames = await lookupFileBankDisplayNames({
+      entryPaths: fileEntries.map((entry) => entry.path),
+      folderPublicPath: toPublicPath(path.relative(configuredRoot, absolutePath)),
+    });
+    entries = entries.map((entry) => {
+      if (entry.type !== 'file') return entry;
+      const displayName = displayNames.get(
+        path.basename(entry.path).toLowerCase(),
+      );
+      return displayName ? { ...entry, displayName } : entry;
+    });
+  }
+
+  if (search) {
+    entries = entries.filter((entry) => {
+      const name = String(entry.name || '').toLowerCase();
+      const displayName = String(entry.displayName || '').toLowerCase();
+      return name.includes(search) || displayName.includes(search);
+    });
+  }
+
+  const folderCount = entries.filter((entry) => entry.type === 'folder').length;
+  const fileCount = entries.filter((entry) => entry.type === 'file').length;
+
   entries.sort((a, b) => {
     if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
 
+  if (limit != null) {
+    entries = entries.slice(0, limit);
+  }
+
+  const publicPath = toPublicPath(path.relative(configuredRoot, absolutePath));
+  const relativeUnderPublic = publicPath.replace(/^\/public\/?/, '');
+  const hasParent = relativeUnderPublic.includes('/');
+  const parentPath = hasParent
+    ? toPublicPath(relativeUnderPublic.split('/').slice(0, -1).join('/'))
+    : null;
+
   res.prints = {
-    path: toPublicPath(path.relative(configuredRoot, absolutePath)),
+    path: publicPath,
+    parentPath,
+    hasParent,
+    folderCount,
+    fileCount,
     entries,
   };
   next();
@@ -231,3 +328,15 @@ export const getFileImagePreview = catchAsync(async (req, res, next) => {
 
   sendFileStream(res, absolutePath);
 });
+
+export const getFileBankUploadDirs = catchAsync(async (req, res, next) => {
+  res.prints = {
+    storage: getFileBankStorageMeta(),
+    roots: getFileBankRoots(),
+    uploadDirs: getUploadDirRegistry(),
+  };
+  next();
+});
+
+
+

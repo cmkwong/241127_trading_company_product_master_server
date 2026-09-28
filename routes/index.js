@@ -25,7 +25,7 @@ router.use('/trade_business/panel/purchase', purchaseRoutes);
 router.use('/trade_business/panel/ap', apRoutes);
 
 // trade business home-page routes
-router.use('/trade_business/home_page', homeRoutes);
+router.use('/trade_business/home', homeRoutes);
 
 // general
 router.use('/general', generalRoutes);

@@ -7,6 +7,7 @@ import {
   deleteFile,
   deleteImage,
   resolveStoredFilePathForRead,
+  storedFileExistsInPublicRoot,
 } from './fileUpload.js';
 import { v4 as uuidv4 } from 'uuid';
 import ReadDataModel from './dataModelUtils/ReadDataModel.js';
@@ -1457,12 +1458,19 @@ export default class DataModelUtils {
 
       if (isManagedFileUrl) {
         // The file URL is normally server-managed (generated from a base64
-        // upload). However a CREATE that reuses an already-stored file (e.g.
-        // duplicating a parent record and copying its image child rows) supplies
-        // the URL directly, so allow it through to persist the existing file
-        // reference. It stays stripped for updates and base64-driven creates.
+        // upload). However it is allowed through in two cases:
+        //   1. A CREATE that reuses an already-stored file (e.g. duplicating a
+        //      parent record and copying its image child rows).
+        //   2. An UPDATE (or CREATE) that opts in via `reuse_existing_file: true`
+        //      and references a file that actually exists inside the configured
+        //      public root — this is the "image bank" zero-copy path: the existing
+        //      source path is stored verbatim and no bytes are copied.
+        // Both cases are additionally gated on the file existing on disk, and
+        // neither applies when a base64 payload is present.
         const reusesExistingFile =
-          rowAction === 'create' && !currentModel._hasBase64Content(rawRow);
+          !currentModel._hasBase64Content(rawRow) &&
+          (rowAction === 'create' || rawRow.reuse_existing_file === true) &&
+          storedFileExistsInPublicRoot(rawRow[currentModel.fileUrlField]);
         if (!reusesExistingFile) {
           continue;
         }

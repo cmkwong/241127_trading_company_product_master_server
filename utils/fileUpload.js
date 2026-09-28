@@ -93,6 +93,29 @@ const resolveStoredFilePathForReadInternal = (storedPath) => {
 export const resolveStoredFilePathForRead = (storedPath) =>
   resolveStoredFilePathForReadInternal(storedPath);
 
+/**
+ * True when the stored path resolves to an existing file inside the configured
+ * public root. Used by the "reuse existing file" opt-in so the server can trust
+ * a client-supplied `/public/...` path without writing or copying any bytes.
+ * @param {string} storedPath - DB-style path (preferred: `/public/...`)
+ * @returns {boolean}
+ */
+export const storedFileExistsInPublicRoot = (storedPath) => {
+  if (typeof storedPath !== 'string' || storedPath.trim() === '') {
+    return false;
+  }
+  try {
+    const resolved = resolveStoredFilePathForRead(storedPath);
+    return (
+      !!resolved &&
+      fs.existsSync(resolved) &&
+      fs.statSync(resolved).isFile()
+    );
+  } catch {
+    return false;
+  }
+};
+
 const resolveStoredFilePathForDelete = (storedPath) => {
   const normalized = String(storedPath || '')
     .replace(/\\/g, '/')

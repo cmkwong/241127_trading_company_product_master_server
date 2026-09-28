@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
   getConfiguredPublicRoot,
   resolveStoredFilePathForRead,
@@ -12,6 +13,8 @@ import {
 } from './banana_image2image.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
+import { productImagesModel } from '../../../models/trade_business/panel/products/data_product_images.js';
 
 // ============================================================
 // 🤖 AI IMAGE EDITING (NanoBanana) — BACKGROUND JOB ORCHESTRATION
