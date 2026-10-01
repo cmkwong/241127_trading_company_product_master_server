@@ -13,7 +13,10 @@ import {
 } from './banana_image2image.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
+import AppError from '../../../../utils/appError.js';
+import logger from '../../../../utils/logger.js';
 import { productImagesModel } from '../../../models/trade_business/panel/products/data_product_images.js';
 
 // ============================================================
@@ -35,6 +38,9 @@ const AI_JOB_TTL_MS = 30 * 60 * 1000;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || ''));
+
+const sha256 = (buffer) =>
+  crypto.createHash('sha256').update(buffer).digest('hex');
 
 const readImageSourceBuffer = async (imageUrl) => {
   if (isHttpUrl(imageUrl)) {
@@ -103,7 +109,11 @@ const getSourceBuffer = async (row, outputDir, keepSource) => {
     : null;
 
   if (existing) {
-    return { buffer: await fs.readFile(existing), created: false };
+    const buffer = await fs.readFile(existing);
+    logger.info(
+      `AI edit: reusing pristine source ${existing} (${buffer.length} bytes) for ${row.id}`,
+    );
+    return { buffer, created: false };
   }
 
   const buffer = await readImageSourceBuffer(row.image_url);
@@ -116,6 +126,20 @@ const getSourceBuffer = async (row, outputDir, keepSource) => {
       `${row.id}${SOURCE_SUFFIX}${ext}`,
     );
     await fs.writeFile(pristinePath, buffer);
+
+    // Verify the pristine backup landed intact before we let the pipeline
+    // overwrite the live file — a silent partial write here would lose the
+    // only copy of the original.
+    const written = await fs.stat(pristinePath);
+    if (written.size !== buffer.length) {
+      await fs.unlink(pristinePath).catch(() => {});
+      throw new Error(
+        `Pristine backup verification failed for ${row.id}: expected ${buffer.length} bytes, wrote ${written.size}`,
+      );
+    }
+    logger.info(
+      `AI edit: backed up pristine source ${pristinePath} (${buffer.length} bytes) for ${row.id}`,
+    );
     return { buffer, created: true };
   }
 
@@ -137,6 +161,9 @@ const resolveAiOutputPath = (row) => {
 
   // Fallback for remote / unresolvable sources: the standard images folder
   // with a name derived from the row's image_name (which is the row id here).
+  logger.warn(
+    `AI edit: image_url could not be resolved on disk for row ${row.id} (${row.image_url}); writing output to the standard images folder`,
+  );
   return path.join(
     getConfiguredPublicRoot(),
     'products',
@@ -280,7 +307,39 @@ const processSingleImage = async (row, prompt, options = {}) => {
     const outputFileName = path.basename(targetPath);
 
     await fs.mkdir(outputDir, { recursive: true });
-    await fs.writeFile(targetPath, outputBuffer);
+
+    // Write atomically (temp file + rename) so a crash can never leave a
+    // truncated file at the live path, then verify the bytes on disk match
+    // what we produced before declaring success.
+    const tmpPath = `${targetPath}.${uuidv4()}.tmp`;
+    await fs.writeFile(tmpPath, outputBuffer);
+    try {
+      await fs.rename(tmpPath, targetPath);
+    } catch (renameError) {
+      // Windows can refuse to rename over a file another process holds open
+      // (e.g. an image viewer); fall back to a direct write in that case.
+      logger.warn(
+        `AI edit: atomic rename failed for ${row.id} (${renameError.message}); falling back to direct write`,
+      );
+      await fs.writeFile(targetPath, outputBuffer);
+      await fs.unlink(tmpPath).catch(() => {});
+    }
+
+    const writtenStat = await fs.stat(targetPath);
+    const writtenBuffer = await fs.readFile(targetPath);
+    const writtenHash = sha256(writtenBuffer);
+    const outputHash = sha256(outputBuffer);
+    if (
+      writtenStat.size !== outputBuffer.length ||
+      writtenHash !== outputHash
+    ) {
+      throw new Error(
+        `Output verification failed for ${row.id}: wrote ${writtenStat.size} bytes but produced ${outputBuffer.length}`,
+      );
+    }
+
+    const sourceHash = sha256(source.buffer);
+    const changed = outputHash !== sourceHash;
 
     // No DB update: the file is overwritten under its original name, so the
     // row's `image_name` / `image_url` keep resolving unchanged.
@@ -298,12 +357,31 @@ const processSingleImage = async (row, prompt, options = {}) => {
         format: outputMeta?.format ?? null,
         bytes: outputBuffer.length,
         fileName: outputFileName,
+        verified: true,
+        changed,
       },
     };
+    result.changed = changed;
+
+    if (!changed) {
+      result.warning =
+        'AI returned the same image as the pristine source; the file was not modified.';
+      logger.warn(
+        `AI edit: output for ${row.id} (${row.image_name}) is byte-identical to its pristine source — file left unchanged at ${targetPath}`,
+      );
+    } else {
+      logger.info(
+        `AI edit: wrote verified output for ${row.id} (${row.image_name}) → ${targetPath} (${outputBuffer.length} bytes)`,
+      );
+    }
+
     result.status = 'completed';
   } catch (error) {
     result.status = 'failed';
     result.error = error.message;
+    logger.error(
+      `AI edit failed for row ${row.id} (product ${row.product_id}, ${row.image_name}, ${row.image_url}): ${error.message}\n${error.stack || ''}`,
+    );
   } finally {
     if (tempPublicId && !keepTemporaryUpload) {
       try {
@@ -341,6 +419,10 @@ export const startAiImageEditJob = async (input = {}) => {
   if (!rows.length) {
     throw new AppError('No product images matched the provided criteria', 404);
   }
+
+  logger.info(
+    `AI edit: matched ${rows.length} image row(s) for prompt "${String(prompt).slice(0, 120)}"`,
+  );
 
   const job = {
     id: uuidv4(),
@@ -385,6 +467,9 @@ const runAiImageEditJob = async (jobId, rows, prompt, options) => {
 
   job.status = 'processing';
   job.startedAt = new Date().toISOString();
+  logger.info(
+    `AI edit job ${jobId} started: ${rows.length} image(s), prompt "${String(prompt || '').slice(0, 120)}"`,
+  );
 
   for (const row of rows) {
     const entry = job.results.find((r) => r.id === row.id);
@@ -397,12 +482,18 @@ const runAiImageEditJob = async (jobId, rows, prompt, options) => {
         entry.status = 'failed';
         entry.error = error.message;
       }
+      logger.error(
+        `AI edit job ${jobId} failed for row ${row.id}: ${error.message}`,
+      );
     }
 
     job.processed += 1;
   }
 
   const failed = job.results.filter((r) => r.status === 'failed').length;
+  const unchanged = job.results
+    .filter((r) => r.changed === false)
+    .map((r) => r.id);
   job.status =
     failed === job.total
       ? 'failed'
@@ -410,6 +501,15 @@ const runAiImageEditJob = async (jobId, rows, prompt, options) => {
         ? 'completed-with-errors'
         : 'completed';
   job.finishedAt = new Date().toISOString();
+
+  logger.info(
+    `AI edit job ${jobId} finished: ${job.total} total, ${failed} failed, ${unchanged.length} unchanged`,
+  );
+  if (unchanged.length > 0) {
+    logger.warn(
+      `AI edit job ${jobId}: the following rows completed but were byte-identical to their source (file not modified): ${unchanged.join(', ')}`,
+    );
+  }
 
   setTimeout(() => {
     aiJobStore.delete(jobId);
