@@ -1,4 +1,4 @@
-import { tradeBusinessDbc } from '../../dbModel.js';
+import { tradeBusinessDbc } from '../../../dbModel.js';
 
 /**
  * home_users.js
@@ -62,4 +62,3 @@ export const getHomeProductIdsForUser = async (
 export const getUserProfile = async (username) => {
   return null;
 };
-

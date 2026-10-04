@@ -1710,4 +1710,46 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
+  MASTER_COUNTRY_CALLING_CODE: {
+    name: 'master_country_calling_code',
+    table_type: 'master-master',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      name: {
+        type: 'VARCHAR(100)',
+        notNull: true,
+        description: 'Country name',
+      },
+      calling_code: {
+        type: 'VARCHAR(10)',
+        notNull: true,
+        description: 'Country calling code',
+      },
+      description: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Description of the country calling code',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last modification timestamp',
+      },
+    },
+    constraints: {
+      unique_country_calling_code: {
+        type: 'UNIQUE',
+        fields: ['name', 'calling_code'],
+      },
+    },
+  },
 };

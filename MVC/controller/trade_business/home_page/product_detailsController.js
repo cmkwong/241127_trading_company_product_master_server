@@ -3,8 +3,8 @@ import AppError from '../../../../utils/appError.js';
 import {
   getProductDetails,
   getProductDetailsByIds,
-} from '../../../models/trade_business/home_page/product_details.js';
-import { getHomeProductIdsForUser } from '../../../models/trade_business/home_page/home_users.js';
+} from '../../../models/trade_business/home_page/products/product_details.js';
+import { getHomeProductIdsForUser } from '../../../models/trade_business/home_page/products/home_users.js';
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -52,10 +52,13 @@ export const getHomeProductDetails = catchAsync(async (req, res, next) => {
   );
   const safeOffset = Math.max(Number(offset) || 0, 0);
 
-  const { ids, total } = await getHomeProductIdsForUser(req.user?.name ?? null, {
-    offset: safeOffset,
-    limit: safeLimit,
-  });
+  const { ids, total } = await getHomeProductIdsForUser(
+    req.user?.name ?? null,
+    {
+      offset: safeOffset,
+      limit: safeLimit,
+    },
+  );
 
   const productDetails = ids.length ? await getProductDetailsByIds(ids) : [];
 

@@ -8,6 +8,7 @@ import { PURCHASE_REQUESTS_TABLE_DEFINITIONS } from './table_schema/purchases.js
 import { AP_INVOICES_TABLE_DEFINITIONS } from './table_schema/ap_invoices.js';
 import { AR_INVOICES_TABLE_DEFINITIONS } from './table_schema/ar_invoices.js';
 import { MASTER_TABLE_DEFINITIONS } from './table_schema/master.js';
+import { USERS_TABLE_DEFINITIONS } from './table_schema/users.js';
 
 const TABLE_MASTER_RAW = {
   ...PRODUCTS_TABLE_DEFINITIONS,
@@ -18,6 +19,7 @@ const TABLE_MASTER_RAW = {
   ...AP_INVOICES_TABLE_DEFINITIONS,
   ...AR_INVOICES_TABLE_DEFINITIONS,
   ...MASTER_TABLE_DEFINITIONS,
+  ...USERS_TABLE_DEFINITIONS,
 };
 
 // Keep TABLE_MASTER organized as: master tables first, then data tables.

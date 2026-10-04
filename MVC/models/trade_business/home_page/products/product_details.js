@@ -1,4 +1,4 @@
-import { tradeBusinessDbc } from '../../dbModel.js';
+import { tradeBusinessDbc } from '../../../dbModel.js';
 
 /**
  * product_details.js
@@ -268,52 +268,52 @@ export const getProductDetailsByIds = async (productIds) => {
     currencyRows,
     categoryRows,
   ] = await Promise.all([
-      tradeBusinessDbc.executeQuery(
-        `SELECT id, icon_url, icon_name, min_order_qty, selling_by_mode,
+    tradeBusinessDbc.executeQuery(
+      `SELECT id, icon_url, icon_name, min_order_qty, selling_by_mode,
               sale_single_price_currency_id, sale_single_price_min,
               sale_single_price_max
          FROM products
         WHERE id IN (${placeholders});`,
-        ids,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT product_id, name, display_order
+      ids,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT product_id, name, display_order
          FROM product_names
         WHERE product_id IN (${placeholders});`,
-        ids,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT product_id, min_order_qty, currency_id, sale_price
+      ids,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT product_id, min_order_qty, currency_id, sale_price
          FROM product_sale_prices_by_qty
         WHERE product_id IN (${placeholders});`,
-        ids,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT product_id, sales_currency_id, sales_price
+      ids,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT product_id, sales_currency_id, sales_price
          FROM product_costs
         WHERE product_id IN (${placeholders})
           AND sales_price IS NOT NULL;`,
-        ids,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT pav.product_id, pav.value
+      ids,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT pav.product_id, pav.value
          FROM product_attribute_values pav
          JOIN master_product_attributes mpa ON mpa.id = pav.attribute_id
         WHERE pav.product_id IN (${placeholders})
           AND (LOWER(mpa.label) = LOWER('${ORIGIN_ATTRIBUTE_LABEL}')
                OR LOWER(mpa.name) = LOWER('${ORIGIN_ATTRIBUTE_LABEL}'));`,
-        ids,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT id, code, symbol, detailed_symbol FROM master_currencies;`,
-      ),
-      tradeBusinessDbc.executeQuery(
-        `SELECT product_id, category_id
+      ids,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT id, code, symbol, detailed_symbol FROM master_currencies;`,
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT product_id, category_id
          FROM product_categories
         WHERE product_id IN (${placeholders});`,
-        ids,
-      ),
-    ]);
+      ids,
+    ),
+  ]);
 
   const namesByProduct = new Map();
   for (const row of nameRows) {

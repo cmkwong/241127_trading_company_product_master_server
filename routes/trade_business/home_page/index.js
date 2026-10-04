@@ -1,7 +1,7 @@
 import express from 'express';
 import { optionalAuth } from '../../../middleware/authController.js';
-import * as productDetailsController from '../../../MVC/controller/trade_business/home_page/product_detailsController.js';
-import endController from '../../../middleware/endController.js';
+import productRoutes from './products/index.js';
+import userRoutes from './users/index.js';
 
 const router = express.Router();
 
@@ -9,14 +9,13 @@ const router = express.Router();
 // are allowed and treated as guests.
 router.use(optionalAuth);
 
-// Home page product details:
-//   POST /            -> { product_ids?, offset?, limit? } -> paginated product
-//                        cards for the current user (see `pagination.*` in the response)
-//   GET  /:id         -> single product detail
-router
-  .route('/')
-  .post(productDetailsController.getHomeProductDetails, endController);
+// User profile / account routes (models, password, cart, favourites, etc.)
+router.use('/users', userRoutes);
 
-router.route('/:id').get(productDetailsController.getProductDetail, endController);
+// Home page product details are served at both the root and under /products:
+//   POST /     and POST /products      -> paginated product cards / by ids
+//   GET  /:id  and GET  /products/:id  -> single product detail
+router.use('/products', productRoutes);
+router.use('/', productRoutes);
 
 export default router;
