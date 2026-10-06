@@ -9,10 +9,15 @@ export const USERS_TABLE_DEFINITIONS = {
         primaryKey: true,
         description: 'Primary key for the users table',
       },
-      user_name: {
+      first_name: {
         type: 'VARCHAR(255)',
         notNull: true,
-        description: 'Username of the user',
+        description: 'First name of the user',
+      },
+      last_name: {
+        type: 'VARCHAR(255)',
+        notNull: true,
+        description: 'Last name of the user',
       },
       email: {
         type: 'VARCHAR(255)',
@@ -21,8 +26,15 @@ export const USERS_TABLE_DEFINITIONS = {
       },
       display_name: {
         type: 'VARCHAR(255)',
-        notNull: true,
         description: 'Display name of the user',
+      },
+      company_name: {
+        type: 'TEXT',
+        description: 'Company name of the user',
+      },
+      website: {
+        type: 'TEXT',
+        description: 'Website URL of the user',
       },
       country_calling_code: {
         type: 'VARCHAR(36)',
@@ -61,6 +73,48 @@ export const USERS_TABLE_DEFINITIONS = {
       updated_at: {
         type: 'TIMESTAMP',
         description: 'Timestamp when the user was last updated',
+      },
+    },
+  },
+  USER_ROLES: {
+    name: 'user_roles',
+    table_type: 'users-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      user_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'users',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to users.id',
+      },
+      role: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        description: 'Role assigned to the user',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last update timestamp',
+      },
+    },
+    constraints: {
+      unique_user_role: {
+        type: 'UNIQUE',
+        fields: ['user_id', 'role'],
       },
     },
   },
@@ -142,10 +196,6 @@ export const USERS_TABLE_DEFINITIONS = {
       phone_number: {
         type: 'VARCHAR(30)',
         description: 'Delivery contact number',
-      },
-      company_name: {
-        type: 'VARCHAR(150)',
-        description: 'Optional company name (useful for B2B)',
       },
       address_line_1: {
         type: 'VARCHAR(255)',
