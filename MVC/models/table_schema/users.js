@@ -58,6 +58,12 @@ export const USERS_TABLE_DEFINITIONS = {
         description: 'Status of the user',
         default: 'active',
       },
+      email_signup: {
+        type: 'BOOLEAN',
+        notNull: true,
+        default: false,
+        description: 'Indicates whether the user signed up via email',
+      },
       email_verified_at: {
         type: 'TIMESTAMP',
         description: "Timestamp when the user's email was verified",
@@ -141,6 +147,12 @@ export const USERS_TABLE_DEFINITIONS = {
         type: 'TEXT',
         notNull: true,
         description: 'bcrypt encrypted - Hashed password of the user',
+      },
+      active: {
+        type: 'BOOLEAN',
+        notNull: true,
+        default: true,
+        description: 'Indicates whether the user is active',
       },
       created_at: {
         type: 'TIMESTAMP',

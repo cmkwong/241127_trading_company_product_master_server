@@ -7,7 +7,9 @@ import {
   verifyPassword,
 } from '../MVC/models/trade_business/home_page/users/data_user_auths.js';
 import { getPrimaryRoleByUserId } from '../MVC/models/trade_business/home_page/users/data_user_roles.js';
+import { userModel } from '../MVC/models/trade_business/home_page/users/data_users.js';
 import * as time from '../utils/time.js';
+import { verifyFirebaseIdToken } from '../utils/firebaseAdmin.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
@@ -27,6 +29,14 @@ export const signToken = (payload) => {
       expiresIn: process.env.JWT_EXPIRES_IN, // Expiry time
     },
   );
+};
+
+// Build the app's JWT payload string. The first `;`-delimited segment is the
+// login identifier (email) that `protect`/`getUserRole` read back to resolve the
+// user's role; the remaining segments are informational.
+export const issueAppToken = (identifier, payload) => {
+  const [currentDate, currentTime] = time.getCurrentTimeStr();
+  return signToken(`${identifier};${payload ?? ''};${currentDate} ${currentTime}`);
 };
 
 // Get the user (authenticate against the trade_business `users` table and
@@ -93,10 +103,7 @@ export const getToken = catchAsync(async (req, res, next) => {
     });
   } else {
     const role = await getPrimaryRoleByUserId(matched[0].id);
-    const [currentDate, currentTime] = time.getCurrentTimeStr();
-    const token = signToken(
-      `${identifier};${payload};${currentDate} ${currentTime}`,
-    );
+    const token = issueAppToken(identifier, payload);
     res.prints = {
       username: identifier,
       role,
@@ -104,6 +111,94 @@ export const getToken = catchAsync(async (req, res, next) => {
     };
     next();
   }
+});
+
+// Exchange a Firebase email-link (passwordless) ID token for the app's own JWT.
+// If the email is brand new, a `users` row is created with `email_signup = true`;
+// otherwise the existing account is used. first_name / last_name are required
+// only when creating a brand-new account, so a returning user can be logged in
+// with just the ID token.
+export const getTokenWithEmail = catchAsync(async (req, res, next) => {
+  const { idToken, payload } = req.body;
+  const first_name = String(req.body?.first_name ?? '').trim();
+  const last_name = String(req.body?.last_name ?? '').trim();
+
+  if (!idToken) {
+    res.status(400).json({
+      status: 'failed',
+      msg: 'An idToken is required.',
+    });
+    return;
+  }
+
+  let decoded;
+  try {
+    decoded = await verifyFirebaseIdToken(idToken);
+  } catch (err) {
+    res.status(401).json({
+      status: 'failed',
+      msg: 'Invalid or expired Firebase token.',
+    });
+    return;
+  }
+
+  const email = String(decoded?.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({
+      status: 'failed',
+      msg: 'Firebase token does not contain an email address.',
+    });
+    return;
+  }
+
+  const existing = await tradeBusinessDbc.executeQuery(
+    'SELECT id FROM users WHERE email = ? LIMIT 1;',
+    [email],
+  );
+  let userId = existing?.[0]?.id;
+
+  if (!userId) {
+    if (!first_name || !last_name) {
+      res.status(400).json({
+        status: 'failed',
+        code: 'NAMES_REQUIRED',
+        msg: 'first_name and last_name are required to complete sign-up.',
+      });
+      return;
+    }
+
+    const created = await userModel.crudO.performCrud({
+      operation: 'create',
+      tableName: userModel.tableName,
+      data: {
+        first_name,
+        last_name,
+        email,
+        display_name: `${first_name} ${last_name}`.trim(),
+        status: 'active',
+        email_signup: true,
+      },
+    });
+
+    userId = created?.id || created?.record?.id;
+    if (!userId) {
+      res.status(500).json({
+        status: 'failed',
+        msg: 'Failed to create the user account.',
+      });
+      return;
+    }
+  }
+
+  const role = await getPrimaryRoleByUserId(userId);
+  const token = issueAppToken(email, payload);
+
+  res.prints = {
+    username: email,
+    role,
+    token,
+  };
+  next();
 });
 
 export const login = catchAsync(async (req, res, next) => {

@@ -70,6 +70,7 @@ export const signupUser = catchAsync(async (req, res, next) => {
       email,
       display_name,
       status: 'active',
+      email_signup: false,
     },
   });
 

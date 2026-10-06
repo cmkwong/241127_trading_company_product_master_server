@@ -6,6 +6,9 @@ const router = express.Router();
 
 // Authentication routes
 router.route('/getToken').post(authController.getToken, endController);
+router
+  .route('/getTokenWithEmail')
+  .post(authController.getTokenWithEmail, endController);
 
 // Add other auth routes as needed
 // router.route('/login').post(authController.login, endController);
