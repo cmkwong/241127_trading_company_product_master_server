@@ -31,12 +31,35 @@ router.post(
   '/truncate',
   authController.restrictTo('admin'),
   userController.truncateUserTables,
+  endController,
 );
 
 router
   .route('/ids')
-  .post(userController.getUserById, endController)
-  .patch(userController.updateUser, endController)
-  .delete(userController.deleteUser, endController);
+  .post(
+    authController.restrictTo('admin'),
+    userController.getUserById,
+    endController,
+  )
+  .patch(
+    authController.restrictTo('admin'),
+    userController.updateUser,
+    endController,
+  )
+  .delete(
+    authController.restrictTo('admin'),
+    userController.deleteUser,
+    endController,
+  );
+
+// Self-service: the logged-in user may read only her own record. The `:id`
+// must match the authenticated user's own id (guarded by `restrictTo`), so a
+// request for any other — even valid — id is rejected with 403.
+router.get(
+  '/:id',
+  authController.restrictTo('user-self'),
+  userController.getSelfUser,
+  endController,
+);
 
 export default router;

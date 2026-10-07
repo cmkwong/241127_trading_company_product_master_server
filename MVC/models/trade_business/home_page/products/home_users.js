@@ -18,7 +18,7 @@ const MAX_LIMIT = 100;
 /**
  * Derive the product ids to show on the home page for a user.
  *
- * @param {string|null} username - The auth username, or null for a guest.
+ * @param {string|null} email - The auth email, or null for a guest.
  * @param {Object} [options] - Pagination options.
  * @param {number} [options.offset=0] - Number of products to skip.
  * @param {number} [options.limit=DEFAULT_LIMIT] - Maximum products to return.
@@ -26,7 +26,7 @@ const MAX_LIMIT = 100;
  *   order) plus the total number of products available.
  */
 export const getHomeProductIdsForUser = async (
-  username,
+  email,
   { offset = 0, limit = DEFAULT_LIMIT } = {},
 ) => {
   const safeLimit = Math.min(
@@ -36,7 +36,7 @@ export const getHomeProductIdsForUser = async (
   const safeOffset = Math.max(Number(offset) || 0, 0);
 
   // TODO(user-profile): once a user -> product mapping exists, branch on
-  // username here, e.g.:
+  // email here, e.g.:
   //   SELECT product_id FROM user_home_products WHERE user_id = ?
   // For now, both guests and authenticated users see the most recent products.
   const [rows, countRows] = await Promise.all([
@@ -54,11 +54,11 @@ export const getHomeProductIdsForUser = async (
 };
 
 /**
- * Fetch the profile for a given username.
+ * Fetch the profile for a given email.
  * TODO(user-profile): implement once a profile source is available.
- * @param {string|null} username
+ * @param {string|null} email
  * @returns {Promise<Object|null>}
  */
-export const getUserProfile = async (username) => {
+export const getUserProfile = async (email) => {
   return null;
 };

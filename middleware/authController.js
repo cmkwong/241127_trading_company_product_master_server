@@ -36,7 +36,9 @@ export const signToken = (payload) => {
 // user's role; the remaining segments are informational.
 export const issueAppToken = (identifier, payload) => {
   const [currentDate, currentTime] = time.getCurrentTimeStr();
-  return signToken(`${identifier};${payload ?? ''};${currentDate} ${currentTime}`);
+  return signToken(
+    `${identifier};${payload ?? ''};${currentDate} ${currentTime}`,
+  );
 };
 
 // Get the user (authenticate against the trade_business `users` table and
@@ -44,7 +46,9 @@ export const issueAppToken = (identifier, payload) => {
 // flow accepted a `username`; in the current schema the login identifier is the
 // user's email address, so `username` is treated as the email.
 export const getUser = async (email, password) => {
-  const normalized = String(email ?? '').trim().toLowerCase();
+  const normalized = String(email ?? '')
+    .trim()
+    .toLowerCase();
   if (!normalized || !password) return [];
 
   const rows = await tradeBusinessDbc.executeQuery(
@@ -63,20 +67,24 @@ export const getUser = async (email, password) => {
   return [user];
 };
 
-export const getUserRole = async (identifier) => {
+// Resolve a user's id from either a raw UUID or an email address. Returns null
+// when the identifier is empty or does not map to an existing user.
+export const resolveUserId = async (identifier) => {
   if (!identifier) return null;
   const value = String(identifier).trim();
   if (!value) return null;
 
-  // Resolve the user id from either a raw id or an email address.
-  let userId = value;
-  if (!UUID_PATTERN.test(value)) {
-    const rows = await tradeBusinessDbc.executeQuery(
-      'SELECT id FROM users WHERE email = ? LIMIT 1;',
-      [value.toLowerCase()],
-    );
-    userId = rows?.[0]?.id || null;
-  }
+  if (UUID_PATTERN.test(value)) return value;
+
+  const rows = await tradeBusinessDbc.executeQuery(
+    'SELECT id FROM users WHERE email = ? LIMIT 1;',
+    [value.toLowerCase()],
+  );
+  return rows?.[0]?.id || null;
+};
+
+export const getUserRole = async (identifier) => {
+  const userId = await resolveUserId(identifier);
   if (!userId) return null;
 
   return getPrimaryRoleByUserId(userId);
@@ -84,13 +92,13 @@ export const getUserRole = async (identifier) => {
 
 // Get the token
 export const getToken = catchAsync(async (req, res, next) => {
-  const { username, password, payload } = req.body;
-  const identifier = String(username ?? req.body?.email ?? '').trim();
+  const { email, password, payload } = req.body;
+  const identifier = String(email ?? req.body?.email ?? '').trim();
 
   if (!identifier || !password) {
     res.status(400).json({
       status: 'failed',
-      msg: 'Please provide username/email and password',
+      msg: 'Please provide email and password',
     });
     return;
   }
@@ -105,7 +113,7 @@ export const getToken = catchAsync(async (req, res, next) => {
     const role = await getPrimaryRoleByUserId(matched[0].id);
     const token = issueAppToken(identifier, payload);
     res.prints = {
-      username: identifier,
+      email: identifier,
       role,
       token,
     };
@@ -142,7 +150,9 @@ export const getTokenWithEmail = catchAsync(async (req, res, next) => {
     return;
   }
 
-  const email = String(decoded?.email ?? '').trim().toLowerCase();
+  const email = String(decoded?.email ?? '')
+    .trim()
+    .toLowerCase();
   if (!email) {
     res.status(400).json({
       status: 'failed',
@@ -194,7 +204,7 @@ export const getTokenWithEmail = catchAsync(async (req, res, next) => {
   const token = issueAppToken(email, payload);
 
   res.prints = {
-    username: email,
+    email,
     role,
     token,
   };
@@ -271,9 +281,14 @@ export const protect = catchAsync(async (req, res, next) => {
   }
 });
 
+// Sentinel scope understood by `restrictTo`. When present, the caller may act
+// on a resource only when that resource belongs to themselves (i.e. the id in
+// the request matches the authenticated user's own id).
+export const SELF_SCOPE = 'user-self';
+
 // restrict the user role
 export const restrictTo = (...roles) => {
-  return (req, res, next) => {
+  return catchAsync(async (req, res, next) => {
     // Check if user object exists
     if (!req.user) {
       return next(
@@ -281,29 +296,35 @@ export const restrictTo = (...roles) => {
       );
     }
 
-    // Check if user has a role property
-    if (!req.user.role) {
-      return next(new AppError('User role information is missing', 403));
-    }
+    // Resolve the authenticated user's own id once, only if the `user-self`
+    // scope is requested, so ordinary role checks keep their current cost.
+    let selfId = null;
+    if (roles.includes(SELF_SCOPE)) {
+      selfId =
+        req.user.id || (await resolveUserId(req.user.name ?? req.user.email));
 
-    // If user has multiple roles (as an array)
-    if (Array.isArray(req.user.role)) {
-      // Check if any of the user's roles are allowed
-      const hasPermission = req.user.role.some((userRole) =>
-        roles.includes(userRole),
-      );
+      const requestedId = req.params?.id;
 
-      if (!hasPermission) {
-        return next(
-          new AppError(
-            'You do not have permission to perform this action',
-            403,
-          ),
-        );
+      if (selfId && requestedId && selfId === requestedId) {
+        // The resource belongs to the caller: grant and expose the id.
+        req.selfUserId = selfId;
+        return next();
       }
     }
-    // If user has a single role (as a string)
-    else if (!roles.includes(req.user.role)) {
+
+    // Role-based permission: determine whether the user's role(s) allow access.
+    // A missing role simply grants no role-based permission (instead of a hard
+    // 403) so the `user-self` scope can still authorise role-less users.
+    const role = req.user.role;
+    let hasRolePermission = false;
+
+    if (Array.isArray(role)) {
+      hasRolePermission = role.some((userRole) => roles.includes(userRole));
+    } else if (role) {
+      hasRolePermission = roles.includes(role);
+    }
+
+    if (!hasRolePermission) {
       return next(
         new AppError('You do not have permission to perform this action', 403),
       );
@@ -311,7 +332,7 @@ export const restrictTo = (...roles) => {
 
     // If we reach here, the user has the required role(s)
     next();
-  };
+  });
 };
 
 // Soft authentication for public routes (e.g. the home page).

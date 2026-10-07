@@ -100,6 +100,30 @@ export const signupUser = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * Public pre-flight check used by the sign-up form to warn the user before a
+ * duplicate account is created (or a verification email is sent). Mirrors the
+ * duplicate-email query in `signupUser`.
+ * @route GET /trade_business/home/users/signup/check-email?email=...
+ */
+export const checkEmailAvailability = catchAsync(async (req, res, next) => {
+  const email = String(req.query?.email ?? '').trim().toLowerCase();
+
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    return next(new AppError('A valid email address is required.', 400));
+  }
+
+  const existing = await userModel.executeQuery(
+    'SELECT id FROM users WHERE email = ? LIMIT 1;',
+    [email],
+  );
+
+  res.status(200).json({
+    status: 'success',
+    data: { email, exists: Boolean(existing?.length) },
+  });
+});
+
 export const getAllUsers = catchAsync(async (req, res, next) => {
   const { includeBase64, iconOnly, compress } = req.query;
 
@@ -138,6 +162,37 @@ export const getUserById = catchAsync(async (req, res, next) => {
 
   const structuredData = await userModel.processStructureDataOperation(
     req.body.data,
+    'read',
+    {
+      includeBase64: includeBase64 === '1',
+      base64OnlyTable: iconOnly === '1' ? ['users'] : null,
+      compress: compress === '1',
+    },
+  );
+
+  res.status(200).json({
+    status: 'success',
+    structuredData,
+  });
+});
+
+/**
+ * Get the authenticated user's own record. The target id is taken from
+ * `req.selfUserId`, which `restrictTo('user-self')` sets only after verifying
+ * that the requested `:id` belongs to the caller — it is never trusted from the
+ * client directly.
+ * @route GET /trade_business/home/users/data/:id
+ */
+export const getSelfUser = catchAsync(async (req, res, next) => {
+  const { includeBase64, iconOnly, compress } = req.query;
+  const selfId = req.selfUserId;
+
+  if (!selfId) {
+    return next(new AppError('Unable to determine the target user.', 400));
+  }
+
+  const structuredData = await userModel.processStructureDataOperation(
+    { users: [{ id: selfId }] },
     'read',
     {
       includeBase64: includeBase64 === '1',
