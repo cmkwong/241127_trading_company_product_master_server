@@ -5,18 +5,34 @@ import endController from '../../../../../middleware/endController.js';
 
 const router = express.Router();
 
-// All password operations require an authenticated user.
-router.use(authController.protect);
+// Public "forgot password" flow (no authentication): request a reset link and
+// redeem it with a new password.
+router.post('/forgot', passwordController.requestPasswordReset);
+router.post(
+  '/forgot/confirm',
+  passwordController.resetPasswordWithToken,
+);
 
 // Self-service password update (verifies current password when provided).
-router.post('/update', passwordController.updateUserPassword, endController);
+router.post(
+  '/update',
+  authController.protect,
+  passwordController.updateUserPassword,
+  endController,
+);
 
 // Verify a password against the stored hash.
-router.post('/verify', passwordController.verifyUserPassword, endController);
+router.post(
+  '/verify',
+  authController.protect,
+  passwordController.verifyUserPassword,
+  endController,
+);
 
 // Admin-only: reset / set a password for an explicit target user.
 router.post(
   '/reset',
+  authController.protect,
   authController.restrictTo('admin', 'system-admin'),
   passwordController.resetUserPassword,
   endController,
@@ -24,6 +40,7 @@ router.post(
 
 router.post(
   '/set',
+  authController.protect,
   authController.restrictTo('admin', 'system-admin'),
   passwordController.setUserPassword,
   endController,

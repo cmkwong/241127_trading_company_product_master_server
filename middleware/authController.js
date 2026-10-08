@@ -10,6 +10,15 @@ import { getPrimaryRoleByUserId } from '../MVC/models/trade_business/home_page/u
 import { userModel } from '../MVC/models/trade_business/home_page/users/data_users.js';
 import * as time from '../utils/time.js';
 import { verifyFirebaseIdToken } from '../utils/firebaseAdmin.js';
+import { sendMail } from '../utils/mailer.js';
+import {
+  signMagicLinkToken,
+  verifyMagicLinkToken,
+  readMagicLinkPurpose,
+  buildMagicLink,
+  MAGIC_LINK_PURPOSES,
+} from '../utils/magicLink.js';
+import { buildLoginMagicLinkEmail } from '../MVC/models/trade_business/mails/loginMagicLinkEmail.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
@@ -208,6 +217,125 @@ export const getTokenWithEmail = catchAsync(async (req, res, next) => {
     role,
     token,
   };
+  next();
+});
+
+// Send a passwordless "magic link" login email to an existing user. Responds
+// successfully whether or not the account exists, to avoid leaking which email
+// addresses are registered.
+export const sendLoginMagicLink = catchAsync(async (req, res, next) => {
+  const email = String(req.body?.email ?? '')
+    .trim()
+    .toLowerCase();
+  const { payload } = req.body;
+
+  if (!email) {
+    return next(new AppError('An email address is required.', 400));
+  }
+
+  const existing = await tradeBusinessDbc.executeQuery(
+    'SELECT id, first_name, last_name FROM users WHERE email = ? LIMIT 1;',
+    [email],
+  );
+  const user = existing?.[0];
+
+  if (user) {
+    const token = signMagicLinkToken({
+      email,
+      purpose: MAGIC_LINK_PURPOSES.LOGIN,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    });
+    const { subject, html, text } = buildLoginMagicLinkEmail({
+      link: buildMagicLink(token),
+      firstName: user.first_name,
+    });
+    await sendMail({ to: email, subject, html, text });
+  }
+
+  // Always report success to prevent account enumeration.
+  res.prints = { sent: true };
+  next();
+});
+
+// Redeem a magic-link token (sign-up or login) and issue the app's own JWT.
+// For a sign-up link with a brand-new email, a `users` row is created with
+// `email_signup = true`; otherwise the existing account is used. Mirrors the
+// shape of `getTokenWithEmail` so the frontend contract stays identical.
+export const getTokenWithMagicLink = catchAsync(async (req, res, next) => {
+  const { token, payload } = req.body;
+  const first_name = String(req.body?.first_name ?? '').trim();
+  const last_name = String(req.body?.last_name ?? '').trim();
+
+  if (!token) {
+    return next(new AppError('A magic-link token is required.', 400));
+  }
+
+  const purpose = readMagicLinkPurpose(token);
+  if (!purpose || !Object.values(MAGIC_LINK_PURPOSES).includes(purpose)) {
+    return next(
+      new AppError('This link is invalid. Please request a new one.', 401),
+    );
+  }
+
+  let decoded;
+  try {
+    decoded = verifyMagicLinkToken(token, purpose);
+  } catch (err) {
+    return next(err);
+  }
+
+  const email = decoded.email;
+  const existing = await tradeBusinessDbc.executeQuery(
+    'SELECT id FROM users WHERE email = ? LIMIT 1;',
+    [email],
+  );
+  let userId = existing?.[0]?.id;
+
+  if (purpose === MAGIC_LINK_PURPOSES.SIGNUP && !userId) {
+    const first = first_name || decoded.first_name;
+    const last = last_name || decoded.last_name;
+    if (!first || !last) {
+      res.status(400).json({
+        status: 'failed',
+        code: 'NAMES_REQUIRED',
+        msg: 'first_name and last_name are required to complete sign-up.',
+      });
+      return;
+    }
+
+    const created = await userModel.crudO.performCrud({
+      operation: 'create',
+      tableName: userModel.tableName,
+      data: {
+        first_name: first,
+        last_name: last,
+        email,
+        display_name: `${first} ${last}`.trim(),
+        status: 'active',
+        email_signup: true,
+        email_verified_at: new Date(),
+      },
+    });
+    userId = created?.id || created?.record?.id;
+    if (!userId) {
+      return next(new AppError('Failed to create the user account.', 500));
+    }
+  }
+
+  if (!userId) {
+    return next(new AppError('No account found for this email.', 404));
+  }
+
+  await tradeBusinessDbc.executeQuery(
+    'UPDATE users SET last_login_at = ? WHERE id = ?;',
+    [new Date(), userId],
+  );
+
+  const role = await getPrimaryRoleByUserId(userId);
+  const appToken = issueAppToken(email, payload);
+
+  res.prints = { email, role, token: appToken };
   next();
 });
 

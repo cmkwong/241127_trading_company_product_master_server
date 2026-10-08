@@ -2,6 +2,13 @@ import catchAsync from '../../../../../utils/catchAsync.js';
 import AppError from '../../../../../utils/appError.js';
 import { userModel } from '../../../../models/trade_business/home_page/users/data_users.js';
 import { setUserPassword } from '../../../../models/trade_business/home_page/users/data_user_auths.js';
+import { sendMail } from '../../../../../utils/mailer.js';
+import {
+  signMagicLinkToken,
+  buildMagicLink,
+  MAGIC_LINK_PURPOSES,
+} from '../../../../../utils/magicLink.js';
+import { buildMagicLinkEmail } from '../../../../models/trade_business/mails/magicLinkEmail.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -97,6 +104,55 @@ export const signupUser = catchAsync(async (req, res, next) => {
   res.status(201).json({
     status: 'success',
     data: { user_id: userId },
+  });
+});
+
+/**
+ * Public self-service email-verification trigger. Signs a short-lived,
+ * purpose-scoped magic-link token carrying the first/last name and emails it
+ * to the address provided. No account is created until the link is redeemed
+ * (see `getTokenWithMagicLink` in the auth middleware).
+ * @route POST /trade_business/home/users/signup/send-magic-link
+ */
+export const sendSignupMagicLink = catchAsync(async (req, res, next) => {
+  const first_name = String(req.body?.first_name ?? '').trim();
+  const last_name = String(req.body?.last_name ?? '').trim();
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+
+  if (!first_name) {
+    return next(new AppError('first_name is required.', 400));
+  }
+  if (!last_name) {
+    return next(new AppError('last_name is required.', 400));
+  }
+  if (!email || !EMAIL_PATTERN.test(email)) {
+    return next(new AppError('A valid email address is required.', 400));
+  }
+
+  const existing = await userModel.executeQuery(
+    'SELECT id FROM users WHERE email = ? LIMIT 1;',
+    [email],
+  );
+  if (existing?.length) {
+    return next(new AppError('An account with this email already exists.', 409));
+  }
+
+  const token = signMagicLinkToken({
+    email,
+    purpose: MAGIC_LINK_PURPOSES.SIGNUP,
+    first_name,
+    last_name,
+  });
+  const { subject, html, text } = buildMagicLinkEmail({
+    link: buildMagicLink(token),
+    firstName: first_name,
+    purpose: 'signup',
+  });
+  await sendMail({ to: email, subject, html, text });
+
+  res.status(200).json({
+    status: 'success',
+    data: { email, sent: true },
   });
 });
 
