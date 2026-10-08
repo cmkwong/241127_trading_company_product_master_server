@@ -382,3 +382,68 @@ export const getProductDetails = async (productId) => {
   const details = await getProductDetailsByIds([productId]);
   return details[0] ?? null;
 };
+
+// ---------------------------------------------------------------------------
+// Category filtering
+// ---------------------------------------------------------------------------
+
+const CATEGORY_DEFAULT_LIMIT = 24;
+const CATEGORY_MAX_LIMIT = 100;
+
+/**
+ * Derive the product ids that belong to one or more categories, in display
+ * order (most recent first), for the home page category filter.
+ *
+ * @param {string[]} categoryIds - `product_categories.category_id` values.
+ * @param {Object} [options] - Pagination options.
+ * @param {number} [options.offset=0] - Number of products to skip.
+ * @param {number} [options.limit=CATEGORY_DEFAULT_LIMIT] - Max products to return.
+ * @returns {Promise<{ids: string[], total: number}>} Matching product ids plus
+ *   the total number of products across all the given categories.
+ */
+export const getProductIdsByCategory = async (
+  categoryIds,
+  { offset = 0, limit = CATEGORY_DEFAULT_LIMIT } = {},
+) => {
+  const ids = [
+    ...new Set(
+      (categoryIds || []).map((id) => String(id).trim()).filter(Boolean),
+    ),
+  ];
+
+  if (ids.length === 0) {
+    return { ids: [], total: 0 };
+  }
+
+  const safeLimit = Math.min(
+    Math.max(Number(limit) || CATEGORY_DEFAULT_LIMIT, 1),
+    CATEGORY_MAX_LIMIT,
+  );
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+
+  const placeholders = buildPlaceholders(ids.length);
+
+  const [rows, countRows] = await Promise.all([
+    tradeBusinessDbc.executeQuery(
+      `SELECT DISTINCT p.id, p.created_at
+         FROM products p
+         JOIN product_categories pc ON pc.product_id = p.id
+        WHERE pc.category_id IN (${placeholders})
+        ORDER BY p.created_at DESC
+        LIMIT ? OFFSET ?;`,
+      [...ids, safeLimit, safeOffset],
+    ),
+    tradeBusinessDbc.executeQuery(
+      `SELECT COUNT(DISTINCT p.id) AS total
+         FROM products p
+         JOIN product_categories pc ON pc.product_id = p.id
+        WHERE pc.category_id IN (${placeholders});`,
+      ids,
+    ),
+  ]);
+
+  return {
+    ids: (rows || []).map((row) => row.id),
+    total: Number(countRows?.[0]?.total) || 0,
+  };
+};

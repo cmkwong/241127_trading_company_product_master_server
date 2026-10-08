@@ -178,10 +178,10 @@ export const getUserById = catchAsync(async (req, res, next) => {
 
 /**
  * Get the authenticated user's own record. The target id is taken from
- * `req.selfUserId`, which `restrictTo('user-self')` sets only after verifying
- * that the requested `:id` belongs to the caller — it is never trusted from the
- * client directly.
- * @route GET /trade_business/home/users/data/:id
+ * `req.selfUserId`, which `restrictTo('user-self')` derives solely from the
+ * verified token (the caller's email address) — no id or email is accepted from
+ * the client, so it is never trusted from the request directly.
+ * @route GET /trade_business/home/users/data/info
  */
 export const getSelfUser = catchAsync(async (req, res, next) => {
   const { includeBase64, iconOnly, compress } = req.query;

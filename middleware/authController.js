@@ -298,18 +298,26 @@ export const restrictTo = (...roles) => {
 
     // Resolve the authenticated user's own id once, only if the `user-self`
     // scope is requested, so ordinary role checks keep their current cost.
-    let selfId = null;
     if (roles.includes(SELF_SCOPE)) {
-      selfId =
-        req.user.id || (await resolveUserId(req.user.name ?? req.user.email));
+      // The login identifier (first `;`-segment of the JWT payload) is the
+      // caller's email address. The caller is identified solely by the verified
+      // token — no id/email is accepted from the request — so there is nothing
+      // for a client to spoof.
+      const callerEmail = String(req.user.name ?? req.user.email ?? '')
+        .trim()
+        .toLowerCase();
 
-      const requestedId = req.params?.id;
+      const selfId = req.user.id || (await resolveUserId(callerEmail));
 
-      if (selfId && requestedId && selfId === requestedId) {
-        // The resource belongs to the caller: grant and expose the id.
-        req.selfUserId = selfId;
-        return next();
+      if (!selfId) {
+        return next(
+          new AppError('You do not have permission to perform this action', 403),
+        );
       }
+
+      // The caller's own record: grant and expose the id.
+      req.selfUserId = selfId;
+      return next();
     }
 
     // Role-based permission: determine whether the user's role(s) allow access.

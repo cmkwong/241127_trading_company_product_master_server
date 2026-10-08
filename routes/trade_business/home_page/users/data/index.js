@@ -52,11 +52,11 @@ router
     endController,
   );
 
-// Self-service: the logged-in user may read only her own record. The `:id`
-// must match the authenticated user's own id (guarded by `restrictTo`), so a
-// request for any other — even valid — id is rejected with 403.
+// Self-service: the logged-in user may read only their own record. The caller
+// is identified solely by the verified token (their email address); no id or
+// email is accepted from the request.
 router.get(
-  '/:id',
+  '/info',
   authController.restrictTo('user-self'),
   userController.getSelfUser,
   endController,
