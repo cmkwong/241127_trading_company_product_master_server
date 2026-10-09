@@ -80,6 +80,16 @@ export const USERS_TABLE_DEFINITIONS = {
         type: 'TIMESTAMP',
         description: 'Timestamp when the user was last updated',
       },
+      token_version: {
+        type: 'INT',
+        default: 0,
+        description:
+          'Monotonic counter bumped on password change to revoke existing sessions',
+      },
+      password_changed_at: {
+        type: 'TIMESTAMP',
+        description: 'Timestamp of the last password change',
+      },
     },
   },
   USER_ROLES: {
@@ -757,6 +767,60 @@ export const USERS_TABLE_DEFINITIONS = {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP',
         description: 'Creation timestamp',
+      },
+    },
+  },
+  USER_PASSWORD_RESETS: {
+    name: 'user_password_resets',
+    table_type: 'users-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      user_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'users',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to users.id',
+      },
+      token_hash: {
+        type: 'VARCHAR(64)',
+        notNull: true,
+        description: 'sha256 hex digest of the opaque reset token',
+      },
+      expires_at: {
+        type: 'TIMESTAMP',
+        notNull: true,
+        description: 'Expiry timestamp for the reset token',
+      },
+      used_at: {
+        type: 'TIMESTAMP',
+        description: 'When the token was redeemed (single-use)',
+      },
+      requested_ip: {
+        type: 'VARCHAR(45)',
+        description: 'IP address that requested the reset',
+      },
+      requested_ua: {
+        type: 'VARCHAR(255)',
+        description: 'User agent that requested the reset',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+    },
+    constraints: {
+      unique_token_hash: {
+        type: 'UNIQUE',
+        fields: ['token_hash'],
       },
     },
   },

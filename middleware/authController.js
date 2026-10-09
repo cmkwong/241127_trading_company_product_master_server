@@ -21,6 +21,8 @@ import {
 import { buildLoginMagicLinkEmail } from '../MVC/models/trade_business/mails/loginMagicLinkEmail.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
+import { securityConfig } from '../utils/securityConfig.js';
+import logger from '../utils/logger.js';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -36,6 +38,7 @@ export const signToken = (payload) => {
     process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN, // Expiry time
+      algorithm: 'HS256',
     },
   );
 };
@@ -43,11 +46,22 @@ export const signToken = (payload) => {
 // Build the app's JWT payload string. The first `;`-delimited segment is the
 // login identifier (email) that `protect`/`getUserRole` read back to resolve the
 // user's role; the remaining segments are informational.
-export const issueAppToken = (identifier, payload) => {
+export const issueAppToken = (identifier, payload, tokenVersion = 0) => {
   const [currentDate, currentTime] = time.getCurrentTimeStr();
   return signToken(
-    `${identifier};${payload ?? ''};${currentDate} ${currentTime}`,
+    `${identifier};${payload ?? ''};${currentDate} ${currentTime};${tokenVersion}`,
   );
+};
+
+// Read the current per-user session version. Bumped on password change so that
+// previously-issued JWTs stop being accepted.
+export const getTokenVersionByUserId = async (userId) => {
+  if (!userId) return 0;
+  const rows = await tradeBusinessDbc.executeQuery(
+    'SELECT token_version FROM users WHERE id = ? LIMIT 1;',
+    [userId],
+  );
+  return Number(rows?.[0]?.token_version ?? 0) || 0;
 };
 
 // Get the user (authenticate against the trade_business `users` table and
@@ -120,7 +134,8 @@ export const getToken = catchAsync(async (req, res, next) => {
     });
   } else {
     const role = await getPrimaryRoleByUserId(matched[0].id);
-    const token = issueAppToken(identifier, payload);
+    const tokenVersion = await getTokenVersionByUserId(matched[0].id);
+    const token = issueAppToken(identifier, payload, tokenVersion);
     res.prints = {
       email: identifier,
       role,
@@ -210,7 +225,8 @@ export const getTokenWithEmail = catchAsync(async (req, res, next) => {
   }
 
   const role = await getPrimaryRoleByUserId(userId);
-  const token = issueAppToken(email, payload);
+  const tokenVersion = await getTokenVersionByUserId(userId);
+  const token = issueAppToken(email, payload, tokenVersion);
 
   res.prints = {
     email,
@@ -333,7 +349,8 @@ export const getTokenWithMagicLink = catchAsync(async (req, res, next) => {
   );
 
   const role = await getPrimaryRoleByUserId(userId);
-  const appToken = issueAppToken(email, payload);
+  const tokenVersion = await getTokenVersionByUserId(userId);
+  const appToken = issueAppToken(email, payload, tokenVersion);
 
   res.prints = { email, role, token: appToken };
   next();
@@ -386,7 +403,9 @@ export const protect = catchAsync(async (req, res, next) => {
     }
 
     // 2) Verify the token
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+    });
 
     // 3) Check the payload and determine the user's role
     const { payload } = decoded;
@@ -394,8 +413,32 @@ export const protect = catchAsync(async (req, res, next) => {
       return next(new AppError('The payload does not exist.', 401));
     }
 
-    const [currentUser] = payload.split(';');
+    const [currentUser, , , tokenVersion] = payload.split(';');
     const role = await getUserRole(currentUser); // Use getUserRole function
+
+    // Session revocation: reject tokens whose embedded token_version no longer
+    // matches the user's current value (bumped on password change).
+    if (securityConfig.enforceTokenVersion) {
+      const userId = await resolveUserId(currentUser);
+      const currentVersion = await getTokenVersionByUserId(userId);
+      const embedded = Number(tokenVersion);
+
+      if (Number.isFinite(embedded)) {
+        if (embedded !== currentVersion) {
+          return next(
+            new AppError('Your session has expired. Please log in again.', 401),
+          );
+        }
+      } else if (securityConfig.rejectLegacyTokens) {
+        return next(
+          new AppError('Your session has expired. Please log in again.', 401),
+        );
+      } else {
+        logger.warn(
+          `Token without a version segment for "${currentUser}"; allowing (relaxed mode).`,
+        );
+      }
+    }
 
     if (!role) {
       req.user = { name: currentUser, role: 'user' }; // Default to user role if none found
@@ -490,10 +533,22 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
   }
 
   try {
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+    });
     const { payload } = decoded;
     if (payload) {
-      const [currentUser] = payload.split(';');
+      const [currentUser, , , tokenVersion] = payload.split(';');
+      if (
+        securityConfig.enforceTokenVersion &&
+        Number.isFinite(Number(tokenVersion))
+      ) {
+        const userId = await resolveUserId(currentUser);
+        const currentVersion = await getTokenVersionByUserId(userId);
+        if (Number(tokenVersion) !== currentVersion) {
+          return next(); // stale session -> treat as guest
+        }
+      }
       req.user = { name: currentUser };
     }
   } catch (error) {

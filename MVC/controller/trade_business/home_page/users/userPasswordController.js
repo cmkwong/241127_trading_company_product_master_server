@@ -1,19 +1,28 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
 import AppError from '../../../../../utils/appError.js';
+import logger from '../../../../../utils/logger.js';
+import { securityConfig } from '../../../../../utils/securityConfig.js';
+import { tradeBusinessDbc } from '../../../../models/dbModel.js';
 import { userModel } from '../../../../models/trade_business/home_page/users/data_users.js';
 import {
   getAuthByUserId,
   verifyPassword,
   setUserPassword as upsertUserPassword,
 } from '../../../../models/trade_business/home_page/users/data_user_auths.js';
+import {
+  createPasswordReset,
+  findResetByHash,
+  markResetUsed,
+  invalidateUserResets,
+} from '../../../../models/trade_business/home_page/users/data_user_password_resets.js';
 import { sendMail } from '../../../../../utils/mailer.js';
 import {
-  signMagicLinkToken,
-  verifyMagicLinkToken,
   buildPasswordResetLink,
-  MAGIC_LINK_PURPOSES,
+  generatePasswordResetToken,
+  hashPasswordResetToken,
 } from '../../../../../utils/magicLink.js';
 import { buildPasswordResetEmail } from '../../../../models/trade_business/mails/passwordResetEmail.js';
+import { buildPasswordChangedEmail } from '../../../../models/trade_business/mails/passwordChangedEmail.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -154,7 +163,7 @@ export const verifyUserPassword = catchAsync(async (req, res, next) => {
 /**
  * Public "forgot password" trigger. Looks up the email, confirms the account
  * exists AND signs in with a password (a `user_auths` row is present), then
- * emails a short-lived, purpose-scoped reset link. Responds successfully
+ * emails a short-lived, single-use opaque reset link. Responds successfully
  * whether or not a link was sent to avoid leaking which emails are registered.
  * @route POST /trade_business/home/users/password/forgot
  */
@@ -174,17 +183,47 @@ export const requestPasswordReset = catchAsync(async (req, res, next) => {
   if (user) {
     const auth = await getAuthByUserId(user.id);
     if (auth) {
-      const token = signMagicLinkToken({
-        email,
-        purpose: MAGIC_LINK_PURPOSES.PASSWORD_RESET,
-        first_name: user.first_name,
-        last_name: user.last_name,
+      // 1) Invalidate any previous reset links so only the newest is usable.
+      await invalidateUserResets(user.id);
+
+      // 2) Issue an opaque, single-use token and store only its sha256 hash.
+      const token = generatePasswordResetToken();
+      const tokenHash = hashPasswordResetToken(token);
+      const expiresAt = new Date(
+        Date.now() + securityConfig.resetTokenTtlMinutes * 60 * 1000,
+      );
+
+      await createPasswordReset({
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+        requestedIp: req.ip || null,
+        requestedUa: String(req.headers?.['user-agent'] || '').slice(0, 255),
       });
+
       const { subject, html, text } = buildPasswordResetEmail({
         link: buildPasswordResetLink(token),
         firstName: user.first_name,
+        expiresInMinutes: securityConfig.resetTokenTtlMinutes,
       });
-      await sendMail({ to: email, subject, html, text });
+
+      // 3) Keep the send off the request path in production so endpoint timing
+      //    cannot reveal which accounts are registered; await it in development
+      //    so transient SMTP failures are visible.
+      const send = () => sendMail({ to: email, subject, html, text });
+      if (securityConfig.awaitMail) {
+        await send().catch((err) =>
+          logger.error(
+            `Failed to send password-reset email to ${email}: ${err.message}`,
+          ),
+        );
+      } else {
+        send().catch((err) =>
+          logger.error(
+            `Failed to send password-reset email to ${email}: ${err.message}`,
+          ),
+        );
+      }
     }
   }
 
@@ -196,9 +235,10 @@ export const requestPasswordReset = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Public password-reset redemption. Verifies the PASSWORD_RESET-scoped magic
- * link and applies the new password to the account it was minted for. Returns
- * the account's email so the client can complete the standard login exchange.
+ * Public password-reset redemption. Resolves the opaque single-use token to its
+ * stored hash, marks it consumed and applies the new password to the account it
+ * was minted for. Returns the account's email so the client can complete the
+ * standard login exchange.
  * @route POST /trade_business/home/users/password/forgot/confirm
  */
 export const resetPasswordWithToken = catchAsync(async (req, res, next) => {
@@ -213,27 +253,62 @@ export const resetPasswordWithToken = catchAsync(async (req, res, next) => {
     );
   }
 
-  let decoded;
-  try {
-    decoded = verifyMagicLinkToken(token, MAGIC_LINK_PURPOSES.PASSWORD_RESET);
-  } catch (err) {
-    return next(err);
+  // Resolve the opaque token to a stored reset row (single-use, revocable).
+  const tokenHash = hashPasswordResetToken(token);
+  const reset = await findResetByHash(tokenHash);
+
+  if (!reset || reset.used_at || new Date(reset.expires_at) <= new Date()) {
+    return next(
+      new AppError(
+        'This link is invalid or has expired. Please request a new one.',
+        400,
+      ),
+    );
   }
 
-  const existing = await userModel.executeQuery(
-    'SELECT id FROM users WHERE email = ? LIMIT 1;',
-    [decoded.email],
+  // Load the target user for the password write and notification step.
+  const userRows = await userModel.executeQuery(
+    'SELECT id, email, first_name FROM users WHERE id = ? LIMIT 1;',
+    [reset.user_id],
   );
-  const userId = existing?.[0]?.id;
+  const target = userRows?.[0];
+  const userId = target?.id;
+  const userEmail = target?.email;
 
   if (!userId) {
-    return next(new AppError('No account found for this email.', 404));
+    return next(new AppError('No account found for this link.', 404));
   }
 
   await upsertUserPassword(userId, new_password);
 
+  // Single-use: mark this token consumed and drop any sibling links.
+  await markResetUsed(reset.id);
+  await invalidateUserResets(userId);
+
+  // Session revocation: bump token_version and record the change time so every
+  // previously-issued JWT becomes stale.
+  await tradeBusinessDbc.executeQuery(
+    'UPDATE users SET password_changed_at = ?, token_version = COALESCE(token_version, 0) + 1 WHERE id = ?;',
+    [new Date(), userId],
+  );
+
+  // Post-change notification (kept off the request path in production).
+  const { subject, html, text } = buildPasswordChangedEmail({
+    firstName: target.first_name,
+  });
+  const send = () => sendMail({ to: userEmail, subject, html, text });
+  if (securityConfig.awaitMail) {
+    await send().catch((err) =>
+      logger.error(`Failed to send password-changed email: ${err.message}`),
+    );
+  } else {
+    send().catch((err) =>
+      logger.error(`Failed to send password-changed email: ${err.message}`),
+    );
+  }
+
   res.status(200).json({
     status: 'success',
-    data: { email: decoded.email },
+    data: { email: userEmail },
   });
 });

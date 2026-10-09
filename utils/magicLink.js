@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import AppError from './appError.js';
 
 // Purpose tags carried inside the magic-link JWT so a token minted for one flow
@@ -33,7 +34,7 @@ export const signMagicLinkToken = ({ email, purpose, first_name, last_name }) =>
       last_name: String(last_name ?? '').trim(),
     },
     getSecret(),
-    { expiresIn: getExpiresIn() },
+    { expiresIn: getExpiresIn(), algorithm: 'HS256' },
   );
 };
 
@@ -67,7 +68,7 @@ export const verifyMagicLinkToken = (token, expectedPurpose) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(token, getSecret());
+    decoded = jwt.verify(token, getSecret(), { algorithms: ['HS256'] });
   } catch (err) {
     if (err && err.name === 'TokenExpiredError') {
       throw new AppError('This link has expired. Please request a new one.', 400);
@@ -118,3 +119,21 @@ export const buildPasswordResetLink = (token) => {
   const base = (process.env.APP_BASE_URL || '').replace(/\/+$/, '');
   return `${base}/resetPassword?token=${encodeURIComponent(token)}`;
 };
+
+/**
+ * Generate an opaque, cryptographically-random password-reset token. Unlike the
+ * magic-link JWT, this is a bearer secret with no embedded state: the server
+ * stores only its sha256 hash (see `hashPasswordResetToken`) in a database row
+ * that enforces single-use and revocability.
+ * @returns {string} 43-char base64url token
+ */
+export const generatePasswordResetToken = () =>
+  crypto.randomBytes(32).toString('base64url');
+
+/**
+ * Hash a reset token for at-rest storage and lookup.
+ * @param {string} token
+ * @returns {string} sha256 hex digest
+ */
+export const hashPasswordResetToken = (token) =>
+  crypto.createHash('sha256').update(String(token)).digest('hex');

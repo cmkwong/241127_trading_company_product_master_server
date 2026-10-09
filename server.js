@@ -5,11 +5,15 @@ import {
   closeAllConnections,
 } from './utils/dbConn.js';
 import app from './app.js';
+import { assertSecureEnv } from './utils/validateEnv.js';
 
 // setting env
 dotenv.config({
   path: './.env',
 });
+
+// Fail fast on weak/missing security secrets before anything else boots.
+assertSecureEnv();
 
 const startServer = async () => {
   try {
