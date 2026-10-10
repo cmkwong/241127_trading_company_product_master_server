@@ -12,6 +12,7 @@ import * as UserProductHistory from './data_user_product_history.js';
 import * as UserRfqs from './data_user_rfqs.js';
 import * as UserMemberships from './data_user_memberships.js';
 import * as UserNotifications from './data_user_notifications.js';
+import * as UserPaymentMethods from './data_user_payment_methods.js';
 
 export const userModel = new DataModelUtils({
   dbc: tradeBusinessDbc,
@@ -26,6 +27,11 @@ export const userModel = new DataModelUtils({
     display_name: { required: true },
   },
   defaults: { id: uuidv4 },
+  fileConfig: {
+    fileUrlField: 'icon_url',
+    uploadDir: 'public/users/{id}/icon/',
+    imagesOnly: true,
+  },
   childTableConfig: [
     {
       tableName: TABLE_MASTER['USER_AUTHS'].name,
@@ -38,6 +44,7 @@ export const userModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['USER_ADDRESSES'].name,
       model: UserAddresses.userAddressModel,
+      syncOnUpdate: true,
     },
     {
       tableName: TABLE_MASTER['USER_CARTS'].name,
@@ -62,6 +69,11 @@ export const userModel = new DataModelUtils({
     {
       tableName: TABLE_MASTER['USER_NOTIFICATIONS'].name,
       model: UserNotifications.userNotificationModel,
+    },
+    {
+      tableName: TABLE_MASTER['USER_PAYMENT_METHODS'].name,
+      model: UserPaymentMethods.userPaymentMethodModel,
+      syncOnUpdate: true,
     },
   ],
 });

@@ -62,4 +62,34 @@ router.get(
   endController,
 );
 
+// Self-service profile + address + payment-method update.
+router.patch(
+  '/self',
+  authController.restrictTo('user-self'),
+  userController.updateSelfUser,
+  endController,
+);
+
+// Self-service RFQ CRUD.
+router.post(
+  '/self/rfqs',
+  authController.restrictTo('user-self'),
+  userController.createSelfRfq,
+  endController,
+);
+
+router.patch(
+  '/self/rfqs/ids',
+  authController.restrictTo('user-self'),
+  userController.updateSelfRfq,
+  endController,
+);
+
+router.delete(
+  '/self/rfqs/ids',
+  authController.restrictTo('user-self'),
+  userController.deleteSelfRfq,
+  endController,
+);
+
 export default router;

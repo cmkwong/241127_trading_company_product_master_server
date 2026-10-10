@@ -15,6 +15,7 @@ const USER_TABLE_KEYS = [
   'USER_RFQ_ATTACHMENTS',
   'USER_MEMBERSHIPS',
   'USER_NOTIFICATIONS',
+  'USER_PAYMENT_METHODS',
 ];
 
 const createTable = async (tableKey) => {
@@ -89,6 +90,8 @@ export const createUserMembershipsTable = async () =>
   createTable('USER_MEMBERSHIPS');
 export const createUserNotificationsTable = async () =>
   createTable('USER_NOTIFICATIONS');
+export const createUserPaymentMethodsTable = async () =>
+  createTable('USER_PAYMENT_METHODS');
 
 export const createAllUserTables = async (tableType) => {
   try {

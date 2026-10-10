@@ -1,6 +1,8 @@
+import { v4 as uuidv4 } from 'uuid';
 import catchAsync from '../../../../../utils/catchAsync.js';
 import AppError from '../../../../../utils/appError.js';
 import { userModel } from '../../../../models/trade_business/home_page/users/data_users.js';
+import { userRfqModel } from '../../../../models/trade_business/home_page/users/data_user_rfqs.js';
 import { setUserPassword } from '../../../../models/trade_business/home_page/users/data_user_auths.js';
 import { sendMail } from '../../../../../utils/mailer.js';
 import {
@@ -291,6 +293,274 @@ export const truncateUserTables = catchAsync(async (req, res, next) => {
   const sql = `SELECT id FROM users;`;
   const ids = await userModel.dbc.executeQuery(sql);
   await userModel.processStructureDataOperation({ users: ids }, 'delete');
+
+  res.status(200).json({
+    status: 'success',
+  });
+});
+
+// ============================================================
+// SELF-SERVICE ACCOUNT OPERATIONS (identity derived from token)
+// ============================================================
+
+// Fields a user may edit on their own profile. Email, status and credential
+// fields are intentionally excluded and are never trusted from the client.
+const SELF_EDITABLE_FIELDS = [
+  'first_name',
+  'last_name',
+  'display_name',
+  'company_name',
+  'website',
+  'country_calling_code',
+  'phone_number',
+  'icon_name',
+];
+
+// Child tables that may be edited through the self profile update. Each row is
+// force-bound to the caller's own id so a user can never write another user's
+// addresses or payment methods.
+const SELF_CHILD_TABLES = ['user_addresses', 'user_payment_methods'];
+
+// Remove a spoofable foreign-key column from a nested row so the write layer
+// links it to the correct parent automatically.
+const stripForeignKey = (row, key) => {
+  if (!row || typeof row !== 'object') return {};
+  const { [key]: _omit, ...rest } = row;
+  return rest;
+};
+
+const generateRfqNumber = async () => {
+  const now = new Date();
+  const yyyymmdd = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('');
+  const prefix = `RFQ-${yyyymmdd}-`;
+
+  const rows = await userRfqModel.executeQuery(
+    'SELECT rfq_number FROM user_rfqs WHERE rfq_number LIKE ? ORDER BY rfq_number DESC LIMIT 1;',
+    [`${prefix}%`],
+  );
+
+  let sequence = 1;
+  const lastNumber = rows?.[0]?.rfq_number;
+  if (lastNumber) {
+    const match = String(lastNumber).match(/(\d+)$/);
+    if (match) sequence = parseInt(match[1], 10) + 1;
+  }
+
+  return `${prefix}${String(sequence).padStart(3, '0')}`;
+};
+
+/**
+ * Update the authenticated user's own profile and their address / payment
+ * method records. The target id is forced from `req.selfUserId`; editable
+ * fields are whitelisted.
+ * @route PATCH /trade_business/home/users/data/self
+ */
+export const updateSelfUser = catchAsync(async (req, res, next) => {
+  const selfId = req.selfUserId;
+  if (!selfId) {
+    return next(new AppError('Unable to determine the target user.', 400));
+  }
+
+  const userPatch = req.body?.data?.users?.[0];
+  if (!userPatch || typeof userPatch !== 'object') {
+    return next(new AppError('data.users[0] is required.', 400));
+  }
+
+  const sanitizedUser = { id: selfId };
+  for (const field of SELF_EDITABLE_FIELDS) {
+    if (userPatch[field] !== undefined) {
+      sanitizedUser[field] = userPatch[field];
+    }
+  }
+
+  // Icon upload payload: the client converts a freshly-picked blob into a
+  // base64 data URI. The server-side file pipeline turns it into a stored
+  // `icon_url` under `/public/users/{id}/icon/`.
+  if (userPatch.base64_image !== undefined) {
+    sanitizedUser.base64_image = userPatch.base64_image;
+  }
+
+  for (const childKey of SELF_CHILD_TABLES) {
+    if (Array.isArray(userPatch[childKey])) {
+      sanitizedUser[childKey] = userPatch[childKey].map((row) => ({
+        ...row,
+        user_id: selfId,
+      }));
+    }
+  }
+
+  const structuredData = await userModel.processStructureDataOperation(
+    { users: [sanitizedUser] },
+    'update',
+  );
+
+  res.status(200).json({
+    status: 'success',
+    structuredData,
+  });
+});
+
+/**
+ * Create a new draft RFQ for the authenticated user. The RFQ number is
+ * generated server-side and the user id is forced from the token.
+ * @route POST /trade_business/home/users/data/self/rfqs
+ */
+export const createSelfRfq = catchAsync(async (req, res, next) => {
+  const selfId = req.selfUserId;
+  if (!selfId) {
+    return next(new AppError('Unable to determine the target user.', 400));
+  }
+
+  const body =
+    req.body?.data?.user_rfqs?.[0] ??
+    req.body?.user_rfqs?.[0] ??
+    req.body ??
+    {};
+
+  const rfqNumber = await generateRfqNumber();
+
+  const rfq = {
+    id: body.id || uuidv4(),
+    user_id: selfId,
+    rfq_number: rfqNumber,
+    status: body.status || 'draft',
+    shipping_address_id: body.shipping_address_id || null,
+    expected_delivery_date: body.expected_delivery_date || null,
+    buyer_remarks: body.buyer_remarks || null,
+    sales_quotation_id: body.sales_quotation_id || null,
+  };
+
+  if (Array.isArray(body.user_rfq_items)) {
+    rfq.user_rfq_items = body.user_rfq_items.map((row) =>
+      stripForeignKey(row, 'rfq_id'),
+    );
+  }
+  if (Array.isArray(body.user_rfq_attachments)) {
+    rfq.user_rfq_attachments = body.user_rfq_attachments.map((row) =>
+      stripForeignKey(row, 'rfq_id'),
+    );
+  }
+
+  const structuredData = await userRfqModel.processStructureDataOperation(
+    { user_rfqs: [rfq] },
+    'create',
+  );
+
+  res.status(201).json({
+    status: 'success',
+    structuredData,
+  });
+});
+
+/**
+ * Update an authenticated user's own RFQ (edit fields, replace items /
+ * attachments, submit or cancel). Ownership is verified before writing.
+ * @route PATCH /trade_business/home/users/data/self/rfqs/ids
+ */
+export const updateSelfRfq = catchAsync(async (req, res, next) => {
+  const selfId = req.selfUserId;
+  if (!selfId) {
+    return next(new AppError('Unable to determine the target user.', 400));
+  }
+
+  const body =
+    req.body?.data?.user_rfqs?.[0] ??
+    req.body?.user_rfqs?.[0] ??
+    req.body ??
+    {};
+
+  const id = body.id;
+  if (!id) {
+    return next(new AppError('RFQ id is required.', 400));
+  }
+
+  const owned = await userRfqModel.executeQuery(
+    'SELECT id FROM user_rfqs WHERE id = ? AND user_id = ? LIMIT 1;',
+    [id, selfId],
+  );
+  if (!owned?.length) {
+    return next(new AppError('RFQ not found.', 404));
+  }
+
+  const allowedFields = [
+    'status',
+    'shipping_address_id',
+    'expected_delivery_date',
+    'buyer_remarks',
+    'sales_quotation_id',
+  ];
+
+  const patch = { id, user_id: selfId };
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) patch[field] = body[field];
+  }
+
+  // Replacement mode so items/attachments removed by the user are deleted.
+  if (
+    Array.isArray(body.user_rfq_items) ||
+    Array.isArray(body.user_rfq_attachments)
+  ) {
+    patch._sync_children = true;
+  }
+  if (Array.isArray(body.user_rfq_items)) {
+    patch.user_rfq_items = body.user_rfq_items.map((row) =>
+      stripForeignKey(row, 'rfq_id'),
+    );
+  }
+  if (Array.isArray(body.user_rfq_attachments)) {
+    patch.user_rfq_attachments = body.user_rfq_attachments.map((row) =>
+      stripForeignKey(row, 'rfq_id'),
+    );
+  }
+
+  const structuredData = await userRfqModel.processStructureDataOperation(
+    { user_rfqs: [patch] },
+    'update',
+  );
+
+  res.status(200).json({
+    status: 'success',
+    structuredData,
+  });
+});
+
+/**
+ * Delete an authenticated user's own RFQ (and its items/attachments).
+ * Ownership is verified before deleting.
+ * @route DELETE /trade_business/home/users/data/self/rfqs/ids
+ */
+export const deleteSelfRfq = catchAsync(async (req, res, next) => {
+  const selfId = req.selfUserId;
+  if (!selfId) {
+    return next(new AppError('Unable to determine the target user.', 400));
+  }
+
+  const id =
+    req.body?.data?.user_rfqs?.[0]?.id ??
+    req.body?.user_rfqs?.[0]?.id ??
+    req.body?.id ??
+    req.params?.id;
+
+  if (!id) {
+    return next(new AppError('RFQ id is required.', 400));
+  }
+
+  const owned = await userRfqModel.executeQuery(
+    'SELECT id FROM user_rfqs WHERE id = ? AND user_id = ? LIMIT 1;',
+    [id, selfId],
+  );
+  if (!owned?.length) {
+    return next(new AppError('RFQ not found.', 404));
+  }
+
+  await userRfqModel.processStructureDataOperation(
+    { user_rfqs: [{ id }] },
+    'delete',
+  );
 
   res.status(200).json({
     status: 'success',

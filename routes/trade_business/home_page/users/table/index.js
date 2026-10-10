@@ -25,6 +25,7 @@ router.post('/create/rfq-items', tableController.createUserRfqItemsTable, endCon
 router.post('/create/rfq-attachments', tableController.createUserRfqAttachmentsTable, endController);
 router.post('/create/memberships', tableController.createUserMembershipsTable, endController);
 router.post('/create/notifications', tableController.createUserNotificationsTable, endController);
+router.post('/create/payment-methods', tableController.createUserPaymentMethodsTable, endController);
 
 router.delete('/drop-all', tableController.dropAllTables, endController);
 

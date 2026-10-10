@@ -49,9 +49,13 @@ export const USERS_TABLE_DEFINITIONS = {
         type: 'VARCHAR(30)',
         description: 'Phone number of the user',
       },
-      user_icon: {
-        type: 'VARCHAR(500)',
-        description: 'URL or path to the user icon',
+      icon_name: {
+        type: 'VARCHAR(255)',
+        description: 'user icon name',
+      },
+      icon_url: {
+        type: 'TEXT',
+        description: 'URL to user icon image',
       },
       status: {
         type: 'VARCHAR(50)',
@@ -770,6 +774,80 @@ export const USERS_TABLE_DEFINITIONS = {
       },
     },
   },
+  USER_PAYMENT_METHODS: {
+    name: 'user_payment_methods',
+    table_type: 'users-data',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID primary key',
+      },
+      user_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'users',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+        description: 'Reference to users.id',
+      },
+      provider: {
+        type: 'VARCHAR(50)',
+        description: 'For example: Stripe',
+      },
+      provider_customer_id: {
+        type: 'VARCHAR(255)',
+        description: 'Customer reference from the provider',
+      },
+      provider_payment_method_id: {
+        type: 'VARCHAR(255)',
+        description: 'Saved payment-method reference',
+      },
+      method_type: {
+        type: 'VARCHAR(30)',
+        description: 'card, bank_account, etc.',
+      },
+      card_brand: {
+        type: 'VARCHAR(30)',
+        description: 'Nullable; Visa, Mastercard, etc.',
+      },
+      last_four: {
+        type: 'CHAR(4)',
+        description: 'Nullable display metadata',
+      },
+      expiry_month: {
+        type: 'TINYINT UNSIGNED',
+        description: 'Nullable; 1-12 for cards',
+      },
+      expiry_year: {
+        type: 'SMALLINT UNSIGNED',
+        description: 'Nullable; four-digit year',
+      },
+      is_default: {
+        type: 'BOOLEAN',
+        default: false,
+        description: 'Default payment method',
+      },
+      status: {
+        type: 'VARCHAR(20)',
+        default: 'active',
+        description: 'active, expired, removed',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+        description: 'Creation timestamp',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        description: 'Last modification timestamp',
+      },
+    },
+  },
+
   USER_PASSWORD_RESETS: {
     name: 'user_password_resets',
     table_type: 'users-data',

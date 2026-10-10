@@ -80,6 +80,13 @@ export const createUserNotificationsTable = catchAsync(
   },
 );
 
+export const createUserPaymentMethodsTable = catchAsync(
+  async (req, res, next) => {
+    const result = await TableModel.createUserPaymentMethodsTable();
+    res.status(201).json({ status: 'success', message: result.message });
+  },
+);
+
 export const dropAllTables = catchAsync(async (req, res, next) => {
   const { confirm } = req.body;
   const { tableType } = req.query;
