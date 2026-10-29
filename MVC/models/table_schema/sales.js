@@ -149,22 +149,6 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
           onDelete: 'SET NULL',
         },
       },
-      length: {
-        type: 'DECIMAL(10,3)',
-      },
-      width: {
-        type: 'DECIMAL(10,3)',
-      },
-      height: {
-        type: 'DECIMAL(10,3)',
-      },
-      qty: {
-        type: 'INT',
-        default: 0,
-      },
-      weight: {
-        type: 'DECIMAL(10,3)',
-      },
       chargeable_divisor: {
         type: 'DECIMAL(12,3)',
         default: 6000,
@@ -189,6 +173,52 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       base_line: {
         type: 'VARCHAR(36)',
         description: 'Source line id in the matching line table',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_SHIPPING_DIMENSIONS: {
+    name: 'sales_shipping_dimensions',
+    table_type: 'sales-data',
+    description:
+      'Carton sizes, quantities and weights for a sales shipping detail',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID',
+      },
+      sales_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      length: {
+        type: 'DECIMAL(10,3)',
+      },
+      width: {
+        type: 'DECIMAL(10,3)',
+      },
+      height: {
+        type: 'DECIMAL(10,3)',
+      },
+      qty: {
+        type: 'INT',
+        default: 0,
+      },
+      weight: {
+        type: 'DECIMAL(10,3)',
       },
       created_at: {
         type: 'TIMESTAMP',
@@ -1009,22 +1039,6 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
         },
         description: 'Reference to products.id',
       },
-      length: {
-        type: 'DECIMAL(10,3)',
-      },
-      width: {
-        type: 'DECIMAL(10,3)',
-      },
-      height: {
-        type: 'DECIMAL(10,3)',
-      },
-      qty: {
-        type: 'INT',
-        default: 0,
-      },
-      weight: {
-        type: 'DECIMAL(10,3)',
-      },
       chargeable_divisor: {
         type: 'DECIMAL(12,3)',
         default: 6000,
@@ -1041,6 +1055,52 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       remark: {
         type: 'TEXT',
         description: 'Internal remark (not for print)',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  SALES_PACKING_DIMENSIONS: {
+    name: 'sales_packing_dimensions',
+    table_type: 'sales-data',
+    description:
+      'Carton sizes, quantities and weights for a sales packing item',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+        description: 'UUID',
+      },
+      sales_packing_item_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'sales_packing_items',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      length: {
+        type: 'DECIMAL(10,3)',
+      },
+      width: {
+        type: 'DECIMAL(10,3)',
+      },
+      height: {
+        type: 'DECIMAL(10,3)',
+      },
+      qty: {
+        type: 'INT',
+        default: 0,
+      },
+      weight: {
+        type: 'DECIMAL(10,3)',
       },
       created_at: {
         type: 'TIMESTAMP',

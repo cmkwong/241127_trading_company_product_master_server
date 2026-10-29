@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import DataModelUtils from '../../../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../../tables.js';
 import { tradeBusinessDbc } from '../../../dbModel.js';
+import * as SalesPackingDimensions from './data_sales_packing_dimensions.js';
 import * as SalesPackingItemImages from './data_sales_packing_item_images.js';
 import * as SalesPackingItemInternalImages from './data_sales_packing_item_internal_images.js';
 import * as SalesPackingItemInternalFiles from './data_sales_packing_item_internal_files.js';
@@ -15,6 +16,10 @@ export const salesPackingListModel = new DataModelUtils({
   requiredFields: ['sales_quotation_id'],
   defaults: { id: uuidv4 },
   childTableConfig: [
+    {
+      tableName: TABLE_MASTER['SALES_PACKING_DIMENSIONS'].name,
+      model: SalesPackingDimensions.salesPackingDimensionModel,
+    },
     {
       tableName: TABLE_MASTER['SALES_PACKING_ITEM_IMAGES'].name,
       model: SalesPackingItemImages.salesPackingItemImageModel,

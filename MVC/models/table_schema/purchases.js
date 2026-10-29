@@ -82,22 +82,6 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
       address_text: {
         type: 'TEXT',
       },
-      length: {
-        type: 'DECIMAL(10,3)',
-      },
-      width: {
-        type: 'DECIMAL(10,3)',
-      },
-      height: {
-        type: 'DECIMAL(10,3)',
-      },
-      quantity: {
-        type: 'INT',
-        default: 0,
-      },
-      weight: {
-        type: 'DECIMAL(10,3)',
-      },
       currency_id: {
         type: 'VARCHAR(36)',
         references: {
@@ -120,6 +104,51 @@ export const PURCHASE_REQUESTS_TABLE_DEFINITIONS = {
       remark: {
         type: 'TEXT',
         description: 'Internal remark (not for print)',
+      },
+      created_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP',
+      },
+      updated_at: {
+        type: 'TIMESTAMP',
+        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      },
+    },
+  },
+  PURCHASE_SHIPPING_DIMENSIONS: {
+    name: 'purchase_shipping_dimensions',
+    table_type: 'purchase-data',
+    description:
+      'Carton sizes, quantities and weights for a purchase shipping detail',
+    fields: {
+      id: {
+        type: 'VARCHAR(36)',
+        primaryKey: true,
+      },
+      purchase_shipping_detail_id: {
+        type: 'VARCHAR(36)',
+        notNull: true,
+        references: {
+          table: 'purchase_shipping_details',
+          field: 'id',
+          onDelete: 'CASCADE',
+        },
+      },
+      length: {
+        type: 'DECIMAL(10,3)',
+      },
+      width: {
+        type: 'DECIMAL(10,3)',
+      },
+      height: {
+        type: 'DECIMAL(10,3)',
+      },
+      qty: {
+        type: 'INT',
+        default: 0,
+      },
+      weight: {
+        type: 'DECIMAL(10,3)',
       },
       created_at: {
         type: 'TIMESTAMP',

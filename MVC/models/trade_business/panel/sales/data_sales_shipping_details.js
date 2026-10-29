@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import DataModelUtils from '../../../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../../tables.js';
 import { tradeBusinessDbc } from '../../../dbModel.js';
+import * as SalesShippingDimensions from './data_sales_shipping_dimensions.js';
 import * as SalesShippingPrices from './data_sales_shipping_prices.js';
 import * as SalesShippingImages from './data_sales_shipping_images.js';
 import * as SalesShippingInternalImages from './data_sales_shipping_internal_images.js';
@@ -26,6 +27,10 @@ export const salesShippingDetailModel = new DataModelUtils({
     },
   },
   childTableConfig: [
+    {
+      tableName: TABLE_MASTER['SALES_SHIPPING_DIMENSIONS'].name,
+      model: SalesShippingDimensions.salesShippingDimensionModel,
+    },
     {
       tableName: TABLE_MASTER['SALES_SHIPPING_PRICES'].name,
       model: SalesShippingPrices.salesShippingPriceModel,
