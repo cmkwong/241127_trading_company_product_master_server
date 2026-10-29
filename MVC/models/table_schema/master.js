@@ -447,6 +447,10 @@ export const MASTER_TABLE_DEFINITIONS = {
         notNull: true,
         description: 'Color type name',
       },
+      color_code_hex: {
+        type: 'VARCHAR(7)',
+        description: 'Hex code for the color type (e.g., #FFFFFF for white)',
+      },
       description: {
         type: 'VARCHAR(255)',
         description: 'Color type description',

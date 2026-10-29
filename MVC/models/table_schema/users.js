@@ -179,12 +179,6 @@ export const USERS_TABLE_DEFINITIONS = {
         description: 'Last update timestamp',
       },
     },
-    constraints: {
-      unique_user_auth: {
-        type: 'UNIQUE',
-        fields: ['user_id'],
-      },
-    },
   },
   USER_ADDRESSES: {
     name: 'user_addresses',
@@ -847,7 +841,10 @@ export const USERS_TABLE_DEFINITIONS = {
       },
     },
   },
-
+  // Ledger of single-use, revocable password-reset tokens issued by the public
+  // "forgot password" flow. Only the sha256 hash of the emailed token is stored
+  // (never the raw secret). Redeeming a link stamps `used_at` and deletes sibling
+  // rows for the same user, so at most one link is live at a time.
   USER_PASSWORD_RESETS: {
     name: 'user_password_resets',
     table_type: 'users-data',

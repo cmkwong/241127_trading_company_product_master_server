@@ -1025,6 +1025,16 @@ export const SALES_QUOTATIONS_TABLE_DEFINITIONS = {
       weight: {
         type: 'DECIMAL(10,3)',
       },
+      chargeable_divisor: {
+        type: 'DECIMAL(12,3)',
+        default: 6000,
+        description: 'Volumetric divisor for chargeable weight calculation',
+      },
+      min_chargeable_weight: {
+        type: 'DECIMAL(10,3)',
+        default: 12,
+        description: 'Minimum chargeable weight per carton in kg',
+      },
       details: {
         type: 'TEXT',
       },

@@ -15,5 +15,6 @@ export const salesPackingItemInternalFileModel = new DataModelUtils({
     fileUrlField: 'file_url',
     uploadDir: 'public/quotations/{id}/packing_items/internal/',
     imagesOnly: false,
+    maxSizeInMB: 20,
   },
 });

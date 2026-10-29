@@ -60,6 +60,7 @@ export default class DataModelUtils {
       this.fileTypeField = config.fileConfig.fileTypeField;
       this.descriptionField = config.fileConfig.descriptionField;
       this.imagesOnly = config.fileConfig.imagesOnly || false;
+      this.maxSizeInMB = config.fileConfig.maxSizeInMB || 50;
       this.fileTypeName = this.fileUrlField.replace('_url', '');
     }
   }
@@ -299,6 +300,7 @@ export default class DataModelUtils {
             fileType = 'document';
           else if (mimeType.includes('zip') || mimeType.includes('tar'))
             fileType = 'archive';
+          else if (mimeType.includes('video')) fileType = 'video';
         }
       }
     }
@@ -315,6 +317,7 @@ export default class DataModelUtils {
       else if (fileType === 'spreadsheet') allowedTypes = ['SPREADSHEET'];
       else if (fileType === 'presentation') allowedTypes = ['PRESENTATION'];
       else if (fileType === 'archive') allowedTypes = ['ARCHIVE'];
+      else if (fileType === 'video') allowedTypes = ['VIDEO'];
     }
 
     const uploadDir = this.getUploadDir(entityId, fileType);
@@ -325,6 +328,7 @@ export default class DataModelUtils {
     } else {
       fileUrl = await saveBase64File(data.base64_file, uploadDir, {
         allowedTypes,
+        maxSizeInMB: this.maxSizeInMB,
       });
     }
 
