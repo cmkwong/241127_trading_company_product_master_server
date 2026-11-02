@@ -67,6 +67,12 @@ router
     endController,
   );
 
+router.get(
+  '/catalogData',
+  authController.restrictTo('admin', 'manager', 'product-manager'),
+  productsController.getCatalogData,
+);
+
 // Routes that require ID validation
 router.route('/get/ids').post(productsController.getProductById, endController);
 

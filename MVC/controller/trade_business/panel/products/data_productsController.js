@@ -5,11 +5,15 @@ import { toBool } from '../../../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSelection.js';
 import { getProductsSeedData } from '../../../../../utils/productsSource.js';
 import { productModel } from '../../../../models/trade_business/panel/products/data_products.js';
+import { currencyModel } from '../../../../models/trade_business/panel/master/master_currenciesModel.js';
+import { exchangeRateHkdModel } from '../../../../models/trade_business/panel/master/master_exchangeRateHkdModel.js';
+import { masterProductAttributesModel } from '../../../../models/trade_business/panel/master/master_product_attributes_model.js';
 import {
   startAiImageEditJob,
   getAiImageEditJob,
 } from '../../../../models/trade_business/AI/product_images.js';
 import { productImagesModel } from '../../../../models/trade_business/panel/products/data_product_images.js';
+import { productImagesTypeModel } from '../../../../models/trade_business/panel/master/master_productImagesTypeModel.js';
 
 const ICON_COMPRESSION_DEFAULTS = {
   maxWidth: 220,
@@ -78,6 +82,246 @@ const buildReadOptions = (source = {}) => {
   }
 
   return readOptions;
+};
+
+const parseCatalogIds = (idsInput) => {
+  const parts = Array.isArray(idsInput)
+    ? idsInput
+    : String(idsInput || '').split(',');
+
+  return [
+    ...new Set(parts.map((id) => String(id || '').trim()).filter(Boolean)),
+  ];
+};
+
+const CATALOG_EXCHANGE_RATE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Local (server) today formatted as YYYY-MM-DD. */
+const getTodayDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/** Trim + uppercase a requested base currency, defaulting to 'USD'. */
+const normalizeCatalogBaseCurrency = (value) => {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized || 'USD';
+};
+
+/**
+ * Image type whose images populate the catalog thumbnail strip.
+ * Matched by normalized name so a master-data rename still resolves.
+ */
+const CATALOG_IMAGE_TYPE_NAME = 'Edited - catalog';
+
+/** Resolve the catalog thumbnail image type ids (and the matched type). */
+const resolveCatalogImageType = (rows = []) => {
+  const target = CATALOG_IMAGE_TYPE_NAME.trim().toLowerCase();
+  const list = Array.isArray(rows) ? rows : [];
+
+  const matched = list.find(
+    (row) => String(row?.name || '').trim().toLowerCase() === target,
+  );
+
+  if (!matched) {
+    return { ids: new Set(), type: null };
+  }
+
+  const ids = new Set();
+  list.forEach((row) => {
+    const name = String(row?.name || '').trim().toLowerCase();
+    if (name === target && row?.id) {
+      ids.add(String(row.id));
+    }
+  });
+
+  return {
+    ids,
+    type: { id: String(matched.id), name: String(matched.name) },
+  };
+};
+
+const sortValueOrMax = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+};
+
+/**
+ * Reduce each product's `product_images` to the catalog thumbnail type only,
+ * ordered by `image_row` then `display_order`. Operates on copies so pricing,
+ * `icon_url` and deletion flags on the source records are left untouched.
+ */
+const selectCatalogImages = (products = [], catalogTypeIds) => {
+  const ids = catalogTypeIds instanceof Set ? catalogTypeIds : new Set();
+
+  return (Array.isArray(products) ? products : []).map((product) => {
+    if (!product || typeof product !== 'object') {
+      return product;
+    }
+
+    const images = Array.isArray(product.product_images)
+      ? product.product_images
+      : [];
+
+    const selected = images
+      .filter((img) => !img?._delete)
+      .filter((img) => ids.has(String(img?.image_type_id || '').trim()))
+      .sort((a, b) => {
+        const rowDiff = sortValueOrMax(a?.image_row) - sortValueOrMax(b?.image_row);
+        if (rowDiff !== 0) {
+          return rowDiff;
+        }
+        return (
+          sortValueOrMax(a?.display_order) - sortValueOrMax(b?.display_order)
+        );
+      });
+
+    return { ...product, product_images: selected };
+  });
+};
+
+/** Currency columns (besides HKD) present on a master_exchange_rate_hkd row. */
+const buildExchangeRateMap = (row = {}) => {
+  const map = { HKD: 1 };
+  if (!row || typeof row !== 'object') {
+    return map;
+  }
+
+  Object.entries(row).forEach(([key, value]) => {
+    if (key === 'id' || key === 'Date' || /_at$/.test(key)) {
+      return;
+    }
+    const code = String(key || '').trim().toUpperCase();
+    const rate = Number(value);
+    if (!code || !Number.isFinite(rate) || rate <= 0) {
+      return;
+    }
+    map[code] = rate;
+  });
+
+  return map;
+};
+
+/** Convert `amount` from `fromCode` to `toCode` using per-HKD rates. */
+const convertCatalogAmount = (amount, fromCode, toCode, rateMap = {}) => {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  const sourceRate = Number(rateMap[String(fromCode || '').toUpperCase()]);
+  const targetRate = Number(rateMap[String(toCode || '').toUpperCase()]);
+
+  if (!Number.isFinite(sourceRate) || sourceRate <= 0) {
+    return null;
+  }
+  if (!Number.isFinite(targetRate) || targetRate <= 0) {
+    return null;
+  }
+
+  return (value / sourceRate) * targetRate;
+};
+
+const roundCatalogMoney = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return value;
+  }
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+};
+
+/**
+ * Convert every price the catalog prints into the requested base currency.
+ * Rows whose source currency cannot be resolved keep their numeric value
+ * (treated as already expressed in the base currency).
+ */
+const convertCatalogPrices = (
+  products,
+  currencyCodeById,
+  rateMap,
+  baseCurrency,
+) => {
+  if (!Array.isArray(products)) {
+    return products;
+  }
+
+  return products.map((product) => {
+    const result = { ...(product || {}) };
+
+    if (Array.isArray(result.product_sale_prices_by_qty)) {
+      result.product_sale_prices_by_qty = result.product_sale_prices_by_qty.map(
+        (tier) => {
+          if (!tier || tier._delete) {
+            return tier;
+          }
+          const code = String(
+            currencyCodeById[String(tier.currency_id || '')] || '',
+          ).toUpperCase();
+          const converted = convertCatalogAmount(
+            tier.sale_price,
+            code,
+            baseCurrency,
+            rateMap,
+          );
+          return converted === null
+            ? tier
+            : { ...tier, sale_price: roundCatalogMoney(converted) };
+        },
+      );
+    }
+
+    if (Array.isArray(result.product_costs)) {
+      result.product_costs = result.product_costs.map((cost) => {
+        if (!cost || cost._delete) {
+          return cost;
+        }
+        const code = String(
+          currencyCodeById[String(cost.sales_currency_id || '')] || '',
+        ).toUpperCase();
+        const converted = convertCatalogAmount(
+          cost.sales_price,
+          code,
+          baseCurrency,
+          rateMap,
+        );
+        return converted === null
+          ? cost
+          : { ...cost, sales_price: roundCatalogMoney(converted) };
+      });
+    }
+
+    const singleCurrencyId = String(
+      result.sale_single_price_currency_id || '',
+    );
+    const singleCode = String(
+      currencyCodeById[singleCurrencyId] || '',
+    ).toUpperCase();
+
+    const convertedMin = convertCatalogAmount(
+      result.sale_single_price_min,
+      singleCode,
+      baseCurrency,
+      rateMap,
+    );
+    if (convertedMin !== null) {
+      result.sale_single_price_min = roundCatalogMoney(convertedMin);
+    }
+
+    const convertedMax = convertCatalogAmount(
+      result.sale_single_price_max,
+      singleCode,
+      baseCurrency,
+      rateMap,
+    );
+    if (convertedMax !== null) {
+      result.sale_single_price_max = roundCatalogMoney(convertedMax);
+    }
+
+    return result;
+  });
 };
 
 /**
@@ -160,6 +404,148 @@ export const getProductById = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     structuredData,
+  });
+});
+
+/**
+ * Get catalog payload bundle for selected product ids.
+ * @route GET /api/v1/trade_business/panel/products/data/catalogData?ids=a,b,c
+ */
+export const getCatalogData = catchAsync(async (req, res, next) => {
+  const ids = parseCatalogIds(req?.query?.ids);
+
+  const dateInput = String(req?.query?.date || '').trim();
+  const date = dateInput || getTodayDateString();
+  if (!CATALOG_EXCHANGE_RATE_DATE_PATTERN.test(date)) {
+    return next(
+      new AppError('Invalid date format. Expected YYYY-MM-DD', 400),
+    );
+  }
+
+  const baseCurrency = normalizeCatalogBaseCurrency(req?.query?.baseCurrency);
+
+  if (ids.length === 0) {
+    res.status(200).json({
+      status: 'success',
+      date,
+      baseCurrency,
+      exchangeRate: null,
+      catalogImageType: null,
+      products: [],
+      currencies: [],
+      masterDataMap: {
+        master_product_attributes: [],
+      },
+    });
+    return;
+  }
+
+  const structuredData = await productModel.processStructureDataOperation(
+    {
+      products: ids.map((id) => ({ id })),
+    },
+    'read',
+    buildReadOptions({
+      includeBase64: true,
+      compress: true,
+    }),
+  );
+
+  const [
+    currencies,
+    masterProductAttributes,
+    exchangeRateRows,
+    productImageTypeRows,
+  ] = await Promise.all([
+    currencyModel.executeQuery(`SELECT * FROM ${currencyModel.tableName};`),
+    masterProductAttributesModel.executeQuery(
+      `SELECT * FROM ${masterProductAttributesModel.tableName};`,
+    ),
+    exchangeRateHkdModel.executeQuery(
+      `SELECT * FROM ${exchangeRateHkdModel.tableName} WHERE \`Date\` <= ? ORDER BY \`Date\` DESC LIMIT 1`,
+      [date],
+    ),
+    productImagesTypeModel.executeQuery(
+      `SELECT id, name FROM ${productImagesTypeModel.tableName};`,
+    ),
+  ]);
+
+  const { ids: catalogImageTypeIds, type: catalogImageType } =
+    resolveCatalogImageType(productImageTypeRows);
+
+  let exchangeRate =
+    Array.isArray(exchangeRateRows) && exchangeRateRows.length > 0
+      ? exchangeRateRows[0]
+      : null;
+
+  // Fall back to the latest available row when the requested date predates
+  // every stored rate (mirrors `selectExchangeRateRow` on the frontend).
+  if (!exchangeRate) {
+    const latestRows = await exchangeRateHkdModel.executeQuery(
+      `SELECT * FROM ${exchangeRateHkdModel.tableName} ORDER BY \`Date\` DESC LIMIT 1`,
+    );
+    exchangeRate =
+      Array.isArray(latestRows) && latestRows.length > 0 ? latestRows[0] : null;
+  }
+
+  if (!exchangeRate) {
+    return next(
+      new AppError(`No exchange rate available on or before ${date}`, 400),
+    );
+  }
+
+  const rateMap = buildExchangeRateMap(exchangeRate);
+
+  if (!Object.prototype.hasOwnProperty.call(rateMap, baseCurrency)) {
+    return next(
+      new AppError(
+        `Unsupported base currency: ${baseCurrency}. Supported: ${Object.keys(
+          rateMap,
+        ).join(', ')}`,
+        400,
+      ),
+    );
+  }
+
+  const currencyCodeById = {};
+  (Array.isArray(currencies) ? currencies : []).forEach((currency) => {
+    const id = String(currency?.id || '').trim();
+    const code = String(currency?.code || '').trim().toUpperCase();
+    if (id && code) {
+      currencyCodeById[id] = code;
+    }
+  });
+
+  const products = Array.isArray(structuredData?.data?.products)
+    ? structuredData.data.products
+    : [];
+  const convertedProducts = convertCatalogPrices(
+    products,
+    currencyCodeById,
+    rateMap,
+    baseCurrency,
+  );
+
+  // Narrow each product to its "Edited - catalog" thumbnails. When the type
+  // cannot be resolved (master-data drift) leave images untouched so the
+  // catalog never silently loses all its thumbnails.
+  const catalogProducts = catalogImageType
+    ? selectCatalogImages(convertedProducts, catalogImageTypeIds)
+    : convertedProducts;
+
+  res.status(200).json({
+    status: 'success',
+    date,
+    baseCurrency,
+    exchangeRate,
+    catalogImageType,
+    products: catalogProducts,
+    currencies: Array.isArray(currencies) ? currencies : [],
+    masterDataMap: {
+      master_product_attributes: Array.isArray(masterProductAttributes)
+        ? masterProductAttributes
+        : [],
+    },
   });
 });
 
