@@ -119,6 +119,10 @@ export const productModel = new DataModelUtils({
       tableName: TABLE_MASTER['PRODUCT_SALE_PRICES_BY_QTY'].name,
       connectedKeys: { id: 'productId' }, // parent table -> child table
       model: ProductSalePricesByQty.productSalePricesByQtyModel,
+      // Wipe + rewrite this child on save (the client sends the full tier list)
+      // so a re-laddered / swapped (min_order_qty, currency_id) combination can
+      // never violate unique_product_sale_price mid-save.
+      replaceOnUpdate: true,
     },
     {
       tableName: TABLE_MASTER['PRODUCT_DELIVERY_DATES'].name,

@@ -1325,12 +1325,61 @@ export default class DataModelUtils {
 
       const tableRows = Array.isArray(rawRow[jsonKey]) ? rawRow[jsonKey] : [];
 
-      // Update sync behavior (opt-in only):
-      // By default PATCH payloads are partial diffs, so omitted child rows must be preserved.
-      // Enable replacement mode only when explicitly requested.
+      // ---------------------------------------------------------------------
+      // Update sync behaviour (opt-in only)
+      // ---------------------------------------------------------------------
+      // By default a PATCH payload is a PARTIAL diff: child rows missing from the
+      // payload are left untouched and rows present in the payload are applied
+      // one-by-one (insert or update).
+      //
+      // That one-by-one application cannot express "the client's array is the
+      // complete truth". For a child table with a composite UNIQUE key (e.g.
+      // product_sale_prices_by_qty, unique on
+      // (product_id, min_order_qty, currency_id)) any save in which several rows
+      // change a key part at the same time fails with
+      //   "Duplicate entry '…' for key '…unique_product_sale_price'"
+      // because the NEW value of row A is still occupied in the database by the
+      // OLD value of row B at the moment row A is written.
+      //
+      // Two opt-in modes fix that (all other callers keep partial-diff behaviour):
+      //   childConfig.syncOnUpdate = true
+      //     -> sync-delete rows that are missing from the payload (server diff).
+      //   childConfig.replaceOnUpdate = true   (NEW)
+      //     -> "replace" mode: when the client also opts in per request via
+      //        `_replace_tables`, EVERY existing row of this child is deleted
+      //        first - inside this same transaction - and the payload rows are
+      //        then re-inserted with their client-supplied ids.
+      //        Wipe + rewrite means the unique key never sees two versions of the
+      //        same logical row at once, and row ids stay stable.
+      //
+      // Guard rails: replace mode must be requested by BOTH sides (model +
+      // request), it runs only on 'update', and it is refused for tables that
+      // manage files - deleting such a row also deletes the file it owns, so a
+      // diff-driven wipe could destroy images.
+      const replaceTables = Array.isArray(rawRow?._replace_tables)
+        ? rawRow._replace_tables
+        : [];
+
+      const replaceRequested =
+        childConfig?.replaceOnUpdate === true &&
+        (replaceTables.includes(jsonKey) || replaceTables.includes(tableName));
+
+      if (replaceRequested && childConfig.model.hasFileHandling) {
+        console.warn(
+          `replaceOnUpdate is not supported for file-managed table '${tableName}'; falling back to sync mode.`,
+        );
+      }
+
+      const shouldReplaceChildrenOnUpdate =
+        parentAction === 'update' &&
+        replaceRequested &&
+        !childConfig.model.hasFileHandling;
+
       const shouldSyncChildrenOnUpdate =
         parentAction === 'update' &&
-        (childConfig?.syncOnUpdate === true || rawRow?._sync_children === true);
+        (shouldReplaceChildrenOnUpdate ||
+          childConfig?.syncOnUpdate === true ||
+          rawRow?._sync_children === true);
 
       if (shouldSyncChildrenOnUpdate) {
         const parentPkField = currentModel.entityIdField || 'id';
@@ -1367,7 +1416,15 @@ export default class DataModelUtils {
               existingRow?.[childPkField] || existingRow?.id,
             );
 
-            if (!existingId || payloadIds.has(existingId)) continue;
+            if (!existingId) continue;
+
+            // Which existing rows must go away?
+            //  - Replace mode: ALL of them (the payload is re-inserted right
+            //    after, reusing the same ids) => no unique-key collisions.
+            //  - Sync mode: only the rows the payload no longer contains.
+            if (!shouldReplaceChildrenOnUpdate && payloadIds.has(existingId)) {
+              continue;
+            }
 
             await this._collectDeleteQueue(
               {

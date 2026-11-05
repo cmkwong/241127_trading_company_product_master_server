@@ -5,8 +5,6 @@ import { SUPPLIERS_TABLE_DEFINITIONS } from './table_schema/suppliers.js';
 import { CUSTOMERS_TABLE_DEFINITIONS } from './table_schema/customers.js';
 import { SALES_QUOTATIONS_TABLE_DEFINITIONS } from './table_schema/sales.js';
 import { PURCHASE_REQUESTS_TABLE_DEFINITIONS } from './table_schema/purchases.js';
-import { AP_INVOICES_TABLE_DEFINITIONS } from './table_schema/ap_invoices.js';
-import { AR_INVOICES_TABLE_DEFINITIONS } from './table_schema/ar_invoices.js';
 import { MASTER_TABLE_DEFINITIONS } from './table_schema/master.js';
 import { USERS_TABLE_DEFINITIONS } from './table_schema/users.js';
 
@@ -16,8 +14,6 @@ const TABLE_MASTER_RAW = {
   ...CUSTOMERS_TABLE_DEFINITIONS,
   ...SALES_QUOTATIONS_TABLE_DEFINITIONS,
   ...PURCHASE_REQUESTS_TABLE_DEFINITIONS,
-  ...AP_INVOICES_TABLE_DEFINITIONS,
-  ...AR_INVOICES_TABLE_DEFINITIONS,
   ...MASTER_TABLE_DEFINITIONS,
   ...USERS_TABLE_DEFINITIONS,
 };

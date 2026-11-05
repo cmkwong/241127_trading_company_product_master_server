@@ -1018,6 +1018,12 @@ export const PRODUCTS_TABLE_DEFINITIONS = {
         notNull: false,
         description: 'Weight of the packing',
       },
+      is_default: {
+        type: 'BOOLEAN',
+        notNull: false,
+        default: false,
+        description: 'Indicates if this is the default packing',
+      },
       remark: {
         type: 'TEXT',
         description: 'Packing Remark',
