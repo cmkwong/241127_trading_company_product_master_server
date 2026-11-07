@@ -426,6 +426,7 @@ class CrudOperations {
       const columnName = column.COLUMN_NAME;
       if (
         columnName !== primaryKeyColumn &&
+        columnName !== 'created_at' &&
         updateData[columnName] !== undefined
       ) {
         updateParts.push(`${columnName} = ?`);

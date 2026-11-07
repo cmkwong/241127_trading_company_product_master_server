@@ -5,7 +5,6 @@ import { TABLE_MASTER, generateCreateTableSQL } from '../../../tables.js';
 const CATALOG_TABLE_KEYS = [
   'CATALOGS',
   'CATALOG_PRODUCT_ROWS',
-  'CATALOG_PRODUCT_ROW_IMAGES',
   'CATALOG_PRODUCT_ROW_ATTRIBUTE_DISPLAYS',
 ];
 

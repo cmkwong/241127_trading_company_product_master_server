@@ -59,10 +59,6 @@ export const CATALOGS_TABLE_DEFINITIONS = {
         },
         description: 'ID of the product in this row',
       },
-      image_url: {
-        type: 'VARCHAR(255)',
-        description: 'URL of the image for the product in this row',
-      },
       display_order: {
         type: 'INT',
         description: 'Display order of the product in the catalog',
@@ -76,44 +72,6 @@ export const CATALOGS_TABLE_DEFINITIONS = {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
         description: 'Timestamp when the row was last updated',
-      },
-    },
-  },
-  CATALOG_PRODUCT_ROW_IMAGES: {
-    name: 'catalog_product_row_images',
-    table_type: 'catalog-data',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'UUID primary key',
-      },
-      catalog_product_row_id: {
-        type: 'VARCHAR(36)',
-        references: {
-          table: 'catalog_product_rows',
-          field: 'id',
-          onDelete: 'CASCADE',
-        },
-        description: 'ID of the catalog product row this image belongs to',
-      },
-      image_url: {
-        type: 'VARCHAR(255)',
-        description: 'URL of the image for the catalog product row',
-      },
-      display_order: {
-        type: 'INT',
-        description: 'Display order of the image for the catalog product row',
-      },
-      created_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP',
-        description: 'Timestamp when the image was created',
-      },
-      updated_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        description: 'Timestamp when the image was last updated',
       },
     },
   },

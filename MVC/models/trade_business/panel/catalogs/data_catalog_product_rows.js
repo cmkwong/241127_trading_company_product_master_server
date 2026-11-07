@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import DataModelUtils from '../../../../../utils/dataModelUtils.js';
 import { TABLE_MASTER } from '../../../tables.js';
 import { tradeBusinessDbc } from '../../../dbModel.js';
-import * as CatalogProductRowImages from './data_catalog_product_row_images.js';
 import * as CatalogProductRowAttributeDisplays from './data_catalog_product_row_attribute_displays.js';
 
 export const catalogProductRowModel = new DataModelUtils({
@@ -14,10 +13,6 @@ export const catalogProductRowModel = new DataModelUtils({
   requiredFields: ['catalog_id'],
   defaults: { id: uuidv4 },
   childTableConfig: [
-    {
-      tableName: TABLE_MASTER['CATALOG_PRODUCT_ROW_IMAGES'].name,
-      model: CatalogProductRowImages.catalogProductRowImageModel,
-    },
     {
       tableName: TABLE_MASTER['CATALOG_PRODUCT_ROW_ATTRIBUTE_DISPLAYS'].name,
       model:

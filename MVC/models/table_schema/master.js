@@ -331,6 +331,11 @@ export const MASTER_TABLE_DEFINITIONS = {
         default: false,
         description: 'Indicates if this is the default size type in checkboxes',
       },
+      display_order: {
+        type: 'INT',
+        default: 0,
+        description: 'Display order for the size type',
+      },
       created_at: {
         type: 'TIMESTAMP',
         default: 'CURRENT_TIMESTAMP',
@@ -1187,6 +1192,12 @@ export const MASTER_TABLE_DEFINITIONS = {
       dropdown_reference: {
         type: 'VARCHAR(200)',
         description: 'Reference to a dropdown list for this attribute',
+      },
+      catalog_default_display: {
+        type: 'BOOLEAN',
+        default: false,
+        description:
+          'Indicates if this attribute should be displayed by default in the catalog',
       },
       created_at: {
         type: 'TIMESTAMP',

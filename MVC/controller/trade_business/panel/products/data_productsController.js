@@ -8,6 +8,9 @@ import { productModel } from '../../../../models/trade_business/panel/products/d
 import { currencyModel } from '../../../../models/trade_business/panel/master/master_currenciesModel.js';
 import { exchangeRateHkdModel } from '../../../../models/trade_business/panel/master/master_exchangeRateHkdModel.js';
 import { masterProductAttributesModel } from '../../../../models/trade_business/panel/master/master_product_attributes_model.js';
+import { colorTypeModel } from '../../../../models/trade_business/panel/master/master_colorTypesModel.js';
+import { sizeTypeModel } from '../../../../models/trade_business/panel/master/master_sizeTypesModel.js';
+import { capacityTypeModel } from '../../../../models/trade_business/panel/master/master_capacityTypesModel.js';
 import {
   startAiImageEditJob,
   getAiImageEditJob,
@@ -435,6 +438,9 @@ export const getCatalogData = catchAsync(async (req, res, next) => {
       currencies: [],
       masterDataMap: {
         master_product_attributes: [],
+        master_color_types: [],
+        master_size_types: [],
+        master_capacity_types: [],
       },
     });
     return;
@@ -454,12 +460,20 @@ export const getCatalogData = catchAsync(async (req, res, next) => {
   const [
     currencies,
     masterProductAttributes,
+    masterColorTypes,
+    masterSizeTypes,
+    masterCapacityTypes,
     exchangeRateRows,
     productImageTypeRows,
   ] = await Promise.all([
     currencyModel.executeQuery(`SELECT * FROM ${currencyModel.tableName};`),
     masterProductAttributesModel.executeQuery(
       `SELECT * FROM ${masterProductAttributesModel.tableName};`,
+    ),
+    colorTypeModel.executeQuery(`SELECT * FROM ${colorTypeModel.tableName};`),
+    sizeTypeModel.executeQuery(`SELECT * FROM ${sizeTypeModel.tableName};`),
+    capacityTypeModel.executeQuery(
+      `SELECT * FROM ${capacityTypeModel.tableName};`,
     ),
     exchangeRateHkdModel.executeQuery(
       `SELECT * FROM ${exchangeRateHkdModel.tableName} WHERE \`Date\` <= ? ORDER BY \`Date\` DESC LIMIT 1`,
@@ -544,6 +558,13 @@ export const getCatalogData = catchAsync(async (req, res, next) => {
     masterDataMap: {
       master_product_attributes: Array.isArray(masterProductAttributes)
         ? masterProductAttributes
+        : [],
+      master_color_types: Array.isArray(masterColorTypes)
+        ? masterColorTypes
+        : [],
+      master_size_types: Array.isArray(masterSizeTypes) ? masterSizeTypes : [],
+      master_capacity_types: Array.isArray(masterCapacityTypes)
+        ? masterCapacityTypes
         : [],
     },
   });

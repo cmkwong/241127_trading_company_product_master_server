@@ -46,6 +46,7 @@ import { supplierModel } from '../trade_business/panel/suppliers/data_suppliers.
 import { customerModel } from '../trade_business/panel/customers/data_customers.js';
 import { salesQuotationModel } from '../trade_business/panel/sales/data_sales_quotations.js';
 import { purchaseRequestModel } from '../trade_business/panel/purchase/data_purchase_requests.js';
+import { catalogModel } from '../trade_business/panel/catalogs/data_catalogs.js';
 
 // This file defines the default data mappings for both master and transactional data in the trade business domain. It provides functions to retrieve these mappings, which can be used for seeding the database with initial data or resetting to default values.
 export const getMasterDefaultMappings = () => {
@@ -228,6 +229,11 @@ export const getDataDefaultMappings = () => {
       name: 'purchase',
       model: purchaseRequestModel,
       data: defaultPurchaseRequests,
+    },
+    {
+      name: 'catalogs',
+      model: catalogModel,
+      data: { catalogs: [] },
     },
   ];
 };

@@ -1517,22 +1517,42 @@ export default class DataModelUtils {
         currentModel.fileUrlField &&
         field === currentModel.fileUrlField;
 
+      // Hoisted so the value-normalisation step below can turn an explicit
+      // clear into NULL (and so the `if` gate can reference the same flags).
+      const rawFileUrl = isManagedFileUrl
+        ? rawRow[currentModel.fileUrlField]
+        : undefined;
+      const hasBase64 = currentModel._hasBase64Content(rawRow);
+      const clearsFileOnUpdate =
+        isManagedFileUrl &&
+        rowAction === 'update' &&
+        !hasBase64 &&
+        (rawFileUrl === null ||
+          rawFileUrl === undefined ||
+          String(rawFileUrl).trim() === '');
+
       if (isManagedFileUrl) {
         // The file URL is normally server-managed (generated from a base64
-        // upload). However it is allowed through in two cases:
+        // upload). However it is allowed through in three cases:
         //   1. A CREATE that reuses an already-stored file (e.g. duplicating a
         //      parent record and copying its image child rows).
         //   2. An UPDATE (or CREATE) that opts in via `reuse_existing_file: true`
         //      and references a file that actually exists inside the configured
         //      public root — this is the "image bank" zero-copy path: the existing
         //      source path is stored verbatim and no bytes are copied.
-        // Both cases are additionally gated on the file existing on disk, and
-        // neither applies when a base64 payload is present.
+        //   3. An UPDATE that explicitly clears the field (empty/null value) —
+        //      this lets the user "detach" a file so the column is set to NULL.
+        //      No bytes are written and the old file is never deleted here
+        //      (physical deletion is governed separately by
+        //      FILE_DISABLE_PHYSICAL_DELETE, which is already enabled).
+        // Cases 1 & 2 are gated on the file existing on disk, and none of the
+        // three applies when a base64 payload is present.
         const reusesExistingFile =
-          !currentModel._hasBase64Content(rawRow) &&
+          !hasBase64 &&
           (rowAction === 'create' || rawRow.reuse_existing_file === true) &&
-          storedFileExistsInPublicRoot(rawRow[currentModel.fileUrlField]);
-        if (!reusesExistingFile) {
+          storedFileExistsInPublicRoot(rawFileUrl);
+
+        if (!reusesExistingFile && !clearsFileOnUpdate) {
           continue;
         }
       }
@@ -1544,6 +1564,12 @@ export default class DataModelUtils {
       ) {
         const fieldConfig = tableSchema[field];
         let value = rawRow[field];
+
+        // A managed file URL that was explicitly cleared becomes NULL so the
+        // column is actually emptied (an '' would linger as a free-text value).
+        if (clearsFileOnUpdate) {
+          value = null;
+        }
 
         // Empty string is only valid for free-text columns. For numeric
         // columns (DECIMAL/INT/...) MySQL strict mode rejects '', and for
