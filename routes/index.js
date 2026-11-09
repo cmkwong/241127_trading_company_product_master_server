@@ -7,6 +7,7 @@ import masterRoutes from './trade_business/panel/master/index.js';
 import salesRoutes from './trade_business/panel/sales/index.js';
 import purchaseRoutes from './trade_business/panel/purchase/index.js';
 import catalogRoutes from './trade_business/panel/catalogs/index.js';
+import companyRoutes from './trade_business/panel/companys/index.js';
 import generalRoutes from './general/index.js';
 import homeRoutes from './trade_business/home_page/index.js';
 
@@ -21,6 +22,7 @@ router.use('/trade_business/panel/customers', customerRoutes);
 router.use('/trade_business/panel/sales', salesRoutes);
 router.use('/trade_business/panel/purchase', purchaseRoutes);
 router.use('/trade_business/panel/catalogs', catalogRoutes);
+router.use('/trade_business/panel/companys', companyRoutes);
 
 // trade business home-page routes
 router.use('/trade_business/home', homeRoutes);

@@ -106,48 +106,6 @@ export const MASTER_TABLE_DEFINITIONS = {
       },
     },
   },
-  MASTER_COMPANY_INFO: {
-    name: 'master_company_info',
-    table_type: 'sales-master',
-    fields: {
-      id: {
-        type: 'VARCHAR(36)',
-        primaryKey: true,
-        description: 'UUID primary key',
-      },
-      logo_icon_url: {
-        type: 'TEXT',
-        description: 'Company logo icon URL',
-      },
-      logo_icon_name: {
-        type: 'VARCHAR(255)',
-        description: 'Company logo icon file name',
-      },
-      company_name: {
-        type: 'VARCHAR(255)',
-        notNull: true,
-        description: 'Company display name',
-      },
-      company_address: {
-        type: 'TEXT',
-        description: 'Company address shown on quotation',
-      },
-      contact_person: {
-        type: 'VARCHAR(255)',
-        description: 'Primary contact person name',
-      },
-      created_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP',
-        description: 'Creation timestamp',
-      },
-      updated_at: {
-        type: 'TIMESTAMP',
-        default: 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        description: 'Last update timestamp',
-      },
-    },
-  },
   MASTER_INCOTERMS: {
     name: 'master_incoterms',
     table_type: 'sales-master',

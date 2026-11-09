@@ -451,7 +451,6 @@ const ensureMasterTableWithDefaults = async (tableName, mappingEntry) => {
 
 const TABLES_WITH_AUTO_DEFAULTS_ON_READ = new Set([
   'master_shipping_method',
-  'master_company_info',
 ]);
 
 const MASTER_TABLE_DEFAULT_ORDER = {

@@ -8,6 +8,7 @@ import { PURCHASE_REQUESTS_TABLE_DEFINITIONS } from './table_schema/purchases.js
 import { MASTER_TABLE_DEFINITIONS } from './table_schema/master.js';
 import { USERS_TABLE_DEFINITIONS } from './table_schema/users.js';
 import { CATALOGS_TABLE_DEFINITIONS } from './table_schema/catalogs.js';
+import { COMPANYS_TABLE_DEFINITIONS } from './table_schema/companys.js';
 
 const TABLE_MASTER_RAW = {
   ...PRODUCTS_TABLE_DEFINITIONS,
@@ -16,6 +17,7 @@ const TABLE_MASTER_RAW = {
   ...SALES_QUOTATIONS_TABLE_DEFINITIONS,
   ...PURCHASE_REQUESTS_TABLE_DEFINITIONS,
   ...CATALOGS_TABLE_DEFINITIONS,
+  ...COMPANYS_TABLE_DEFINITIONS,
   ...MASTER_TABLE_DEFINITIONS,
   ...USERS_TABLE_DEFINITIONS,
 };

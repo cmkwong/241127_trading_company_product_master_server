@@ -18,7 +18,6 @@ import * as master_servicesModel from '../trade_business/panel/master/master_ser
 import * as master_serviceImagesModel from '../trade_business/panel/master/master_serviceImagesModel.js';
 import * as master_currenciesModel from '../trade_business/panel/master/master_currenciesModel.js';
 import * as master_countriesModel from '../trade_business/panel/master/master_countriesModel.js';
-import * as master_companyInfoModel from '../trade_business/panel/master/master_companyInfoModel.js';
 import * as master_incotermsModel from '../trade_business/panel/master/master_incotermsModel.js';
 import * as master_invoiceTypesModel from '../trade_business/panel/master/master_invoiceTypesModel.js';
 import * as master_shippingMethodModel from '../trade_business/panel/master/master_shippingMethodModel.js';
@@ -126,10 +125,6 @@ export const getMasterDefaultMappings = () => {
     master_countries: {
       model: master_countriesModel.countryModel,
       data: default_master_data.master_countries || [],
-    },
-    master_company_info: {
-      model: master_companyInfoModel.companyInfoModel,
-      data: default_master_data.master_company_info || [],
     },
     master_incoterms: {
       model: master_incotermsModel.incotermModel,
