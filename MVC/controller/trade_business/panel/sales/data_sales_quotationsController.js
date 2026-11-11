@@ -1,5 +1,4 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
-import { defaultSalesQuotations } from '../../../../../datas/sales.js';
 import { salesQuotationModel } from '../../../../models/trade_business/panel/sales/data_sales_quotations.js';
 import { toBool } from '../../../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSelection.js';
@@ -30,7 +29,7 @@ export const importDefaultSalesQuotations = catchAsync(
   async (req, res, next) => {
     const structuredData =
       await salesQuotationModel.processStructureDataOperation(
-        defaultSalesQuotations,
+        [], // Default empty array
         'create',
       );
 

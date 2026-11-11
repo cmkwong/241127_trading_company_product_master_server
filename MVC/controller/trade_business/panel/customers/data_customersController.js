@@ -1,5 +1,4 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
-import { defaultCustomers } from '../../../../../datas/customers.js';
 import { customerModel } from '../../../../models/trade_business/panel/customers/data_customers.js';
 
 export const createCustomer = catchAsync(async (req, res, next) => {
@@ -16,7 +15,7 @@ export const createCustomer = catchAsync(async (req, res, next) => {
 
 export const importDefaultCustomers = catchAsync(async (req, res, next) => {
   const structuredData = await customerModel.processStructureDataOperation(
-    defaultCustomers,
+    [], // Default empty array
     'create',
   );
 

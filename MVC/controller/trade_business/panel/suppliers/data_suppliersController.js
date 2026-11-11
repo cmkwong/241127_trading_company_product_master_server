@@ -1,5 +1,4 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
-import { defaultSuppliers } from '../../../../../datas/suppliers.js';
 import { supplierModel } from '../../../../models/trade_business/panel/suppliers/data_suppliers.js';
 import { toBool } from '../../../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSelection.js';
@@ -26,7 +25,7 @@ export const createSupplier = catchAsync(async (req, res, next) => {
  */
 export const importDefaultSuppliers = catchAsync(async (req, res, next) => {
   const structuredData = await supplierModel.processStructureDataOperation(
-    defaultSuppliers,
+    [], // Default empty array
     'create',
   );
 

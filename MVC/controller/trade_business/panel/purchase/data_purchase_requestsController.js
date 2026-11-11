@@ -1,5 +1,4 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
-import { defaultPurchaseRequests } from '../../../../../datas/purchase.js';
 import { purchaseRequestModel } from '../../../../models/trade_business/panel/purchase/data_purchase_requests.js';
 
 export const createPurchaseRequest = catchAsync(async (req, res, next) => {
@@ -15,7 +14,7 @@ export const importDefaultPurchaseRequests = catchAsync(
   async (req, res, next) => {
     const structuredData =
       await purchaseRequestModel.processStructureDataOperation(
-        defaultPurchaseRequests,
+        [], // Default empty array
         'create',
       );
     res.status(200).json({ status: 'success', structuredData });

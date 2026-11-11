@@ -1,5 +1,4 @@
 import catchAsync from '../../../../../utils/catchAsync.js';
-import { defaultCompanys } from '../../../../../datas/companys.js';
 import { companyModel } from '../../../../models/trade_business/panel/companys/data_companys.js';
 import { toBool } from '../../../../../utils/booleanFn.js';
 import { getSafeSelectedFieldsForTable } from '../../../../../utils/readFieldSelection.js';
@@ -26,7 +25,7 @@ export const createCompany = catchAsync(async (req, res, next) => {
  */
 export const importDefaultCompanys = catchAsync(async (req, res, next) => {
   const structuredData = await companyModel.processStructureDataOperation(
-    defaultCompanys,
+    [], // Default empty array
     'create',
   );
 
@@ -159,10 +158,7 @@ export const deleteCompany = catchAsync(async (req, res, next) => {
 export const truncateCompanyTables = catchAsync(async (req, res, next) => {
   const sql = `SELECT id FROM companys;`;
   const ids = await companyModel.dbc.executeQuery(sql);
-  await companyModel.processStructureDataOperation(
-    { companys: ids },
-    'delete',
-  );
+  await companyModel.processStructureDataOperation({ companys: ids }, 'delete');
 
   res.status(200).json({
     status: 'success',
